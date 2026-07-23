@@ -25,6 +25,8 @@ type Rel = {
   objet: string;
   date_echeance: string;
   auto: boolean;
+  operation_id: string | null;
+  entite_id: string | null;
   operations: { nom: string } | null;
   entites: { nom: string } | null;
 };
@@ -32,6 +34,13 @@ type Rel = {
 function RelanceCard({ r, today }: { r: Rel; today: string }) {
   const enRetard = r.date_echeance < today;
   const cible = r.operations?.nom ?? r.entites?.nom ?? null;
+  // « Traiter » une relance = raconter le recontact dans un nouveau compte rendu,
+  // pré-rattaché à l'opération/entité de la relance (qui sera close à l'enregistrement).
+  const crHref = r.operation_id
+    ? `/crs/vocal?operation=${r.operation_id}&relance=${r.id}`
+    : r.entite_id
+      ? `/crs/vocal?entite=${r.entite_id}&relance=${r.id}`
+      : `/crs/vocal?relance=${r.id}`;
   return (
     <div className={`relcard${enRetard ? " late" : ""}`}>
       <div className="rel-main">
@@ -43,16 +52,17 @@ function RelanceCard({ r, today }: { r: Rel; today: string }) {
         </div>
       </div>
       <div className="rel-acts">
-        <form action={updateRelance}>
-          <input type="hidden" name="id" value={r.id} />
-          <input type="hidden" name="action" value="faite" />
-          <button className="btn mini" type="submit">✓ Faite</button>
-        </form>
+        <Link className="btn mini" href={crHref}>🎙 Nouveau compte rendu</Link>
         <form action={updateRelance} className="rel-report">
           <input type="hidden" name="id" value={r.id} />
           <input type="hidden" name="action" value="reporter" />
           <input type="date" name="date_echeance" defaultValue={plusJours(7)} aria-label="Reporter au" />
           <button className="btn ghost mini" type="submit">Reporter</button>
+        </form>
+        <form action={updateRelance}>
+          <input type="hidden" name="id" value={r.id} />
+          <input type="hidden" name="action" value="faite" />
+          <button className="btn ghost mini" type="submit" title="Clore sans compte rendu">Faite sans CR</button>
         </form>
         <form action={updateRelance}>
           <input type="hidden" name="id" value={r.id} />
@@ -83,7 +93,7 @@ export default async function Relances({
   const [{ data: relances }, { data: operations }, { data: entites }, { data: utilisateurs }] = await Promise.all([
     supabase
       .from("relances")
-      .select("id, objet, date_echeance, auto, operations(nom), entites(nom)")
+      .select("id, objet, date_echeance, auto, operation_id, entite_id, operations(nom), entites(nom)")
       .eq("statut", "a_faire")
       .order("date_echeance", { ascending: true }),
     supabase.from("operations").select("id, nom").order("created_at", { ascending: false }),

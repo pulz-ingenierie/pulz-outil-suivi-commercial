@@ -41,12 +41,14 @@ export default function VoiceCr({
   today,
   prefillEntite,
   prefillOperation,
+  relanceId,
 }: {
   entites: Opt[];
   operations: Opt[];
   today: string;
   prefillEntite?: string;
   prefillOperation?: string;
+  relanceId?: string;
 }) {
   const [phase, setPhase] = useState<"idle" | "recording" | "recorded">("idle");
   const [seconds, setSeconds] = useState(0);
@@ -369,6 +371,7 @@ export default function VoiceCr({
       {/* Formulaire — posté au serveur (action validée) */}
       <form action={createCr} className="form">
         <input type="hidden" name="synthese_json" value={synthese ? JSON.stringify(synthese) : ""} />
+        {relanceId && <input type="hidden" name="relance_id" value={relanceId} />}
 
         <label className="field">
           <span className="lab">Compte rendu <em>*</em></span>

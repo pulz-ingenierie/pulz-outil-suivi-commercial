@@ -7,9 +7,9 @@ export const dynamic = "force-dynamic";
 export default async function VocalPage({
   searchParams,
 }: {
-  searchParams: Promise<{ operation?: string; entite?: string }>;
+  searchParams: Promise<{ operation?: string; entite?: string; relance?: string }>;
 }) {
-  const { operation: opPre, entite: entPre } = await searchParams;
+  const { operation: opPre, entite: entPre, relance: relPre } = await searchParams;
 
   if (!isSupabaseConfigured()) {
     return (
@@ -43,12 +43,19 @@ export default async function VocalPage({
         Vous relisez et validez — rien n'est enregistré sans vous.
       </p>
 
+      {relPre && (
+        <div className="card notice" style={{ marginBottom: 14 }}>
+          Ce compte rendu <strong>clôturera la relance</strong> associée dès son enregistrement.
+        </div>
+      )}
+
       <VoiceCr
         entites={entites ?? []}
         operations={operations ?? []}
         today={today}
         prefillEntite={entPre}
         prefillOperation={opPre}
+        relanceId={relPre}
       />
     </main>
   );

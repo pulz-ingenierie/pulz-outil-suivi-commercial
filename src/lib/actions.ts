@@ -273,6 +273,17 @@ export async function createCr(fd: FormData) {
     }
   }
 
+  // Compte rendu généré depuis une relance : on la clôt (faite) et on la relie
+  // au compte rendu qui la « résout ».
+  const relanceId = strOrNull(fd, "relance_id");
+  if (relanceId) {
+    await supabase
+      .from("relances")
+      .update({ statut: "faite", cr_resultat_id: cr.id })
+      .eq("id", relanceId)
+      .eq("org_id", org_id);
+  }
+
   revalidatePath("/");
   revalidatePath("/relances");
   revalidatePath("/entites");
