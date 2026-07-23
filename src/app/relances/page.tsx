@@ -1,0 +1,199 @@
+import Link from "next/link";
+import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
+import { createRelance, updateRelance } from "@/lib/actions";
+import { envoyerRappelsMaintenant } from "@/lib/admin-actions";
+import { getIdentite } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
+
+function dateFr(d: string): string {
+  try {
+    return new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+  } catch {
+    return d;
+  }
+}
+
+function plusJours(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+type Rel = {
+  id: string;
+  objet: string;
+  date_echeance: string;
+  auto: boolean;
+  operations: { nom: string } | null;
+  entites: { nom: string } | null;
+};
+
+function RelanceCard({ r, today }: { r: Rel; today: string }) {
+  const enRetard = r.date_echeance < today;
+  const cible = r.operations?.nom ?? r.entites?.nom ?? null;
+  return (
+    <div className={`relcard${enRetard ? " late" : ""}`}>
+      <div className="rel-main">
+        <div className="rel-obj">{r.objet}</div>
+        <div className="rel-meta">
+          {cible && <span className="rel-cible">{cible}</span>}
+          <span className={`rel-date${enRetard ? " crit" : ""}`}>{dateFr(r.date_echeance)}</span>
+          {r.auto && <span className="pill auto">proposée par l'IA</span>}
+        </div>
+      </div>
+      <div className="rel-acts">
+        <form action={updateRelance}>
+          <input type="hidden" name="id" value={r.id} />
+          <input type="hidden" name="action" value="faite" />
+          <button className="btn mini" type="submit">✓ Faite</button>
+        </form>
+        <form action={updateRelance} className="rel-report">
+          <input type="hidden" name="id" value={r.id} />
+          <input type="hidden" name="action" value="reporter" />
+          <input type="date" name="date_echeance" defaultValue={plusJours(7)} aria-label="Reporter au" />
+          <button className="btn ghost mini" type="submit">Reporter</button>
+        </form>
+        <form action={updateRelance}>
+          <input type="hidden" name="id" value={r.id} />
+          <input type="hidden" name="action" value="abandonner" />
+          <button className="btn ghost mini danger" type="submit">Abandonner</button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default async function Relances({
+  searchParams,
+}: {
+  searchParams: Promise<{ dest?: string; rel?: string; ign?: string; cfg?: string }>;
+}) {
+  const sp = await searchParams;
+  if (!isSupabaseConfigured()) {
+    return (
+      <main className="wrap">
+        <Link className="back" href="/">← Retour au tableau de bord</Link>
+        <div className="card notice"><h2>Base de données à connecter</h2></div>
+      </main>
+    );
+  }
+
+  const supabase = getServerSupabase()!;
+  const [{ data: relances }, { data: operations }, { data: entites }, { data: utilisateurs }] = await Promise.all([
+    supabase
+      .from("relances")
+      .select("id, objet, date_echeance, auto, operations(nom), entites(nom)")
+      .eq("statut", "a_faire")
+      .order("date_echeance", { ascending: true }),
+    supabase.from("operations").select("id, nom").order("created_at", { ascending: false }),
+    supabase.from("entites").select("id, nom").order("nom"),
+    supabase.from("utilisateurs").select("id, nom").eq("actif", true).order("nom"),
+  ]);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const list = (relances ?? []) as unknown as Rel[];
+  const enRetard = list.filter((r) => r.date_echeance < today);
+  const aujourdhui = list.filter((r) => r.date_echeance === today);
+  const aVenir = list.filter((r) => r.date_echeance > today);
+
+  const { profil } = await getIdentite();
+  const estPilote = profil?.role === "pilote";
+
+  // Bannière de résultat après un envoi manuel (?dest=&rel=&ign=&cfg=).
+  const aEnvoye = sp.dest !== undefined;
+  const envoiConfigure = sp.cfg === "1";
+
+  return (
+    <main className="wrap">
+      <Link className="back" href="/">← Retour au tableau de bord</Link>
+      <div className="fiche-head">
+        <div>
+          <div className="eyebrow">Suites à donner</div>
+          <h1>Relances <span className="count-badge">{list.length}</span></h1>
+        </div>
+        {estPilote && (
+          <form action={envoyerRappelsMaintenant}>
+            <button className="btn ghost" type="submit">✉️ Envoyer les rappels maintenant</button>
+          </form>
+        )}
+      </div>
+
+      {aEnvoye && (
+        <div className={`card notice${envoiConfigure ? "" : " err"}`} style={{ marginBottom: 14 }}>
+          {envoiConfigure
+            ? `Rappels envoyés : ${sp.dest} destinataire(s), ${sp.rel} relance(s).${
+                Number(sp.ign) > 0 ? ` ${sp.ign} relance(s) sans responsable/e-mail non envoyée(s).` : ""
+              }`
+            : "L'envoi d'e-mails n'est pas encore configuré (clé Resend manquante). Les rappels s'afficheront ici en attendant."}
+        </div>
+      )}
+
+      {list.length === 0 && (
+        <div className="card"><span className="empty">Aucune relance en attente. Tout est à jour.</span></div>
+      )}
+
+      {enRetard.length > 0 && (
+        <section className="rel-group">
+          <h2 className="rel-h crit">En retard <span className="tnum">{enRetard.length}</span></h2>
+          {enRetard.map((r) => <RelanceCard key={r.id} r={r} today={today} />)}
+        </section>
+      )}
+      {aujourdhui.length > 0 && (
+        <section className="rel-group">
+          <h2 className="rel-h">Pour aujourd'hui <span className="tnum">{aujourdhui.length}</span></h2>
+          {aujourdhui.map((r) => <RelanceCard key={r.id} r={r} today={today} />)}
+        </section>
+      )}
+      {aVenir.length > 0 && (
+        <section className="rel-group">
+          <h2 className="rel-h muted-h">À venir <span className="tnum">{aVenir.length}</span></h2>
+          {aVenir.map((r) => <RelanceCard key={r.id} r={r} today={today} />)}
+        </section>
+      )}
+
+      {/* Créer une relance à la main */}
+      <section className="rel-group">
+        <h2 className="rel-h muted-h">Ajouter une relance</h2>
+        <form action={createRelance} className="form card">
+          <label className="field">
+            <span className="lab">Objet <em>*</em></span>
+            <input name="objet" required placeholder="Ex. Rappeler pour la remise de l'offre" />
+          </label>
+          <div className="row2">
+            <label className="field">
+              <span className="lab">Échéance</span>
+              <input type="date" name="date_echeance" defaultValue={plusJours(7)} />
+            </label>
+            <label className="field">
+              <span className="lab">Assignée à</span>
+              <select name="assignee_id" defaultValue="">
+                <option value="">— Personne —</option>
+                {(utilisateurs ?? []).map((u: any) => <option key={u.id} value={u.id}>{u.nom}</option>)}
+              </select>
+            </label>
+          </div>
+          <div className="row2">
+            <label className="field">
+              <span className="lab">Opération liée</span>
+              <select name="operation_id" defaultValue="">
+                <option value="">— Aucune —</option>
+                {(operations ?? []).map((o: any) => <option key={o.id} value={o.id}>{o.nom}</option>)}
+              </select>
+            </label>
+            <label className="field">
+              <span className="lab">Entité liée</span>
+              <select name="entite_id" defaultValue="">
+                <option value="">— Aucune —</option>
+                {(entites ?? []).map((e: any) => <option key={e.id} value={e.id}>{e.nom}</option>)}
+              </select>
+            </label>
+          </div>
+          <div className="form-foot">
+            <button className="btn" type="submit">Créer la relance</button>
+          </div>
+        </form>
+      </section>
+    </main>
+  );
+}
