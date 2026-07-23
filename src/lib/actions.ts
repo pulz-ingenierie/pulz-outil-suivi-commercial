@@ -205,6 +205,50 @@ export async function createCr(fd: FormData) {
     await supabase.from("cr_operations").insert(operationIds.map((operation_id) => ({ cr_id: cr.id, operation_id })));
   }
 
+  // Personnes détectées par l'IA → contacts (créés s'ils n'existent pas déjà,
+  // rattachés à leur structure). On ne garde que celles dont la structure a été
+  // résolue à une entité connue (entite_id).
+  const contactsRaw = str(fd, "contacts_json");
+  if (contactsRaw) {
+    let persons: any[] = [];
+    try { const p = JSON.parse(contactsRaw); if (Array.isArray(p)) persons = p; } catch { persons = []; }
+    const nets = persons
+      .map((p) => ({
+        nom: typeof p?.nom === "string" ? p.nom.trim() : "",
+        prenom: typeof p?.prenom === "string" && p.prenom.trim() ? p.prenom.trim() : null,
+        fonction: typeof p?.fonction === "string" && p.fonction.trim() ? p.fonction.trim() : null,
+        entite_id: typeof p?.entite_id === "string" && p.entite_id ? p.entite_id : null,
+      }))
+      .filter((p) => p.nom && p.entite_id);
+    if (nets.length) {
+      const entIds = [...new Set(nets.map((p) => p.entite_id as string))];
+      const { data: existing } = await supabase
+        .from("contacts")
+        .select("nom, prenom, entite_id")
+        .in("entite_id", entIds);
+      const key = (eid: string, nom: string, prenom: string | null) =>
+        `${eid}|${nom.toLowerCase()}|${(prenom ?? "").toLowerCase()}`;
+      const seen = new Set((existing ?? []).map((c: any) => key(c.entite_id, c.nom ?? "", c.prenom ?? null)));
+      const toInsert = nets.filter((p) => {
+        const k = key(p.entite_id as string, p.nom, p.prenom);
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+      if (toInsert.length) {
+        await supabase.from("contacts").insert(
+          toInsert.map((p) => ({
+            entite_id: p.entite_id,
+            nom: p.nom,
+            prenom: p.prenom,
+            fonction: p.fonction,
+            source: "vocal",
+          })),
+        );
+      }
+    }
+  }
+
   // Suites suggérées par l'IA → relances (auto) rattachées au compte rendu et à
   // la 1re opération/entité concernée. L'utilisateur pourra les gérer ensuite.
   if (synthese && typeof synthese === "object" && Array.isArray((synthese as any).relances)) {
@@ -231,6 +275,7 @@ export async function createCr(fd: FormData) {
 
   revalidatePath("/");
   revalidatePath("/relances");
+  revalidatePath("/entites");
   for (const opId of operationIds) revalidatePath(`/operations/${opId}`);
   redirect(operationIds[0] ? `/operations/${operationIds[0]}` : "/");
 }

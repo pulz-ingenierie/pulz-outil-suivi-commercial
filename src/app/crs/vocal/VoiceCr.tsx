@@ -3,17 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createCr } from "@/lib/actions";
+import type { ContactExtrait, Synthese } from "@/lib/synthese";
 
 type Opt = { id: string; nom: string };
-type Synthese = {
-  type_rdv: string;
-  date_rdv: string | null;
-  resume: string;
-  points_cles: string[];
-  entites: string[];
-  operations: string[];
-  relances: { objet: string; dans_jours: number }[];
-};
 
 const TYPES_RDV = [
   { v: "dejeuner", l: "Déjeuner" },
@@ -75,6 +67,8 @@ export default function VoiceCr({
   const [instrRec, setInstrRec] = useState<"idle" | "recording">("idle");
   const [selEnt, setSelEnt] = useState<Set<string>>(new Set(prefillEntite ? [prefillEntite] : []));
   const [selOp, setSelOp] = useState<Set<string>>(new Set(prefillOperation ? [prefillOperation] : []));
+  // Personnes (contacts) détectées par l'IA, à créer à l'enregistrement.
+  const [persons, setPersons] = useState<ContactExtrait[]>([]);
   // La liste de rattachement à la main est masquée par défaut : on ne coche
   // rien au préalable. L'IA propose, et on ouvre ce volet pour corriger.
   const [rattachOpen, setRattachOpen] = useState<boolean>(Boolean(prefillEntite || prefillOperation));
@@ -175,6 +169,7 @@ export default function VoiceCr({
     setSynthese(s);
     setTypeRdv(s.type_rdv || "autre");
     if (s.date_rdv) setDateRdv(s.date_rdv);
+    setPersons(s.contacts ?? []);
     const entByName = new Map(entites.map((e) => [e.nom, e.id]));
     const opByName = new Map(operations.map((o) => [o.nom, o.id]));
     const eIds = s.entites.map((n) => entByName.get(n)).filter((x): x is string => Boolean(x));
@@ -315,6 +310,16 @@ export default function VoiceCr({
   const opName = new Map(operations.map((o) => [o.id, o.nom]));
   const selEntNames = [...selEnt].map((id) => ({ id, nom: entName.get(id) ?? "?" }));
   const selOpNames = [...selOp].map((id) => ({ id, nom: opName.get(id) ?? "?" }));
+
+  // Personnes → on résout la structure (libellé) vers une entité connue.
+  const entIdByNom = new Map(entites.map((e) => [e.nom.toLowerCase(), e.id]));
+  const personsPayload = persons.map((p) => ({
+    nom: p.nom,
+    prenom: p.prenom,
+    fonction: p.fonction,
+    entite_id: p.entite ? entIdByNom.get(p.entite.toLowerCase()) ?? null : null,
+  }));
+  const removePerson = (idx: number) => setPersons((prev) => prev.filter((_, i) => i !== idx));
 
   const canSave = transcription.trim().length > 0 && (selEnt.size > 0 || selOp.size > 0);
 
@@ -493,6 +498,7 @@ export default function VoiceCr({
           {/* Champs réellement postés au serveur (cachés) */}
           {[...selEnt].map((id) => <input key={id} type="hidden" name="entite_ids" value={id} />)}
           {[...selOp].map((id) => <input key={id} type="hidden" name="operation_ids" value={id} />)}
+          <input type="hidden" name="contacts_json" value={JSON.stringify(personsPayload)} />
 
           <button
             type="button"
@@ -535,6 +541,28 @@ export default function VoiceCr({
             </div>
           )}
         </div>
+
+        {persons.length > 0 && (
+          <div className="field">
+            <span className="lab">Personnes évoquées</span>
+            <div className="rattach-chips">
+              {persons.map((p, i) => {
+                const nomComplet = [p.prenom, p.nom].filter(Boolean).join(" ") || p.nom;
+                return (
+                  <span className="chip rm" key={i}>
+                    {nomComplet}
+                    {p.fonction ? ` · ${p.fonction}` : ""}
+                    {p.entite ? ` — ${p.entite}` : ""}
+                    <button type="button" aria-label={`Retirer ${nomComplet}`} onClick={() => removePerson(i)}>×</button>
+                  </span>
+                );
+              })}
+            </div>
+            <p className="hint" style={{ marginTop: 2 }}>
+              Les personnes rattachées à une structure connue seront ajoutées à l'annuaire (onglet Réseau → la structure → ses contacts).
+            </p>
+          </div>
+        )}
 
         <label className="field">
           <span className="lab">État</span>

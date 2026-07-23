@@ -4,6 +4,14 @@
 
 export const TYPES_RDV = ["dejeuner", "appel", "visite", "salon", "autre"] as const;
 
+// Une personne physique évoquée (à distinguer d'une structure/organisation).
+export interface ContactExtrait {
+  nom: string;
+  prenom: string | null;
+  fonction: string | null;
+  entite: string | null; // structure de rattachement (libellé)
+}
+
 export interface Synthese {
   type_rdv: string;
   date_rdv: string | null;
@@ -11,6 +19,7 @@ export interface Synthese {
   points_cles: string[];
   entites: string[];
   operations: string[];
+  contacts: ContactExtrait[];
   relances: { objet: string; dans_jours: number }[];
 }
 
@@ -65,6 +74,17 @@ export function validateSynthese(
         }))
         .filter((r) => r.objet.length > 0)
     : [];
+  const contacts = Array.isArray(o.contacts)
+    ? o.contacts
+        .map((c) => (c ?? {}) as Record<string, unknown>)
+        .map((c) => ({
+          nom: typeof c.nom === "string" ? c.nom.trim() : "",
+          prenom: typeof c.prenom === "string" && c.prenom.trim() ? c.prenom.trim() : null,
+          fonction: typeof c.fonction === "string" && c.fonction.trim() ? c.fonction.trim() : null,
+          entite: typeof c.entite === "string" && c.entite.trim() ? c.entite.trim() : null,
+        }))
+        .filter((c) => c.nom.length > 0)
+    : [];
   return {
     type_rdv,
     date_rdv,
@@ -72,6 +92,7 @@ export function validateSynthese(
     points_cles: asStringArray(o.points_cles),
     entites: keepKnown(asStringArray(o.entites), knownEntites),
     operations: keepKnown(asStringArray(o.operations), knownOps),
+    contacts,
     relances,
   };
 }

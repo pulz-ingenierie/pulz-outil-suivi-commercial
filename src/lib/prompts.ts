@@ -19,6 +19,12 @@ Règles absolues :
 - N'infère jamais de montant d'honoraires ou de budget si ce n'est pas dit.
 - Si une information demandée est absente, laisse le champ vide, la liste vide ou null.
 
+DISTINCTION IMPORTANTE — structure vs personne :
+- Une STRUCTURE (organisation) est une entité morale : mairie, bailleur, promoteur, agence d'architecture, entreprise, collectivité… → elle va dans "entites".
+- Une PERSONNE physique (un individu, avec un nom et souvent un prénom et une fonction) → elle va dans "contacts", JAMAIS dans "entites".
+- Exemple : « Louis Dujardin, directeur de la SIGH » → contact { nom: "Dujardin", prenom: "Louis", fonction: "directeur", entite: "SIGH" } ; et "SIGH" est la structure (dans "entites" si elle est connue).
+- Rattache chaque personne à sa structure via le champ "entite".
+
 Entités déjà connues dans l'outil (rattache uniquement à celles réellement évoquées, avec leur libellé EXACT) :
 ${listeEntites}
 
@@ -31,8 +37,9 @@ Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, de la forme :
   "date_rdv": "AAAA-MM-JJ si la date du rendez-vous est déductible de la dictée (résous « hier », « mardi dernier », etc. par rapport à aujourd'hui) ; sinon null",
   "resume": "2 à 4 phrases neutres résumant l'échange",
   "points_cles": ["point important", "..."],
-  "entites": ["libellé exact d'une entité connue évoquée"],
+  "entites": ["libellé exact d'une STRUCTURE connue évoquée"],
   "operations": ["libellé exact d'une opération connue évoquée"],
+  "contacts": [{ "nom": "nom de famille", "prenom": "prénom ou null", "fonction": "fonction ou null", "entite": "libellé de sa structure ou null" }],
   "relances": [{ "objet": "action de suivi à faire", "dans_jours": 14 }]
 }`;
 }
@@ -57,6 +64,7 @@ Règles absolues :
 - N'infère jamais de montant.
 - Nous sommes le ${today} (AAAA-MM-JJ) : résous les dates relatives (« hier », « mardi dernier »).
 - Pour les rattachements, n'utilise que les libellés EXACTS existants ci-dessous ; si la consigne demande de retirer un rattachement, enlève-le de la liste.
+- Une STRUCTURE (organisation) va dans "entites" ; une PERSONNE physique (nom, prénom, fonction) va dans "contacts" — jamais l'inverse.
 
 Entités connues :
 ${listeEntites}
@@ -70,8 +78,9 @@ Réponds UNIQUEMENT par l'objet JSON complet et corrigé, sans texte autour, de 
   "date_rdv": "AAAA-MM-JJ ou null",
   "resume": "…",
   "points_cles": ["…"],
-  "entites": ["libellé exact d'une entité connue"],
+  "entites": ["libellé exact d'une STRUCTURE connue"],
   "operations": ["libellé exact d'une opération connue"],
+  "contacts": [{ "nom": "…", "prenom": "… ou null", "fonction": "… ou null", "entite": "structure ou null" }],
   "relances": [{ "objet": "…", "dans_jours": 14 }]
 }`;
 }
