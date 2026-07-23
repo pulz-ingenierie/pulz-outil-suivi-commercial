@@ -15,7 +15,7 @@ const STATUT_VAR: Record<string, string> = {
   perdu: "--s-perdu",
 };
 
-// Version allégée d'une opération (ce dont les vues ont besoin).
+// Version allégée d'une affaire.
 type Op = {
   id: string;
   nom: string;
@@ -25,10 +25,32 @@ type Op = {
 
 type Ent = { id: string; nom: string };
 
+type Prospect = {
+  id: string;
+  nom: string;
+  type: string;
+  ville: string | null;
+  dernierContact: string | null;
+  silencieux: boolean;
+  dormant: boolean;
+  ops: Op[];
+};
+
+type Contact = {
+  id: string;
+  nom: string;
+  prenom: string | null;
+  fonction: string | null;
+  tel: string | null;
+  email: string | null;
+  entiteNom: string | null;
+};
+
 type Props = {
   operations: Op[];
-  // Pour chaque opération : les prospects (entités) qui y sont rattachés.
   opEntites: Record<string, Ent[]>;
+  prospects: Prospect[];
+  contacts: Contact[];
 };
 
 type Vue = "phase" | "operation" | "prospect";
@@ -38,8 +60,14 @@ function euro(n: number | null): string | null {
   return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n) + " €";
 }
 
-// Puce colorée + libellé de l'étape (utilisée dans les vues « par opération » et
-// « par prospect » où l'étape n'est pas déjà le titre du groupe).
+function dateFr(d: string): string {
+  try {
+    return new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+  } catch {
+    return d;
+  }
+}
+
 function EtapeChip({ statut }: { statut: OperationStatut }) {
   return (
     <span className="chip">
@@ -49,8 +77,7 @@ function EtapeChip({ statut }: { statut: OperationStatut }) {
   );
 }
 
-// Une carte d'opération cliquable. `avecEtape` affiche la puce d'étape ;
-// `avecProspects` affiche les prospects rattachés.
+// Carte d'une affaire (cliquable → sa fiche).
 function CarteOp({
   op,
   entites,
@@ -83,7 +110,7 @@ function CarteOp({
   );
 }
 
-export default function PipelineViews({ operations, opEntites }: Props) {
+export default function PipelineViews({ operations, opEntites, prospects, contacts }: Props) {
   const [vue, setVue] = useState<Vue>("phase");
 
   return (
@@ -100,33 +127,34 @@ export default function PipelineViews({ operations, opEntites }: Props) {
         </button>
       </div>
 
-      {vue === "phase" && <VuePhase operations={operations} opEntites={opEntites} />}
+      {vue === "phase" && <VuePhase operations={operations} />}
       {vue === "operation" && <VueOperation operations={operations} opEntites={opEntites} />}
-      {vue === "prospect" && <VueProspect operations={operations} opEntites={opEntites} />}
+      {vue === "prospect" && <VueProspect prospects={prospects} contacts={contacts} />}
     </>
   );
 }
 
-// --- Vue « Par phase » : un bandeau par étape, la liste des affaires dedans.
-function VuePhase({ operations, opEntites }: Props) {
+// --- Vue « Par phase » : une ligne par étape → page dédiée listant ses affaires.
+function VuePhase({ operations }: { operations: Op[] }) {
   return (
     <div className="vlist">
       {STATUT_ORDRE.map((statut) => {
-        const list = operations.filter((o) => o.statut === statut);
-        return (
-          <div className="grp" key={statut}>
-            <h3>
-              <span className="dot" style={{ background: `var(${STATUT_VAR[statut]})` }} />
-              {STATUT_LABELS[statut]}
-              <span className="cnt tnum">{list.length}</span>
-            </h3>
-            {list.length ? (
-              list.map((o) => (
-                <CarteOp key={o.id} op={o} entites={opEntites[o.id] ?? []} avecProspects />
-              ))
-            ) : (
-              <div className="grp-vide">Aucune affaire à cette étape</div>
-            )}
+        const n = operations.filter((o) => o.statut === statut).length;
+        const contenu = (
+          <>
+            <span className="dot" style={{ background: `var(${STATUT_VAR[statut]})` }} />
+            <span className="pnm">{STATUT_LABELS[statut]}</span>
+            <span className="cnt tnum">{n}</span>
+            {n > 0 && <span className="chev">›</span>}
+          </>
+        );
+        return n > 0 ? (
+          <Link className="phase-row" href={`/operations/phase/${statut}`} key={statut}>
+            {contenu}
+          </Link>
+        ) : (
+          <div className="phase-row vide" key={statut}>
+            {contenu}
           </div>
         );
       })}
@@ -134,72 +162,98 @@ function VuePhase({ operations, opEntites }: Props) {
   );
 }
 
-// --- Vue « Par opération » : toutes les affaires, classées par ordre alphabétique.
-function VueOperation({ operations, opEntites }: Props) {
-  const list = [...operations].sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
-  if (!list.length) {
+// --- Vue « Par opération » : toutes les affaires, dans l'ordre d'entrée dans
+// l'outil (la plus récente en haut — les données arrivent déjà triées ainsi).
+function VueOperation({ operations, opEntites }: { operations: Op[]; opEntites: Record<string, Ent[]> }) {
+  if (!operations.length) {
     return <div className="card"><span className="empty">Aucune opération pour le moment.</span></div>;
   }
   return (
     <div className="vlist">
-      {list.map((o) => (
+      {operations.map((o) => (
         <CarteOp key={o.id} op={o} entites={opEntites[o.id] ?? []} avecEtape avecProspects />
       ))}
     </div>
   );
 }
 
-// --- Vue « Par prospect » : regroupées par prospect (entité) rattaché.
-function VueProspect({ operations, opEntites }: Props) {
-  // On construit, pour chaque prospect, la liste des affaires où il apparaît.
-  const parProspect = new Map<string, { nom: string; ops: Op[] }>();
-  const sansProspect: Op[] = [];
+// --- Vue « Par prospect » : deux sous-onglets — Prospects (structures) et
+// Contacts (personnes).
+function VueProspect({ prospects, contacts }: { prospects: Prospect[]; contacts: Contact[] }) {
+  const [sous, setSous] = useState<"prospects" | "contacts">("prospects");
+  return (
+    <>
+      <div className="seg sub" role="tablist" aria-label="Prospects ou contacts">
+        <button className={sous === "prospects" ? "on" : ""} onClick={() => setSous("prospects")}>
+          Prospects ({prospects.length})
+        </button>
+        <button className={sous === "contacts" ? "on" : ""} onClick={() => setSous("contacts")}>
+          Contacts ({contacts.length})
+        </button>
+      </div>
 
-  for (const o of operations) {
-    const ents = opEntites[o.id] ?? [];
-    if (ents.length === 0) {
-      sansProspect.push(o);
-      continue;
-    }
-    for (const e of ents) {
-      const g = parProspect.get(e.id) ?? { nom: e.nom, ops: [] };
-      g.ops.push(o);
-      parProspect.set(e.id, g);
-    }
+      {sous === "prospects" ? <ListeProspects prospects={prospects} /> : <ListeContacts contacts={contacts} />}
+    </>
+  );
+}
+
+function ListeProspects({ prospects }: { prospects: Prospect[] }) {
+  if (!prospects.length) {
+    return <div className="card"><span className="empty">Aucun prospect enregistré.</span></div>;
   }
-
-  const groupes = [...parProspect.values()].sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
-
-  if (!groupes.length && !sansProspect.length) {
-    return <div className="card"><span className="empty">Aucune opération pour le moment.</span></div>;
-  }
-
   return (
     <div className="vlist">
-      {groupes.map((g) => (
-        <div className="grp" key={g.nom}>
+      {prospects.map((p) => (
+        <div className="grp" key={p.id}>
           <h3>
             <span className="dot ent-dot" />
-            {g.nom}
-            <span className="cnt tnum">{g.ops.length}</span>
+            {p.nom}
+            <span className="cnt tnum">{p.ops.length}</span>
           </h3>
-          {g.ops.map((o) => (
-            <CarteOp key={o.id} op={o} entites={[]} avecEtape />
-          ))}
+          <div className="grp-meta">
+            <span className="chip">{p.type}</span>
+            {p.ville && <span className="grp-sub last">{p.ville}</span>}
+            <span className="last">
+              {p.dernierContact ? `Dernier contact : ${dateFr(p.dernierContact)}` : "Jamais rencontré"}
+            </span>
+            {p.dormant && <span className="pill dormant">en sommeil</span>}
+            {p.silencieux && p.ops.length === 0 && <span className="pill silence">à réchauffer</span>}
+          </div>
+          {p.ops.length ? (
+            p.ops.map((o) => <CarteOp key={o.id} op={o} entites={[]} avecEtape />)
+          ) : (
+            <div className="grp-vide">Aucune affaire en cours — prospect du réseau.</div>
+          )}
         </div>
       ))}
-      {sansProspect.length > 0 && (
-        <div className="grp" key="__sans__">
-          <h3>
-            <span className="dot ent-dot" style={{ opacity: 0.4 }} />
-            Sans prospect rattaché
-            <span className="cnt tnum">{sansProspect.length}</span>
-          </h3>
-          {sansProspect.map((o) => (
-            <CarteOp key={o.id} op={o} entites={[]} avecEtape />
-          ))}
-        </div>
-      )}
+    </div>
+  );
+}
+
+function ListeContacts({ contacts }: { contacts: Contact[] }) {
+  if (!contacts.length) {
+    return <div className="card"><span className="empty">Aucun contact enregistré pour le moment.</span></div>;
+  }
+  return (
+    <div className="vlist">
+      {contacts.map((c) => {
+        const nomComplet = [c.prenom, c.nom].filter(Boolean).join(" ") || c.nom;
+        return (
+          <div className="contact-card" key={c.id}>
+            <div className="contact-main">
+              <div className="cnm">{nomComplet}</div>
+              <div className="cfn">
+                {c.fonction && <span>{c.fonction}</span>}
+                {c.entiteNom && <span className="chip ent">{c.entiteNom}</span>}
+              </div>
+            </div>
+            <div className="contact-acts">
+              {c.tel && <a className="btn ghost mini" href={`tel:${c.tel}`}>Appeler</a>}
+              {c.email && <a className="btn ghost mini" href={`mailto:${c.email}`}>E-mail</a>}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

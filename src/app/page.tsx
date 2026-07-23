@@ -45,12 +45,14 @@ export default async function Dashboard() {
     { data: entites },
     { data: liens },
     { data: crEnt },
+    { data: contactsRaw },
   ] = await Promise.all([
     supabase.from("operations").select("*").order("created_at", { ascending: false }),
     supabase.from("relances").select("*").eq("statut", "a_faire"),
     supabase.from("entites").select("id, nom, type, ville, statut_vie"),
     supabase.from("entite_operation").select("entite_id, operation_id, entites(nom)"),
     supabase.from("cr_entites").select("entite_id, crs(date_rdv)"),
+    supabase.from("contacts").select("id, nom, prenom, fonction, tel, email, entites(nom)"),
   ]);
 
   if (opsErr) {
@@ -71,10 +73,6 @@ export default async function Dashboard() {
 
   const actives = operations.filter((o) => o.statut !== "gagne" && o.statut !== "perdu").length;
   const enRetard = rels.filter((r) => r.date_echeance < today).length;
-
-  // --- Annuaire réseau : entités du réseau, dernier contact, alertes de silence.
-  // Entités déjà engagées dans une opération (on ne les remet pas dans l'annuaire).
-  const avecOp = new Set<string>((liens ?? []).map((l: any) => l.entite_id));
 
   // Pour chaque opération : les prospects (entités) qui y sont rattachés.
   // Sert aux vues « Par prospect » et à l'affichage des portes d'entrée.
@@ -99,34 +97,71 @@ export default async function Dashboard() {
     return !d || d < seuilSilence;
   };
 
+  // Version allégée d'une affaire (juste ce dont les vues ont besoin).
+  const slim = (o: Operation) => ({
+    id: o.id,
+    nom: o.nom,
+    statut: o.statut,
+    montant_estime: o.montant_estime,
+  });
+  const opById = new Map(operations.map((o) => [o.id, o]));
+
+  // Pour chaque prospect (entité) : la liste de ses affaires.
+  const entiteOps: Record<string, ReturnType<typeof slim>[]> = {};
+  for (const l of (liens ?? []) as any[]) {
+    if (!l.entite_id || !l.operation_id) continue;
+    const op = opById.get(l.operation_id);
+    if (op) (entiteOps[l.entite_id] ??= []).push(slim(op));
+  }
+
   type Ent = { id: string; nom: string; type: string; ville: string | null; statut_vie: string | null };
   const toutesEntites = (entites ?? []) as Ent[];
-  // L'annuaire liste les entités « au chaud » (dans le réseau) qui ne sont pas
-  // déjà portées par une opération : celles qu'il ne faut pas laisser refroidir.
-  const annuaire = toutesEntites
-    .filter((e) => !avecOp.has(e.id))
-    .sort((a, b) => {
-      const da = dernierContact.get(a.id) ?? "";
-      const db = dernierContact.get(b.id) ?? "";
-      return da < db ? -1 : da > db ? 1 : a.nom.localeCompare(b.nom);
-    });
-  const silence = annuaire.filter((e) => estSilencieux(e.id)).length;
+
+  // Vue « Par prospect » : TOUS les prospects (avec ou sans affaire), avec leur
+  // état (à réchauffer si silence > 2 mois, en sommeil), classés par nom.
+  const prospects = toutesEntites
+    .map((e) => ({
+      id: e.id,
+      nom: e.nom,
+      type: TYPE_ENTITE[e.type] ?? e.type,
+      ville: e.ville,
+      dernierContact: dernierContact.get(e.id) ?? null,
+      silencieux: estSilencieux(e.id),
+      dormant: e.statut_vie === "dormant",
+      ops: entiteOps[e.id] ?? [],
+    }))
+    .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+
+  // Répertoire des contacts (les personnes), classés par nom.
+  const contacts = ((contactsRaw ?? []) as any[])
+    .map((c) => ({
+      id: c.id as string,
+      nom: c.nom as string,
+      prenom: (c.prenom ?? null) as string | null,
+      fonction: (c.fonction ?? null) as string | null,
+      tel: (c.tel ?? null) as string | null,
+      email: (c.email ?? null) as string | null,
+      entiteNom: (c.entites?.nom ?? null) as string | null,
+    }))
+    .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+
+  // Indicateur « à réchauffer » : prospects silencieux sans affaire en cours.
+  const silence = prospects.filter((p) => p.silencieux && p.ops.length === 0).length;
 
   return (
     <main className="wrap">
       <div className="page-actions">
         <Link className="btn" href="/crs/vocal">🎙 Dicter un compte rendu</Link>
-        <Link className="btn ghost" href="/operations/nouvelle">+ Nouvelle opération</Link>
         <Link className="btn ghost" href="/crs/nouveau">Compte rendu écrit</Link>
+        <Link className="btn ghost" href="/operations/nouvelle">+ Nouvelle opération</Link>
         <Link className="btn ghost" href="/relances">Relances</Link>
-        <Link className="btn ghost" href="/entites">Réseau</Link>
       </div>
 
       <div className="kpis">
         <div className="kpi"><div className="n tnum">{actives}</div><div className="l">Opérations actives</div></div>
         <Link className="kpi crit link" href="/relances"><div className="n tnum">{enRetard}</div><div className="l">Relances en retard</div></Link>
         <Link className="kpi warn link" href="/relances"><div className="n tnum">{rels.length}</div><div className="l">Relances à faire</div></Link>
-        <Link className="kpi link" href="/entites"><div className="n tnum">{silence}</div><div className="l">Contacts à réchauffer (+2 mois)</div></Link>
+        <div className="kpi"><div className="n tnum">{silence}</div><div className="l">Contacts à réchauffer (+2 mois)</div></div>
       </div>
 
       <div className="section-t">
@@ -134,48 +169,12 @@ export default async function Dashboard() {
         <span>le pilotage se fait par affaire — jamais par euro</span>
       </div>
 
-      <PipelineViews operations={operations} opEntites={opEntites} />
-
-      <div className="section-t" style={{ marginTop: 34 }}>
-        <h2>Annuaire réseau</h2>
-        <span>les entités du réseau sans opération en cours — à garder au chaud</span>
-      </div>
-
-      {annuaire.length ? (
-        <div className="netgrid">
-          {annuaire.map((e) => {
-            const dc = dernierContact.get(e.id) ?? null;
-            const froid = estSilencieux(e.id);
-            const dormant = e.statut_vie === "dormant";
-            return (
-              <div className="netcard" key={e.id}>
-                <div className="nhead">
-                  <span className="nnm">{e.nom}</span>
-                  <span className="typechip">{TYPE_ENTITE[e.type] ?? e.type}</span>
-                </div>
-                {e.ville && <div className="loc">{e.ville}</div>}
-                <div className="nfoot">
-                  <span className="last">
-                    {dc ? `Dernier contact : ${dateFr(dc)}` : "Jamais rencontrée"}
-                  </span>
-                  {dormant && <span className="pill dormant">en sommeil</span>}
-                  {froid && <span className="pill silence">à réchauffer</span>}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="card"><span className="empty">Tout le réseau est engagé dans une opération. Rien à réchauffer.</span></div>
-      )}
+      <PipelineViews
+        operations={operations.map(slim)}
+        opEntites={opEntites}
+        prospects={prospects}
+        contacts={contacts}
+      />
     </main>
   );
-}
-
-function dateFr(d: string): string {
-  try {
-    return new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
-  } catch {
-    return d;
-  }
 }
