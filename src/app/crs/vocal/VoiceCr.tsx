@@ -69,6 +69,9 @@ export default function VoiceCr({
   const [statut, setStatut] = useState("valide");
   const [selEnt, setSelEnt] = useState<Set<string>>(new Set(prefillEntite ? [prefillEntite] : []));
   const [selOp, setSelOp] = useState<Set<string>>(new Set(prefillOperation ? [prefillOperation] : []));
+  // La liste de rattachement à la main est masquée par défaut : on ne coche
+  // rien au préalable. L'IA propose, et on ouvre ce volet pour corriger.
+  const [rattachOpen, setRattachOpen] = useState<boolean>(Boolean(prefillEntite || prefillOperation));
 
   const recRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
@@ -179,6 +182,8 @@ export default function VoiceCr({
         // Pré-coche les entités / opérations reconnues par l'IA (par libellé).
         const entByName = new Map(entites.map((e) => [e.nom, e.id]));
         const opByName = new Map(operations.map((o) => [o.nom, o.id]));
+        const matched = s.entites.filter((n) => entByName.has(n)).length +
+          s.operations.filter((n) => opByName.has(n)).length;
         setSelEnt((prev) => {
           const next = new Set(prev);
           s.entites.forEach((n) => { const id = entByName.get(n); if (id) next.add(id); });
@@ -189,6 +194,8 @@ export default function VoiceCr({
           s.operations.forEach((n) => { const id = opByName.get(n); if (id) next.add(id); });
           return next;
         });
+        // L'IA n'a rien reconnu : on ouvre le volet pour rattacher à la main.
+        if (matched === 0) setRattachOpen(true);
       }
     } catch {
       setError("Synthèse indisponible.");
@@ -202,6 +209,11 @@ export default function VoiceCr({
     if (next.has(id)) next.delete(id); else next.add(id);
     setter(next);
   };
+
+  const entName = new Map(entites.map((e) => [e.id, e.nom]));
+  const opName = new Map(operations.map((o) => [o.id, o.nom]));
+  const selEntNames = [...selEnt].map((id) => ({ id, nom: entName.get(id) ?? "?" }));
+  const selOpNames = [...selOp].map((id) => ({ id, nom: opName.get(id) ?? "?" }));
 
   const canSave = transcription.trim().length > 0 && (selEnt.size > 0 || selOp.size > 0);
 
@@ -303,34 +315,75 @@ export default function VoiceCr({
           </label>
         </div>
 
-        <div className="row2">
-          <fieldset className="field pickset">
-            <legend className="lab">Entités concernées</legend>
-            {entites.length ? (
-              <div className="picklist">
-                {entites.map((e) => (
-                  <label className="check" key={e.id}>
-                    <input type="checkbox" name="entite_ids" value={e.id} checked={selEnt.has(e.id)} onChange={() => toggle(selEnt, setSelEnt, e.id)} />
-                    <span>{e.nom}</span>
-                  </label>
-                ))}
-              </div>
-            ) : <div className="empty">Aucune entité. <Link href="/entites/nouvelle">En créer une.</Link></div>}
-          </fieldset>
+        <div className="field">
+          <span className="lab">Rattachements</span>
+          {selEntNames.length + selOpNames.length === 0 ? (
+            <p className="hint" style={{ marginTop: 0 }}>
+              {synthese
+                ? "L'IA n'a rien reconnu automatiquement — rattachez à la main ci-dessous."
+                : "Après « Structurer avec l'IA », les entités et opérations concernées seront proposées ici. Vous pourrez toujours ajuster."}
+            </p>
+          ) : (
+            <div className="rattach-chips">
+              {selEntNames.map((e) => (
+                <span className="chip ent rm" key={e.id}>
+                  {e.nom}
+                  <button type="button" aria-label={`Retirer ${e.nom}`} onClick={() => toggle(selEnt, setSelEnt, e.id)}>×</button>
+                </span>
+              ))}
+              {selOpNames.map((o) => (
+                <span className="chip rm" key={o.id}>
+                  {o.nom}
+                  <button type="button" aria-label={`Retirer ${o.nom}`} onClick={() => toggle(selOp, setSelOp, o.id)}>×</button>
+                </span>
+              ))}
+            </div>
+          )}
 
-          <fieldset className="field pickset">
-            <legend className="lab">Opérations concernées</legend>
-            {operations.length ? (
-              <div className="picklist">
-                {operations.map((o) => (
-                  <label className="check" key={o.id}>
-                    <input type="checkbox" name="operation_ids" value={o.id} checked={selOp.has(o.id)} onChange={() => toggle(selOp, setSelOp, o.id)} />
-                    <span>{o.nom}</span>
-                  </label>
-                ))}
-              </div>
-            ) : <div className="empty">Aucune opération.</div>}
-          </fieldset>
+          {/* Champs réellement postés au serveur (cachés) */}
+          {[...selEnt].map((id) => <input key={id} type="hidden" name="entite_ids" value={id} />)}
+          {[...selOp].map((id) => <input key={id} type="hidden" name="operation_ids" value={id} />)}
+
+          <button
+            type="button"
+            className="btn ghost mini"
+            onClick={() => setRattachOpen((o) => !o)}
+            style={{ marginTop: 4 }}
+          >
+            {rattachOpen ? "Masquer" : "Rattacher / corriger à la main"}
+          </button>
+
+          {rattachOpen && (
+            <div className="row2" style={{ marginTop: 12 }}>
+              <fieldset className="field pickset">
+                <legend className="lab">Entités</legend>
+                {entites.length ? (
+                  <div className="picklist">
+                    {entites.map((e) => (
+                      <label className="check" key={e.id}>
+                        <input type="checkbox" checked={selEnt.has(e.id)} onChange={() => toggle(selEnt, setSelEnt, e.id)} />
+                        <span>{e.nom}</span>
+                      </label>
+                    ))}
+                  </div>
+                ) : <div className="empty">Aucune entité. <Link href="/entites/nouvelle">En créer une.</Link></div>}
+              </fieldset>
+
+              <fieldset className="field pickset">
+                <legend className="lab">Opérations</legend>
+                {operations.length ? (
+                  <div className="picklist">
+                    {operations.map((o) => (
+                      <label className="check" key={o.id}>
+                        <input type="checkbox" checked={selOp.has(o.id)} onChange={() => toggle(selOp, setSelOp, o.id)} />
+                        <span>{o.nom}</span>
+                      </label>
+                    ))}
+                  </div>
+                ) : <div className="empty">Aucune opération.</div>}
+              </fieldset>
+            </div>
+          )}
         </div>
 
         <label className="field">

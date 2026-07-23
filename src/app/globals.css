@@ -134,6 +134,11 @@ h1, h2, h3 { margin: 0; letter-spacing: -.01em; }
         color: var(--muted); border: 1px solid var(--line); }
 .chip .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 .chip.ent { background: var(--accent-soft); color: var(--accent-ink); border-color: transparent; }
+/* Étiquette de rattachement retirable (× pour enlever). */
+.rattach-chips { display: flex; flex-wrap: wrap; gap: 7px; margin: 2px 0 4px; }
+.chip.rm button { border: none; background: transparent; color: inherit; cursor: pointer;
+       font-size: 15px; line-height: 1; padding: 0 0 0 3px; opacity: .7; }
+.chip.rm button:hover { opacity: 1; }
 
 /* Vue « Par phase » : une ligne par étape, qui se déplie sur place (accordéon). */
 .phase-row { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; font: inherit;

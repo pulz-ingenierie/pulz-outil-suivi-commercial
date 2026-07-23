@@ -33,13 +33,14 @@ export default async function VocalPage({
       <Link className="back" href={opPre ? `/operations/${opPre}` : "/"}>← Retour</Link>
       <div className="fiche-head">
         <div>
-          <div className="eyebrow">Compte rendu vocal</div>
-          <h1>Dicter un compte rendu</h1>
+          <div className="eyebrow">Nouveau compte rendu</div>
+          <h1>Saisir un compte rendu</h1>
         </div>
       </div>
       <p className="muted" style={{ margin: "-8px 0 18px", maxWidth: 720 }}>
-        Parlez après votre rendez-vous : l'outil transcrit, puis l'IA vous propose un compte rendu
-        structuré et les suites à donner. Vous relisez et validez — rien n'est enregistré sans vous.
+        Après votre rendez-vous : <strong>dictez</strong> (le micro) <strong>ou écrivez</strong> le compte
+        rendu, puis laissez l'IA le structurer et proposer les entités, opérations et suites concernées.
+        Vous relisez et validez — rien n'est enregistré sans vous.
       </p>
 
       <VoiceCr
