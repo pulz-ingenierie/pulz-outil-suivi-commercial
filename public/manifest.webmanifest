@@ -2,7 +2,7 @@
   "name": "Suivi commercial",
   "short_name": "Suivi",
   "description": "Suivi commercial de l'organisation — module moeïa.",
-  "start_url": "/",
+  "start_url": "/crs/vocal",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
