@@ -96,7 +96,7 @@ export async function createOperation(fd: FormData) {
     await supabase.from("entite_operation").insert({ entite_id: entiteId, operation_id: op.id });
   }
 
-  revalidatePath("/");
+  revalidatePath("/tableau");
   redirect(`/operations/${op.id}`);
 }
 
@@ -122,7 +122,7 @@ export async function updateOperation(fd: FormData) {
     .eq("id", id);
   if (error) throw new Error(error.message);
 
-  revalidatePath("/");
+  revalidatePath("/tableau");
   revalidatePath(`/operations/${id}`);
   redirect(`/operations/${id}`);
 }
@@ -153,7 +153,7 @@ export async function createEntite(fd: FormData) {
   });
   if (error) throw new Error(error.message);
 
-  revalidatePath("/");
+  revalidatePath("/tableau");
   revalidatePath("/entites");
   redirect("/entites");
 }
@@ -284,11 +284,11 @@ export async function createCr(fd: FormData) {
       .eq("org_id", org_id);
   }
 
-  revalidatePath("/");
+  revalidatePath("/tableau");
   revalidatePath("/relances");
   revalidatePath("/entites");
   for (const opId of operationIds) revalidatePath(`/operations/${opId}`);
-  redirect(operationIds[0] ? `/operations/${operationIds[0]}` : "/");
+  redirect(operationIds[0] ? `/operations/${operationIds[0]}` : "/tableau");
 }
 
 // -----------------------------------------------------------------------------
@@ -314,7 +314,7 @@ export async function createRelance(fd: FormData) {
   });
   if (error) throw new Error(error.message);
 
-  revalidatePath("/");
+  revalidatePath("/tableau");
   revalidatePath("/relances");
   redirect("/relances");
 }
@@ -344,7 +344,7 @@ export async function updateRelance(fd: FormData) {
   const { error } = await supabase.from("relances").update(patch).eq("id", id);
   if (error) throw new Error(error.message);
 
-  revalidatePath("/");
+  revalidatePath("/tableau");
   revalidatePath("/relances");
   redirect("/relances");
 }

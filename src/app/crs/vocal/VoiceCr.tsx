@@ -576,7 +576,7 @@ export default function VoiceCr({
         </label>
 
         <div className="form-foot">
-          <Link className="btn ghost" href={prefillOperation ? `/operations/${prefillOperation}` : "/"}>Annuler</Link>
+          <Link className="btn ghost" href={prefillOperation ? `/operations/${prefillOperation}` : "/tableau"}>Annuler</Link>
           <button className="btn" type="submit" disabled={!canSave}>Enregistrer le compte rendu</button>
         </div>
       </form>

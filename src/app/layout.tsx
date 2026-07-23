@@ -51,7 +51,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         {profil && (
           <header className="topbar">
-            <Link className="brand" href="/" style={{ textDecoration: "none", color: "inherit" }}>
+            <Link className="brand" href="/tableau" style={{ textDecoration: "none", color: "inherit" }}>
               <span className="mark">◈</span>Suivi commercial <small>· moeïa</small>
             </Link>
             <div className="top-user">

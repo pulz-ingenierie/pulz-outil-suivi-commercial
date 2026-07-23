@@ -14,7 +14,7 @@ export default async function VocalPage({
   if (!isSupabaseConfigured()) {
     return (
       <main className="wrap">
-        <Link className="back" href="/">← Retour au tableau de bord</Link>
+        <Link className="back" href="/tableau">← Tableau de bord</Link>
         <div className="card notice"><h2>Base de données à connecter</h2></div>
       </main>
     );
@@ -30,7 +30,9 @@ export default async function VocalPage({
 
   return (
     <main className="wrap">
-      <Link className="back" href={opPre ? `/operations/${opPre}` : "/"}>← Retour</Link>
+      <Link className="back" href={opPre ? `/operations/${opPre}` : "/tableau"}>
+        {opPre ? "← Retour" : "← Tableau de bord"}
+      </Link>
       <div className="fiche-head">
         <div>
           <div className="eyebrow">Nouveau compte rendu</div>

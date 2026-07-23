@@ -77,7 +77,7 @@ export default async function PhasePage({ params }: { params: Promise<{ statut: 
   return (
     <main className="wrap">
       <div className="page-head">
-        <Link className="backlink" href="/">‹ Retour au tableau de bord</Link>
+        <Link className="backlink" href="/tableau">‹ Retour au tableau de bord</Link>
         <div className="section-t">
           <h2>
             <span

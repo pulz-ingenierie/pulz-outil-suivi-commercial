@@ -83,7 +83,7 @@ export default async function Relances({
   if (!isSupabaseConfigured()) {
     return (
       <main className="wrap">
-        <Link className="back" href="/">← Retour au tableau de bord</Link>
+        <Link className="back" href="/tableau">← Retour au tableau de bord</Link>
         <div className="card notice"><h2>Base de données à connecter</h2></div>
       </main>
     );
@@ -116,7 +116,7 @@ export default async function Relances({
 
   return (
     <main className="wrap">
-      <Link className="back" href="/">← Retour au tableau de bord</Link>
+      <Link className="back" href="/tableau">← Retour au tableau de bord</Link>
       <div className="fiche-head">
         <div>
           <div className="eyebrow">Suites à donner</div>
