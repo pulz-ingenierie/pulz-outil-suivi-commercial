@@ -52,7 +52,7 @@ export default async function Dashboard() {
     supabase.from("entites").select("id, nom, type, ville, statut_vie"),
     supabase.from("entite_operation").select("entite_id, operation_id, entites(nom)"),
     supabase.from("cr_entites").select("entite_id, crs(date_rdv)"),
-    supabase.from("contacts").select("id, nom, prenom, fonction, tel, email, entites(nom)"),
+    supabase.from("contacts").select("id, nom, prenom, fonction, tel, email, entite_id"),
   ]);
 
   if (opsErr) {
@@ -114,12 +114,32 @@ export default async function Dashboard() {
     if (op) (entiteOps[l.entite_id] ??= []).push(slim(op));
   }
 
+  // Pour chaque structure : les personnes à joindre (contacts), classées par nom.
+  const entiteContacts: Record<
+    string,
+    { id: string; nom: string; prenom: string | null; fonction: string | null; tel: string | null; email: string | null }[]
+  > = {};
+  for (const c of (contactsRaw ?? []) as any[]) {
+    if (!c.entite_id) continue;
+    (entiteContacts[c.entite_id] ??= []).push({
+      id: c.id,
+      nom: c.nom,
+      prenom: c.prenom ?? null,
+      fonction: c.fonction ?? null,
+      tel: c.tel ?? null,
+      email: c.email ?? null,
+    });
+  }
+  for (const arr of Object.values(entiteContacts)) {
+    arr.sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+  }
+
   type Ent = { id: string; nom: string; type: string; ville: string | null; statut_vie: string | null };
   const toutesEntites = (entites ?? []) as Ent[];
 
-  // Vue « Par prospect » : TOUS les prospects (avec ou sans affaire), avec leur
-  // état (à réchauffer si silence > 2 mois, en sommeil), classés par nom.
-  const prospects = toutesEntites
+  // Vue « Réseau » : toutes les structures, avec leurs affaires, leurs personnes
+  // à joindre, et leur état (à réchauffer si silence > 2 mois, en sommeil).
+  const reseau = toutesEntites
     .map((e) => ({
       id: e.id,
       nom: e.nom,
@@ -129,24 +149,12 @@ export default async function Dashboard() {
       silencieux: estSilencieux(e.id),
       dormant: e.statut_vie === "dormant",
       ops: entiteOps[e.id] ?? [],
+      contacts: entiteContacts[e.id] ?? [],
     }))
     .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
 
-  // Répertoire des contacts (les personnes), classés par nom.
-  const contacts = ((contactsRaw ?? []) as any[])
-    .map((c) => ({
-      id: c.id as string,
-      nom: c.nom as string,
-      prenom: (c.prenom ?? null) as string | null,
-      fonction: (c.fonction ?? null) as string | null,
-      tel: (c.tel ?? null) as string | null,
-      email: (c.email ?? null) as string | null,
-      entiteNom: (c.entites?.nom ?? null) as string | null,
-    }))
-    .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
-
-  // Indicateur « à réchauffer » : prospects silencieux sans affaire en cours.
-  const silence = prospects.filter((p) => p.silencieux && p.ops.length === 0).length;
+  // Indicateur « à réchauffer » : structures silencieuses sans affaire en cours.
+  const silence = reseau.filter((p) => p.silencieux && p.ops.length === 0).length;
 
   return (
     <main className="wrap">
@@ -172,8 +180,7 @@ export default async function Dashboard() {
       <PipelineViews
         operations={operations.map(slim)}
         opEntites={opEntites}
-        prospects={prospects}
-        contacts={contacts}
+        reseau={reseau}
       />
     </main>
   );

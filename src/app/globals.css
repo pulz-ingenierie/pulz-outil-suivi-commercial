@@ -135,17 +135,39 @@ h1, h2, h3 { margin: 0; letter-spacing: -.01em; }
 .chip .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 .chip.ent { background: var(--accent-soft); color: var(--accent-ink); border-color: transparent; }
 
-/* Vue « Par phase » : une ligne par étape, cliquable → page dédiée. */
-.phase-row { display: flex; align-items: center; gap: 11px; background: var(--surface);
-       border: 1px solid var(--line); border-radius: 12px; padding: 14px 15px; box-shadow: var(--shadow);
-       text-decoration: none; color: inherit; transition: transform .1s, border-color .1s; }
-.phase-row:hover { transform: translateY(-1px); border-color: var(--accent); }
+/* Vue « Par phase » : une ligne par étape, qui se déplie sur place (accordéon). */
+.phase-row { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; font: inherit;
+       background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 15px;
+       box-shadow: var(--shadow); color: inherit; cursor: pointer; transition: transform .1s, border-color .1s; }
+.phase-row:not(:disabled):hover { transform: translateY(-1px); border-color: var(--accent); }
+.phase-row:disabled { cursor: default; }
 .phase-row .dot { width: 11px; height: 11px; border-radius: 50%; flex: none; }
 .phase-row .pnm { font-weight: 650; font-size: 15px; }
 .phase-row .cnt { margin-left: auto; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
-.phase-row .chev { color: var(--faint); font-size: 20px; line-height: 1; margin-left: 2px; }
+.phase-row .chev { color: var(--faint); font-size: 20px; line-height: 1; margin-left: 2px; transition: transform .15s; }
+.phase-row.open { border-color: var(--accent); }
+.phase-row.open .chev { transform: rotate(90deg); }
 .phase-row.vide { opacity: .5; }
 .phase-row.vide .cnt { color: var(--faint); }
+
+/* Contenu déplié d'une phase. */
+.phase-body { padding: 9px 0 2px 4px; }
+.voir-tout { display: inline-block; color: var(--accent-ink); font-size: 13px; font-weight: 650;
+       text-decoration: none; padding: 3px 2px 6px; }
+.voir-tout:hover { text-decoration: underline; }
+
+/* Barre de recherche (vue Par opération). */
+.search { width: 100%; font: inherit; font-size: 14px; padding: 10px 14px; border: 1px solid var(--line);
+       border-radius: 11px; background: var(--surface); color: var(--ink); margin-bottom: 14px; }
+.search:focus { outline: none; border-color: var(--accent); }
+
+/* Personnes à joindre, sur la carte d'une structure (vue Réseau). */
+.persons { display: flex; flex-direction: column; gap: 7px; margin: 4px 0 9px; }
+.person { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+       background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; }
+.person .pmain { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; min-width: 150px; }
+.person .pnm { font-weight: 640; font-size: 13.5px; }
+.person .pfn { color: var(--muted); font-size: 12px; }
 
 /* Sous-sélecteur (Prospects / Contacts) dans la vue « Par prospect ». */
 .seg.sub { margin-top: 2px; }

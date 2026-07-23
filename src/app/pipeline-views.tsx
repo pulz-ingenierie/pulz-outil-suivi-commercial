@@ -15,7 +15,10 @@ const STATUT_VAR: Record<string, string> = {
   perdu: "--s-perdu",
 };
 
-// Version allégée d'une affaire.
+// Au-delà de ce nombre d'affaires dans une phase dépliée, on montre les
+// premières + un lien vers la page complète (pour rester lisible).
+const MAX_APERCU = 6;
+
 type Op = {
   id: string;
   nom: string;
@@ -25,7 +28,16 @@ type Op = {
 
 type Ent = { id: string; nom: string };
 
-type Prospect = {
+type Personne = {
+  id: string;
+  nom: string;
+  prenom: string | null;
+  fonction: string | null;
+  tel: string | null;
+  email: string | null;
+};
+
+type Structure = {
   id: string;
   nom: string;
   type: string;
@@ -34,26 +46,16 @@ type Prospect = {
   silencieux: boolean;
   dormant: boolean;
   ops: Op[];
-};
-
-type Contact = {
-  id: string;
-  nom: string;
-  prenom: string | null;
-  fonction: string | null;
-  tel: string | null;
-  email: string | null;
-  entiteNom: string | null;
+  contacts: Personne[];
 };
 
 type Props = {
   operations: Op[];
   opEntites: Record<string, Ent[]>;
-  prospects: Prospect[];
-  contacts: Contact[];
+  reseau: Structure[];
 };
 
-type Vue = "phase" | "operation" | "prospect";
+type Vue = "phase" | "operation" | "reseau";
 
 function euro(n: number | null): string | null {
   if (n == null) return null;
@@ -110,7 +112,18 @@ function CarteOp({
   );
 }
 
-export default function PipelineViews({ operations, opEntites, prospects, contacts }: Props) {
+// Boutons pour joindre une personne.
+function ContactActions({ tel, email }: { tel: string | null; email: string | null }) {
+  if (!tel && !email) return null;
+  return (
+    <div className="contact-acts">
+      {tel && <a className="btn ghost mini" href={`tel:${tel}`}>Appeler</a>}
+      {email && <a className="btn ghost mini" href={`mailto:${email}`}>E-mail</a>}
+    </div>
+  );
+}
+
+export default function PipelineViews({ operations, opEntites, reseau }: Props) {
   const [vue, setVue] = useState<Vue>("phase");
 
   return (
@@ -122,39 +135,59 @@ export default function PipelineViews({ operations, opEntites, prospects, contac
         <button className={vue === "operation" ? "on" : ""} onClick={() => setVue("operation")}>
           Par opération
         </button>
-        <button className={vue === "prospect" ? "on" : ""} onClick={() => setVue("prospect")}>
-          Par prospect
+        <button className={vue === "reseau" ? "on" : ""} onClick={() => setVue("reseau")}>
+          Réseau
         </button>
       </div>
 
-      {vue === "phase" && <VuePhase operations={operations} />}
+      {vue === "phase" && <VuePhase operations={operations} opEntites={opEntites} />}
       {vue === "operation" && <VueOperation operations={operations} opEntites={opEntites} />}
-      {vue === "prospect" && <VueProspect prospects={prospects} contacts={contacts} />}
+      {vue === "reseau" && <VueReseau reseau={reseau} />}
     </>
   );
 }
 
-// --- Vue « Par phase » : une ligne par étape → page dédiée listant ses affaires.
-function VuePhase({ operations }: { operations: Op[] }) {
+// --- Vue « Par phase » : chaque étape se déplie sur place (accordéon).
+function VuePhase({ operations, opEntites }: { operations: Op[]; opEntites: Record<string, Ent[]> }) {
+  const [ouverts, setOuverts] = useState<Set<string>>(new Set());
+  const toggle = (s: string) =>
+    setOuverts((prev) => {
+      const next = new Set(prev);
+      next.has(s) ? next.delete(s) : next.add(s);
+      return next;
+    });
+
   return (
     <div className="vlist">
       {STATUT_ORDRE.map((statut) => {
-        const n = operations.filter((o) => o.statut === statut).length;
-        const contenu = (
-          <>
-            <span className="dot" style={{ background: `var(${STATUT_VAR[statut]})` }} />
-            <span className="pnm">{STATUT_LABELS[statut]}</span>
-            <span className="cnt tnum">{n}</span>
-            {n > 0 && <span className="chev">›</span>}
-          </>
-        );
-        return n > 0 ? (
-          <Link className="phase-row" href={`/operations/phase/${statut}`} key={statut}>
-            {contenu}
-          </Link>
-        ) : (
-          <div className="phase-row vide" key={statut}>
-            {contenu}
+        const list = operations.filter((o) => o.statut === statut);
+        const ouvert = ouverts.has(statut);
+        const vide = list.length === 0;
+        return (
+          <div key={statut}>
+            <button
+              className={`phase-row${vide ? " vide" : ""}${ouvert ? " open" : ""}`}
+              onClick={() => !vide && toggle(statut)}
+              aria-expanded={ouvert}
+              disabled={vide}
+            >
+              <span className="dot" style={{ background: `var(${STATUT_VAR[statut]})` }} />
+              <span className="pnm">{STATUT_LABELS[statut]}</span>
+              <span className="cnt tnum">{list.length}</span>
+              {!vide && <span className="chev">›</span>}
+            </button>
+            {ouvert && (
+              <div className="phase-body">
+                {list.slice(0, MAX_APERCU).map((o) => (
+                  <CarteOp key={o.id} op={o} entites={opEntites[o.id] ?? []} avecProspects />
+                ))}
+                {list.length > MAX_APERCU && (
+                  <Link className="voir-tout" href={`/operations/phase/${statut}`}>
+                    Voir les {list.length} affaires ›
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
         );
       })}
@@ -162,98 +195,90 @@ function VuePhase({ operations }: { operations: Op[] }) {
   );
 }
 
-// --- Vue « Par opération » : toutes les affaires, dans l'ordre d'entrée dans
-// l'outil (la plus récente en haut — les données arrivent déjà triées ainsi).
+// --- Vue « Par opération » : toutes les affaires (la plus récente en haut),
+// avec une recherche par nom pour rester lisible quand il y en a beaucoup.
 function VueOperation({ operations, opEntites }: { operations: Op[]; opEntites: Record<string, Ent[]> }) {
-  if (!operations.length) {
-    return <div className="card"><span className="empty">Aucune opération pour le moment.</span></div>;
-  }
-  return (
-    <div className="vlist">
-      {operations.map((o) => (
-        <CarteOp key={o.id} op={o} entites={opEntites[o.id] ?? []} avecEtape avecProspects />
-      ))}
-    </div>
-  );
-}
+  const [q, setQ] = useState("");
+  const terme = q.trim().toLowerCase();
+  const list = terme ? operations.filter((o) => o.nom.toLowerCase().includes(terme)) : operations;
 
-// --- Vue « Par prospect » : deux sous-onglets — Prospects (structures) et
-// Contacts (personnes).
-function VueProspect({ prospects, contacts }: { prospects: Prospect[]; contacts: Contact[] }) {
-  const [sous, setSous] = useState<"prospects" | "contacts">("prospects");
   return (
     <>
-      <div className="seg sub" role="tablist" aria-label="Prospects ou contacts">
-        <button className={sous === "prospects" ? "on" : ""} onClick={() => setSous("prospects")}>
-          Prospects ({prospects.length})
-        </button>
-        <button className={sous === "contacts" ? "on" : ""} onClick={() => setSous("contacts")}>
-          Contacts ({contacts.length})
-        </button>
-      </div>
-
-      {sous === "prospects" ? <ListeProspects prospects={prospects} /> : <ListeContacts contacts={contacts} />}
+      <input
+        className="search"
+        type="search"
+        placeholder="Rechercher une affaire…"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        aria-label="Rechercher une affaire"
+      />
+      {list.length ? (
+        <div className="vlist">
+          {list.map((o) => (
+            <CarteOp key={o.id} op={o} entites={opEntites[o.id] ?? []} avecEtape avecProspects />
+          ))}
+        </div>
+      ) : (
+        <div className="card">
+          <span className="empty">
+            {operations.length ? "Aucune affaire ne correspond à votre recherche." : "Aucune opération pour le moment."}
+          </span>
+        </div>
+      )}
     </>
   );
 }
 
-function ListeProspects({ prospects }: { prospects: Prospect[] }) {
-  if (!prospects.length) {
-    return <div className="card"><span className="empty">Aucun prospect enregistré.</span></div>;
+// --- Vue « Réseau » : les structures, avec leurs affaires et leurs personnes.
+function VueReseau({ reseau }: { reseau: Structure[] }) {
+  if (!reseau.length) {
+    return <div className="card"><span className="empty">Aucune structure enregistrée pour le moment.</span></div>;
   }
   return (
     <div className="vlist">
-      {prospects.map((p) => (
-        <div className="grp" key={p.id}>
+      {reseau.map((s) => (
+        <div className="grp" key={s.id}>
           <h3>
             <span className="dot ent-dot" />
-            {p.nom}
-            <span className="cnt tnum">{p.ops.length}</span>
+            {s.nom}
+            <span className="cnt tnum">{s.ops.length}</span>
           </h3>
           <div className="grp-meta">
-            <span className="chip">{p.type}</span>
-            {p.ville && <span className="grp-sub last">{p.ville}</span>}
+            <span className="chip">{s.type}</span>
+            {s.ville && <span className="last">{s.ville}</span>}
             <span className="last">
-              {p.dernierContact ? `Dernier contact : ${dateFr(p.dernierContact)}` : "Jamais rencontré"}
+              {s.dernierContact ? `Dernier contact : ${dateFr(s.dernierContact)}` : "Jamais rencontré"}
             </span>
-            {p.dormant && <span className="pill dormant">en sommeil</span>}
-            {p.silencieux && p.ops.length === 0 && <span className="pill silence">à réchauffer</span>}
+            {s.dormant && <span className="pill dormant">en sommeil</span>}
+            {s.silencieux && s.ops.length === 0 && <span className="pill silence">à réchauffer</span>}
           </div>
-          {p.ops.length ? (
-            p.ops.map((o) => <CarteOp key={o.id} op={o} entites={[]} avecEtape />)
-          ) : (
-            <div className="grp-vide">Aucune affaire en cours — prospect du réseau.</div>
+
+          {s.ops.map((o) => (
+            <CarteOp key={o.id} op={o} entites={[]} avecEtape />
+          ))}
+
+          {s.contacts.length > 0 && (
+            <div className="persons">
+              {s.contacts.map((c) => {
+                const nomComplet = [c.prenom, c.nom].filter(Boolean).join(" ") || c.nom;
+                return (
+                  <div className="person" key={c.id}>
+                    <div className="pmain">
+                      <span className="pnm">{nomComplet}</span>
+                      {c.fonction && <span className="pfn">{c.fonction}</span>}
+                    </div>
+                    <ContactActions tel={c.tel} email={c.email} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {s.ops.length === 0 && s.contacts.length === 0 && (
+            <div className="grp-vide">Aucune affaire ni personne enregistrée — piste du réseau.</div>
           )}
         </div>
       ))}
-    </div>
-  );
-}
-
-function ListeContacts({ contacts }: { contacts: Contact[] }) {
-  if (!contacts.length) {
-    return <div className="card"><span className="empty">Aucun contact enregistré pour le moment.</span></div>;
-  }
-  return (
-    <div className="vlist">
-      {contacts.map((c) => {
-        const nomComplet = [c.prenom, c.nom].filter(Boolean).join(" ") || c.nom;
-        return (
-          <div className="contact-card" key={c.id}>
-            <div className="contact-main">
-              <div className="cnm">{nomComplet}</div>
-              <div className="cfn">
-                {c.fonction && <span>{c.fonction}</span>}
-                {c.entiteNom && <span className="chip ent">{c.entiteNom}</span>}
-              </div>
-            </div>
-            <div className="contact-acts">
-              {c.tel && <a className="btn ghost mini" href={`tel:${c.tel}`}>Appeler</a>}
-              {c.email && <a className="btn ghost mini" href={`mailto:${c.email}`}>E-mail</a>}
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 }
