@@ -69,6 +69,10 @@ export default function VoiceCr({
   const [typeRdv, setTypeRdv] = useState("autre");
   const [dateRdv, setDateRdv] = useState(today);
   const [statut, setStatut] = useState("valide");
+  // Chat de correction (texte ou voix) de la fiche proposée par l'IA.
+  const [instr, setInstr] = useState("");
+  const [correcting, setCorrecting] = useState(false);
+  const [instrRec, setInstrRec] = useState<"idle" | "recording">("idle");
   const [selEnt, setSelEnt] = useState<Set<string>>(new Set(prefillEntite ? [prefillEntite] : []));
   const [selOp, setSelOp] = useState<Set<string>>(new Set(prefillOperation ? [prefillOperation] : []));
   // La liste de rattachement à la main est masquée par défaut : on ne coche
@@ -78,6 +82,8 @@ export default function VoiceCr({
   const recRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const instrRecRef = useRef<MediaRecorder | null>(null);
+  const instrChunksRef = useRef<BlobPart[]>([]);
   // Réf vers la dernière version du traitement auto, pour l'appeler depuis
   // l'événement d'arrêt du micro sans capturer un état périmé.
   const pipelineRef = useRef<(b: Blob) => void>(() => {});
@@ -162,6 +168,27 @@ export default function VoiceCr({
     }
   }
 
+  // Applique une synthèse aux champs. `authoritative` = la liste de rattachements
+  // remplace la sélection (cas d'une correction, qui peut aussi retirer un
+  // rattachement) ; sinon on ajoute aux rattachements déjà présents (analyse).
+  function applySynthese(s: Synthese, authoritative: boolean) {
+    setSynthese(s);
+    setTypeRdv(s.type_rdv || "autre");
+    if (s.date_rdv) setDateRdv(s.date_rdv);
+    const entByName = new Map(entites.map((e) => [e.nom, e.id]));
+    const opByName = new Map(operations.map((o) => [o.nom, o.id]));
+    const eIds = s.entites.map((n) => entByName.get(n)).filter((x): x is string => Boolean(x));
+    const oIds = s.operations.map((n) => opByName.get(n)).filter((x): x is string => Boolean(x));
+    if (authoritative) {
+      setSelEnt(new Set(eIds));
+      setSelOp(new Set(oIds));
+    } else {
+      setSelEnt((prev) => new Set([...prev, ...eIds]));
+      setSelOp((prev) => new Set([...prev, ...oIds]));
+      if (eIds.length + oIds.length === 0) setRattachOpen(true);
+    }
+  }
+
   async function doSynth(text: string): Promise<void> {
     try {
       const res = await fetch("/api/synthese", {
@@ -179,30 +206,78 @@ export default function VoiceCr({
         setError(data.error ?? "Synthèse impossible.");
         return;
       }
-      const s = data.synthese as Synthese;
-      setSynthese(s);
-      setTypeRdv(s.type_rdv || "autre");
-      if (s.date_rdv) setDateRdv(s.date_rdv);
-      // Pré-coche les entités / opérations reconnues par l'IA (par libellé).
-      const entByName = new Map(entites.map((e) => [e.nom, e.id]));
-      const opByName = new Map(operations.map((o) => [o.nom, o.id]));
-      const matched =
-        s.entites.filter((n) => entByName.has(n)).length +
-        s.operations.filter((n) => opByName.has(n)).length;
-      setSelEnt((prev) => {
-        const next = new Set(prev);
-        s.entites.forEach((n) => { const id = entByName.get(n); if (id) next.add(id); });
-        return next;
-      });
-      setSelOp((prev) => {
-        const next = new Set(prev);
-        s.operations.forEach((n) => { const id = opByName.get(n); if (id) next.add(id); });
-        return next;
-      });
-      if (matched === 0) setRattachOpen(true);
+      applySynthese(data.synthese as Synthese, false);
     } catch {
       setError("Synthèse indisponible.");
     }
+  }
+
+  // Correction en langage naturel (texte ou voix) de la fiche déjà structurée.
+  async function applyCorrection(instruction: string): Promise<void> {
+    if (!instruction.trim() || !synthese || correcting) return;
+    setCorrecting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/affiner", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transcription,
+          synthese,
+          instruction,
+          entites: entites.map((e) => e.nom),
+          operations: operations.map((o) => o.nom),
+          today,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Correction impossible.");
+      } else {
+        applySynthese(data.synthese as Synthese, true);
+        setInstr("");
+      }
+    } catch {
+      setError("Correction indisponible.");
+    } finally {
+      setCorrecting(false);
+    }
+  }
+
+  // Petit micro dédié à la correction : on enregistre une consigne, on la
+  // transcrit, puis on l'applique directement.
+  async function startInstrRec() {
+    setError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = pickMime();
+      const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      instrChunksRef.current = [];
+      rec.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) instrChunksRef.current.push(e.data);
+      };
+      rec.onstop = async () => {
+        const blob = new Blob(instrChunksRef.current, { type: rec.mimeType || "audio/webm" });
+        stream.getTracks().forEach((t) => t.stop());
+        setCorrecting(true);
+        const text = await doTranscribe(blob);
+        if (text && text.trim()) {
+          await applyCorrection(text);
+        } else {
+          setCorrecting(false);
+        }
+      };
+      instrRecRef.current = rec;
+      rec.start();
+      setInstrRec("recording");
+    } catch {
+      setError("Micro inaccessible pour la correction. Écrivez la consigne à la place.");
+    }
+  }
+
+  function stopInstrRec() {
+    instrRecRef.current?.stop();
+    setInstrRec("idle");
   }
 
   // Traitement automatique complet après un enregistrement.
@@ -330,6 +405,44 @@ export default function VoiceCr({
                 <p className="hint">Les relances seront créables à l'étape « relances » (brique suivante).</p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Chat de correction : on parle ou on écrit ce qu'il faut changer. */}
+        {synthese && (
+          <div className="correct-box">
+            <span className="lab">Corriger en parlant (ou en écrivant)</span>
+            <div className="correct-row">
+              <input
+                className="correct-input"
+                type="text"
+                value={instr}
+                onChange={(e) => setInstr(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyCorrection(instr); } }}
+                placeholder="Ex. « la date c'est mardi dernier », « enlève SIGH »…"
+                disabled={correcting || instrRec === "recording"}
+              />
+              {instrRec === "recording" ? (
+                <button type="button" className="btn mic on" onClick={stopInstrRec}>
+                  ● Stop
+                </button>
+              ) : (
+                <button type="button" className="btn ghost mic" onClick={startInstrRec} disabled={correcting} aria-label="Dicter la correction">
+                  🎤
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn"
+                onClick={() => applyCorrection(instr)}
+                disabled={correcting || instrRec === "recording" || !instr.trim()}
+              >
+                Corriger
+              </button>
+            </div>
+            {instrRec === "recording" && <p className="proc">🎤 J'écoute… tapez « Stop » quand c'est dit.</p>}
+            {correcting && <p className="proc">✨ Je corrige la fiche…</p>}
+            <p className="hint">Dites simplement ce qui ne va pas : la date, un rattachement, le résumé… L'IA met la fiche à jour.</p>
           </div>
         )}
 

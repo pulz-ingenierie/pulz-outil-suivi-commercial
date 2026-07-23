@@ -287,6 +287,18 @@ h1, h2, h3 { margin: 0; letter-spacing: -.01em; }
 .rec-acts { display: flex; gap: 10px; flex-wrap: wrap; }
 .proc { font-size: 13.5px; font-weight: 600; color: var(--accent-ink); margin: 0; }
 .proc.ok { color: var(--muted); }
+
+/* Chat de correction de la fiche IA (texte + micro). */
+.correct-box { margin-top: 4px; padding: 14px 15px; border: 1px solid var(--line); border-radius: 13px;
+       background: var(--surface-2); display: flex; flex-direction: column; gap: 9px; }
+.correct-row { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
+.correct-input { flex: 1; min-width: 180px; font: inherit; font-size: 14px; padding: 10px 13px;
+       border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); }
+.correct-input:focus { outline: none; border-color: var(--accent); }
+.btn.mic { padding: 9px 13px; }
+.btn.mic.on { background: var(--crit); border-color: var(--crit); color: #fff; }
+.correct-box .hint { color: var(--faint); font-size: 12.5px; margin: 0; }
+.correct-box .proc { margin: 0; }
 .recorder .hint, .synth-row .hint, .s-relances .hint { color: var(--faint); font-size: 12.5px; margin: 12px 0 0; }
 .notice.err { border-left-color: var(--crit); color: var(--crit); }
 
@@ -298,9 +310,12 @@ h1, h2, h3 { margin: 0; letter-spacing: -.01em; }
 .s-resume { margin: 0 0 10px; font-size: 14.5px; }
 .s-points { margin: 0 0 10px; padding-left: 18px; color: var(--muted); font-size: 14px; }
 .s-points li { margin: 3px 0; }
-.s-relances { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.s-relances { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; }
 .s-relances .lab { font-size: 13px; font-weight: 600; color: var(--muted); width: 100%; }
 .s-relances .hint { width: 100%; }
+/* Une suite suggérée peut être longue : elle passe à la ligne dans le cadre
+   au lieu de déborder à droite. */
+.s-relances .pill { white-space: normal; max-width: 100%; border-radius: 10px; padding: 6px 11px; line-height: 1.35; }
 
 /* Administration des utilisateurs */
 .utable { border: 1px solid var(--line); border-radius: 13px; overflow: hidden; background: var(--surface); box-shadow: var(--shadow); }

@@ -1,0 +1,77 @@
+// Structure d'une synthèse de compte rendu + validation stricte (règle CLAUDE.md :
+// valider les SORTIES de l'IA). Partagé par /api/synthese (analyse initiale) et
+// /api/affiner (correction en langage naturel), pour une seule source de vérité.
+
+export const TYPES_RDV = ["dejeuner", "appel", "visite", "salon", "autre"] as const;
+
+export interface Synthese {
+  type_rdv: string;
+  date_rdv: string | null;
+  resume: string;
+  points_cles: string[];
+  entites: string[];
+  operations: string[];
+  relances: { objet: string; dans_jours: number }[];
+}
+
+// Date au format AAAA-MM-JJ ? (contrôle simple, anti-invention.)
+export function isIsoDate(v: unknown): v is string {
+  return typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v));
+}
+
+function asStringArray(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  return v.filter((x): x is string => typeof x === "string").map((s) => s.trim()).filter(Boolean);
+}
+
+// Garde uniquement les libellés qui existent réellement (anti-hallucination).
+function keepKnown(suggested: string[], known: string[]): string[] {
+  const set = new Set(known);
+  return suggested.filter((s) => set.has(s));
+}
+
+// Extrait le premier objet JSON d'un texte (l'IA doit répondre en JSON pur ;
+// on isole l'objet par sécurité).
+export function extractJsonObject(text: string): unknown | null {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end === -1) return null;
+  try {
+    return JSON.parse(text.slice(start, end + 1));
+  } catch {
+    return null;
+  }
+}
+
+export function validateSynthese(
+  raw: unknown,
+  knownEntites: string[],
+  knownOps: string[],
+  today: string,
+): Synthese {
+  const o = (raw ?? {}) as Record<string, unknown>;
+  const type_rdv =
+    typeof o.type_rdv === "string" && (TYPES_RDV as readonly string[]).includes(o.type_rdv)
+      ? o.type_rdv
+      : "autre";
+  // On n'accepte la date que si elle est bien formée et pas dans le futur.
+  const date_rdv = isIsoDate(o.date_rdv) && (o.date_rdv as string) <= today ? (o.date_rdv as string) : null;
+  const relances = Array.isArray(o.relances)
+    ? o.relances
+        .map((r) => (r ?? {}) as Record<string, unknown>)
+        .map((r) => ({
+          objet: typeof r.objet === "string" ? r.objet.trim() : "",
+          dans_jours: Number.isFinite(r.dans_jours as number) ? Math.max(1, Math.round(r.dans_jours as number)) : 14,
+        }))
+        .filter((r) => r.objet.length > 0)
+    : [];
+  return {
+    type_rdv,
+    date_rdv,
+    resume: typeof o.resume === "string" ? o.resume.trim() : "",
+    points_cles: asStringArray(o.points_cles),
+    entites: keepKnown(asStringArray(o.entites), knownEntites),
+    operations: keepKnown(asStringArray(o.operations), knownOps),
+    relances,
+  };
+}
