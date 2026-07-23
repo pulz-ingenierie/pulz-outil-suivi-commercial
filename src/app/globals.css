@@ -285,6 +285,8 @@ h1, h2, h3 { margin: 0; letter-spacing: -.01em; }
 .rec-done { display: flex; flex-direction: column; gap: 12px; }
 .rec-done .player { width: 100%; max-width: 420px; height: 40px; }
 .rec-acts { display: flex; gap: 10px; flex-wrap: wrap; }
+.proc { font-size: 13.5px; font-weight: 600; color: var(--accent-ink); margin: 0; }
+.proc.ok { color: var(--muted); }
 .recorder .hint, .synth-row .hint, .s-relances .hint { color: var(--faint); font-size: 12.5px; margin: 12px 0 0; }
 .notice.err { border-left-color: var(--crit); color: var(--crit); }
 

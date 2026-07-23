@@ -7,6 +7,7 @@ import { createCr } from "@/lib/actions";
 type Opt = { id: string; nom: string };
 type Synthese = {
   type_rdv: string;
+  date_rdv: string | null;
   resume: string;
   points_cles: string[];
   entites: string[];
@@ -66,6 +67,7 @@ export default function VoiceCr({
   const [synthese, setSynthese] = useState<Synthese | null>(null);
 
   const [typeRdv, setTypeRdv] = useState("autre");
+  const [dateRdv, setDateRdv] = useState(today);
   const [statut, setStatut] = useState("valide");
   const [selEnt, setSelEnt] = useState<Set<string>>(new Set(prefillEntite ? [prefillEntite] : []));
   const [selOp, setSelOp] = useState<Set<string>>(new Set(prefillOperation ? [prefillOperation] : []));
@@ -76,6 +78,9 @@ export default function VoiceCr({
   const recRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Réf vers la dernière version du traitement auto, pour l'appeler depuis
+  // l'événement d'arrêt du micro sans capturer un état périmé.
+  const pipelineRef = useRef<(b: Blob) => void>(() => {});
 
   const stopTimer = () => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -108,6 +113,8 @@ export default function VoiceCr({
           return URL.createObjectURL(blob);
         });
         stream.getTracks().forEach((t) => t.stop());
+        // Enchaînement automatique : transcription → structuration.
+        pipelineRef.current(blob);
       };
       recRef.current = rec;
       rec.start();
@@ -116,7 +123,7 @@ export default function VoiceCr({
       stopTimer();
       timerRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
     } catch {
-      setError("Micro inaccessible. Vérifiez l'autorisation du navigateur, ou saisissez le compte rendu à la main ci-dessous.");
+      setError("Micro inaccessible. Vérifiez l'autorisation du navigateur, ou écrivez le compte rendu à la main ci-dessous.");
     }
   }, []);
 
@@ -137,71 +144,90 @@ export default function VoiceCr({
     });
   }, []);
 
-  async function transcribe() {
-    if (!audioBlob) return;
-    setBusy("transcribe");
-    setError(null);
+  // --- Appels IA (fonctions « pures » : renvoient le résultat, gèrent l'erreur).
+  async function doTranscribe(blob: Blob): Promise<string | null> {
     try {
       const fd = new FormData();
-      fd.append("audio", audioBlob, "enregistrement");
+      fd.append("audio", blob, "enregistrement");
       const res = await fetch("/api/transcribe", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Transcription impossible.");
-      } else {
-        setTranscription((prev) => (prev ? prev + "\n" : "") + (data.text ?? ""));
+        return null;
       }
+      return (data.text ?? "").trim();
     } catch {
-      setError("Transcription indisponible. Saisissez le compte rendu à la main.");
-    } finally {
-      setBusy(null);
+      setError("Transcription indisponible. Écrivez le compte rendu à la main.");
+      return null;
     }
   }
 
-  async function synthesize() {
-    if (!transcription.trim()) return;
-    setBusy("synth");
-    setError(null);
+  async function doSynth(text: string): Promise<void> {
     try {
       const res = await fetch("/api/synthese", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          transcription,
+          transcription: text,
           entites: entites.map((e) => e.nom),
           operations: operations.map((o) => o.nom),
+          today,
         }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Synthèse impossible.");
-      } else {
-        const s = data.synthese as Synthese;
-        setSynthese(s);
-        setTypeRdv(s.type_rdv || "autre");
-        // Pré-coche les entités / opérations reconnues par l'IA (par libellé).
-        const entByName = new Map(entites.map((e) => [e.nom, e.id]));
-        const opByName = new Map(operations.map((o) => [o.nom, o.id]));
-        const matched = s.entites.filter((n) => entByName.has(n)).length +
-          s.operations.filter((n) => opByName.has(n)).length;
-        setSelEnt((prev) => {
-          const next = new Set(prev);
-          s.entites.forEach((n) => { const id = entByName.get(n); if (id) next.add(id); });
-          return next;
-        });
-        setSelOp((prev) => {
-          const next = new Set(prev);
-          s.operations.forEach((n) => { const id = opByName.get(n); if (id) next.add(id); });
-          return next;
-        });
-        // L'IA n'a rien reconnu : on ouvre le volet pour rattacher à la main.
-        if (matched === 0) setRattachOpen(true);
+        return;
       }
+      const s = data.synthese as Synthese;
+      setSynthese(s);
+      setTypeRdv(s.type_rdv || "autre");
+      if (s.date_rdv) setDateRdv(s.date_rdv);
+      // Pré-coche les entités / opérations reconnues par l'IA (par libellé).
+      const entByName = new Map(entites.map((e) => [e.nom, e.id]));
+      const opByName = new Map(operations.map((o) => [o.nom, o.id]));
+      const matched =
+        s.entites.filter((n) => entByName.has(n)).length +
+        s.operations.filter((n) => opByName.has(n)).length;
+      setSelEnt((prev) => {
+        const next = new Set(prev);
+        s.entites.forEach((n) => { const id = entByName.get(n); if (id) next.add(id); });
+        return next;
+      });
+      setSelOp((prev) => {
+        const next = new Set(prev);
+        s.operations.forEach((n) => { const id = opByName.get(n); if (id) next.add(id); });
+        return next;
+      });
+      if (matched === 0) setRattachOpen(true);
     } catch {
       setError("Synthèse indisponible.");
-    } finally {
-      setBusy(null);
     }
+  }
+
+  // Traitement automatique complet après un enregistrement.
+  async function runPipeline(blob: Blob) {
+    setError(null);
+    setBusy("transcribe");
+    const text = await doTranscribe(blob);
+    if (text == null || !text.trim()) {
+      setBusy(null);
+      return;
+    }
+    setTranscription(text);
+    setBusy("synth");
+    await doSynth(text);
+    setBusy(null);
+  }
+  pipelineRef.current = runPipeline;
+
+  // Structuration manuelle (chemin « j'écris à la main »).
+  async function synthesizeManuel() {
+    if (!transcription.trim() || busy) return;
+    setError(null);
+    setBusy("synth");
+    await doSynth(transcription);
+    setBusy(null);
   }
 
   const toggle = (set: Set<string>, setter: (s: Set<string>) => void, id: string) => {
@@ -219,9 +245,9 @@ export default function VoiceCr({
 
   return (
     <>
-      {/* Étape 1 — capture vocale */}
+      {/* Capture vocale — dès l'arrêt, l'outil transcrit puis structure tout seul. */}
       <div className="card recorder">
-        <div className="eyebrow">Étape 1 · Dicter</div>
+        <div className="eyebrow">Dicter</div>
         {phase === "idle" && (
           <button type="button" className="rec-btn" onClick={startRecording}>
             <span className="rec-dot" /> Démarrer l'enregistrement
@@ -230,7 +256,7 @@ export default function VoiceCr({
         {phase === "recording" && (
           <div className="rec-live">
             <button type="button" className="rec-btn stop" onClick={stopRecording}>
-              <span className="rec-sq" /> Arrêter
+              <span className="rec-sq" /> Terminé
             </button>
             <span className="rec-time tnum">● {mmss(seconds)}</span>
           </div>
@@ -238,10 +264,15 @@ export default function VoiceCr({
         {phase === "recorded" && (
           <div className="rec-done">
             {audioUrl && <audio className="player" src={audioUrl} controls />}
+            {busy === "transcribe" && <p className="proc">✍️ Transcription en cours…</p>}
+            {busy === "synth" && <p className="proc">✨ L'IA structure le compte rendu…</p>}
+            {!busy && synthese && <p className="proc ok">✓ Compte rendu analysé — relisez et corrigez ci-dessous.</p>}
             <div className="rec-acts">
-              <button type="button" className="btn" onClick={transcribe} disabled={busy !== null}>
-                {busy === "transcribe" ? "Transcription…" : "Transcrire automatiquement"}
-              </button>
+              {!busy && error && audioBlob && (
+                <button type="button" className="btn" onClick={() => runPipeline(audioBlob)}>
+                  Réessayer l'analyse
+                </button>
+              )}
               <button type="button" className="btn ghost" onClick={resetAudio} disabled={busy !== null}>
                 Recommencer
               </button>
@@ -249,7 +280,7 @@ export default function VoiceCr({
           </div>
         )}
         <p className="hint">
-          Vous pouvez aussi ignorer le micro et écrire directement le compte rendu plus bas.
+          Vous pouvez aussi ignorer le micro et écrire directement le compte rendu ci-dessous.
         </p>
       </div>
 
@@ -267,7 +298,7 @@ export default function VoiceCr({
             required
             value={transcription}
             onChange={(e) => setTranscription(e.target.value)}
-            placeholder="Le texte dicté apparaîtra ici — corrigez-le librement, ou saisissez directement."
+            placeholder="Le texte dicté apparaîtra ici — corrigez-le librement, ou écrivez directement."
           />
         </label>
 
@@ -275,12 +306,12 @@ export default function VoiceCr({
           <button
             type="button"
             className="btn ghost"
-            onClick={synthesize}
+            onClick={synthesizeManuel}
             disabled={busy !== null || !transcription.trim()}
           >
-            {busy === "synth" ? "L'IA structure…" : "✨ Structurer avec l'IA"}
+            {busy === "synth" ? "L'IA structure…" : synthese ? "✨ Relancer l'analyse" : "✨ Structurer avec l'IA"}
           </button>
-          <span className="hint">L'IA propose un type de RDV, un résumé et les suites — vous gardez la main.</span>
+          <span className="hint">L'IA propose la date, un résumé, les rattachements et les suites — vous gardez la main.</span>
         </div>
 
         {synthese && (
@@ -305,7 +336,13 @@ export default function VoiceCr({
         <div className="row2">
           <label className="field">
             <span className="lab">Date du rendez-vous</span>
-            <input type="date" name="date_rdv" defaultValue={today} max={today} />
+            <input
+              type="date"
+              name="date_rdv"
+              value={dateRdv}
+              max={today}
+              onChange={(e) => setDateRdv(e.target.value)}
+            />
           </label>
           <label className="field">
             <span className="lab">Type de rendez-vous</span>
@@ -321,7 +358,7 @@ export default function VoiceCr({
             <p className="hint" style={{ marginTop: 0 }}>
               {synthese
                 ? "L'IA n'a rien reconnu automatiquement — rattachez à la main ci-dessous."
-                : "Après « Structurer avec l'IA », les entités et opérations concernées seront proposées ici. Vous pourrez toujours ajuster."}
+                : "Après l'analyse, les entités et opérations concernées seront proposées ici. Vous pourrez toujours ajuster."}
             </p>
           ) : (
             <div className="rattach-chips">

@@ -16,15 +16,22 @@ interface Body {
   transcription?: string;
   entites?: string[];
   operations?: string[];
+  today?: string;
 }
 
 export interface Synthese {
   type_rdv: string;
+  date_rdv: string | null;
   resume: string;
   points_cles: string[];
   entites: string[];
   operations: string[];
   relances: { objet: string; dans_jours: number }[];
+}
+
+// Date au format AAAA-MM-JJ ? (contrôle simple, anti-invention.)
+function isIsoDate(v: unknown): v is string {
+  return typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v));
 }
 
 function asStringArray(v: unknown): string[] {
@@ -38,9 +45,11 @@ function keepKnown(suggested: string[], known: string[]): string[] {
   return suggested.filter((s) => set.has(s));
 }
 
-function validate(raw: unknown, knownEntites: string[], knownOps: string[]): Synthese {
+function validate(raw: unknown, knownEntites: string[], knownOps: string[], today: string): Synthese {
   const o = (raw ?? {}) as Record<string, unknown>;
   const type_rdv = typeof o.type_rdv === "string" && TYPES_RDV.includes(o.type_rdv) ? o.type_rdv : "autre";
+  // On n'accepte la date que si elle est bien formée et pas dans le futur.
+  const date_rdv = isIsoDate(o.date_rdv) && (o.date_rdv as string) <= today ? (o.date_rdv as string) : null;
   const relances = Array.isArray(o.relances)
     ? o.relances
         .map((r) => (r ?? {}) as Record<string, unknown>)
@@ -52,6 +61,7 @@ function validate(raw: unknown, knownEntites: string[], knownOps: string[]): Syn
     : [];
   return {
     type_rdv,
+    date_rdv,
     resume: typeof o.resume === "string" ? o.resume.trim() : "",
     points_cles: asStringArray(o.points_cles),
     entites: keepKnown(asStringArray(o.entites), knownEntites),
@@ -83,13 +93,14 @@ export async function POST(req: Request) {
 
   const knownEntites = asStringArray(body.entites);
   const knownOps = asStringArray(body.operations);
+  const today = isIsoDate(body.today) ? body.today : new Date().toISOString().slice(0, 10);
   const client = new Anthropic({ apiKey });
 
   try {
     const response = await client.messages.create({
       model: MODEL,
       max_tokens: 2000,
-      system: syntheseSystemPrompt(knownEntites, knownOps),
+      system: syntheseSystemPrompt(knownEntites, knownOps, today),
       messages: [{ role: "user", content: SYNTHESE_USER_PREFIX + transcription }],
     });
 
@@ -112,7 +123,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Réponse IA non conforme (JSON invalide)." }, { status: 502 });
     }
 
-    return NextResponse.json({ synthese: validate(parsed, knownEntites, knownOps) });
+    return NextResponse.json({ synthese: validate(parsed, knownEntites, knownOps, today) });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erreur inconnue.";
     return NextResponse.json({ error: `Synthèse échouée : ${message}` }, { status: 502 });
