@@ -65,7 +65,7 @@ export default async function Dashboard() {
     { data: liens },
     { data: crEnt },
   ] = await Promise.all([
-    supabase.from("operations").select("*").order("created_at", { ascending: true }),
+    supabase.from("operations").select("*").order("created_at", { ascending: false }),
     supabase.from("relances").select("*").eq("statut", "a_faire"),
     supabase.from("entites").select("id, nom, type, ville, statut_vie"),
     supabase.from("entite_operation").select("entite_id"),
@@ -150,7 +150,7 @@ export default async function Dashboard() {
           const list = operations.filter((o) => o.statut === statut);
           const v = STATUT_VAR[statut];
           return (
-            <div className="col" key={statut}>
+            <div className={`col${list.length === 0 ? " col--empty" : ""}`} key={statut}>
               <h3>
                 <span className="dot" style={{ background: `var(${v})` }} />
                 {STATUT_LABELS[statut]}
