@@ -1,11 +1,7 @@
 import Link from "next/link";
 import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
-import {
-  STATUT_LABELS,
-  STATUT_ORDRE,
-  type Operation,
-  type Relance,
-} from "@/lib/types";
+import { type Operation, type Relance } from "@/lib/types";
+import PipelineViews from "./pipeline-views";
 
 // Une entité est « silencieuse » si son dernier contact remonte à plus de 2 mois
 // (ou si on ne l'a jamais rencontrée). C'est le signal « on risque de l'oublier ».
@@ -22,21 +18,6 @@ const TYPE_ENTITE: Record<string, string> = {
 // Rendu à la demande (jamais au build) : les données sont lues à chaque visite,
 // via le serveur. Évite toute connexion à Supabase pendant la compilation.
 export const dynamic = "force-dynamic";
-
-const STATUT_VAR: Record<string, string> = {
-  contact: "--s-contact",
-  qualifie: "--s-qualifie",
-  ao_attente: "--s-ao",
-  offre_remise: "--s-offre",
-  nego: "--s-nego",
-  gagne: "--s-gagne",
-  perdu: "--s-perdu",
-};
-
-function euro(n: number | null): string | null {
-  if (n == null) return null;
-  return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n) + " €";
-}
 
 export default async function Dashboard() {
   // Pas encore configuré : on guide au lieu de planter.
@@ -68,7 +49,7 @@ export default async function Dashboard() {
     supabase.from("operations").select("*").order("created_at", { ascending: false }),
     supabase.from("relances").select("*").eq("statut", "a_faire"),
     supabase.from("entites").select("id, nom, type, ville, statut_vie"),
-    supabase.from("entite_operation").select("entite_id"),
+    supabase.from("entite_operation").select("entite_id, operation_id, entites(nom)"),
     supabase.from("cr_entites").select("entite_id, crs(date_rdv)"),
   ]);
 
@@ -94,6 +75,14 @@ export default async function Dashboard() {
   // --- Annuaire réseau : entités du réseau, dernier contact, alertes de silence.
   // Entités déjà engagées dans une opération (on ne les remet pas dans l'annuaire).
   const avecOp = new Set<string>((liens ?? []).map((l: any) => l.entite_id));
+
+  // Pour chaque opération : les prospects (entités) qui y sont rattachés.
+  // Sert aux vues « Par prospect » et à l'affichage des portes d'entrée.
+  const opEntites: Record<string, { id: string; nom: string }[]> = {};
+  for (const l of (liens ?? []) as any[]) {
+    if (!l.operation_id || !l.entite_id) continue;
+    (opEntites[l.operation_id] ??= []).push({ id: l.entite_id, nom: l.entites?.nom ?? "—" });
+  }
 
   // Dernier RDV connu pour chaque entité (via les comptes rendus rattachés).
   const dernierContact = new Map<string, string>();
@@ -141,31 +130,11 @@ export default async function Dashboard() {
       </div>
 
       <div className="section-t">
-        <h2>Pipeline par opération</h2>
+        <h2>Pipeline des affaires</h2>
         <span>le pilotage se fait par affaire — jamais par euro</span>
       </div>
 
-      <div className="board">
-        {STATUT_ORDRE.map((statut) => {
-          const list = operations.filter((o) => o.statut === statut);
-          const v = STATUT_VAR[statut];
-          return (
-            <div className={`col${list.length === 0 ? " col--empty" : ""}`} key={statut}>
-              <h3>
-                <span className="dot" style={{ background: `var(${v})` }} />
-                {STATUT_LABELS[statut]}
-                <span className="cnt tnum">{list.length}</span>
-              </h3>
-              {list.map((o) => (
-                <Link className="op" href={`/operations/${o.id}`} key={o.id}>
-                  <div className="onm">{o.nom}</div>
-                  {euro(o.montant_estime) && <div className="amt">{euro(o.montant_estime)}</div>}
-                </Link>
-              ))}
-            </div>
-          );
-        })}
-      </div>
+      <PipelineViews operations={operations} opEntites={opEntites} />
 
       <div className="section-t" style={{ marginTop: 34 }}>
         <h2>Annuaire réseau</h2>
