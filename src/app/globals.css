@@ -391,7 +391,10 @@ h1, h2, h3 { margin: 0; letter-spacing: -.01em; }
 .sig-d { --cat: var(--c-struct); display: inline-flex; align-items: center; gap: 7px; font: inherit; font-size: 13px;
        font-weight: 650; padding: 7px 12px; border-radius: 10px; cursor: pointer;
        border: 1.5px solid color-mix(in srgb, var(--cat) 55%, var(--line));
-       background: var(--surface); color: color-mix(in srgb, var(--cat) 62%, var(--ink)); }
+       background: var(--surface); color: color-mix(in srgb, var(--cat) 62%, var(--ink));
+       text-transform: uppercase; letter-spacing: .02em; }
+/* Sous-mentions internes d'un signet : pas de majuscule forcée. */
+.sig-d .sig-sub, .sig-d .sig-badge, .sig-d .mini-sig { text-transform: none; letter-spacing: 0; }
 .sig-d:hover { background: color-mix(in srgb, var(--cat) 11%, var(--surface)); }
 .sig-d.struct { --cat: var(--c-struct); } .sig-d.op { --cat: var(--c-op); }
 .sig-d.pers { --cat: var(--c-pers); } .sig-d.rel { --cat: var(--c-rel); }
@@ -432,6 +435,17 @@ h1, h2, h3 { margin: 0; letter-spacing: -.01em; }
        background: var(--surface); color: var(--ink); width: 100%; }
 .carte-body input:focus, .carte-body select:focus, .carte-fields input:focus, .carte-nom:focus { outline: none; border-color: var(--accent); }
 .carte-foot { display: flex; justify-content: space-between; gap: 10px; margin-top: 4px; }
+/* En-tête de carte en AFFICHAGE (lecture seule, épuré). */
+.carte-top .carte-nom-view { width: 100%; margin: 10px 0 0; font-size: 21px; font-weight: 700; line-height: 1.2;
+       text-transform: uppercase; letter-spacing: .01em; }
+.carte-meta { margin-top: 5px; font-size: 13.5px; color: var(--muted); font-weight: 500; }
+/* Section de signets associés dans une carte. */
+.carte-sect { display: flex; flex-direction: column; gap: 9px; }
+.carte-sect-h { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700;
+       letter-spacing: .03em; text-transform: uppercase; color: var(--muted); }
+.carte-sect-h .ic { width: 15px; height: 15px; color: var(--muted); }
+.carte-body .hint { color: var(--faint); font-size: 12.5px; margin: 2px 0 0; }
+.btn.danger { color: var(--warn); }
 .sig-badge { font-style: normal; font-weight: 700; font-size: 9.5px; padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
 .sig-badge.base { background: var(--accent-soft); color: var(--accent-ink); }
 .sig-badge.new { background: color-mix(in srgb, var(--warn) 20%, transparent); color: var(--warn); }

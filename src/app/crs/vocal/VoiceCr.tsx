@@ -155,9 +155,15 @@ export default function VoiceCr({
   const [rattachements, setRattachements] = useState<Rattach[]>(initRattach);
   const [personnes, setPersonnes] = useState<PersonneEdit[]>([]);
   const [relances, setRelances] = useState<RelanceEdit[]>([]);
-  // Carte ouverte au clic sur un signet (overlay, pas d'édition inline).
+  // Carte ouverte au clic sur un signet (overlay). S'ouvre en AFFICHAGE ;
+  // on passe en édition via le bouton « Modifier ».
   const [openCard, setOpenCard] = useState<{ cat: "rat" | "pers" | "rel" | "reperes"; i: number } | null>(null);
+  const [cardMode, setCardMode] = useState<"view" | "edit">("view");
   const fermerCarte = () => setOpenCard(null);
+  const ouvrirCarte = (cat: "rat" | "pers" | "rel" | "reperes", i: number, mode: "view" | "edit" = "view") => {
+    setCardMode(mode);
+    setOpenCard({ cat, i });
+  };
 
   // Chat de correction.
   const [instr, setInstr] = useState("");
@@ -437,108 +443,193 @@ export default function VoiceCr({
   const majRel = (i: number, patch: Partial<RelanceEdit>) =>
     setRelances((prev) => prev.map((x, j) => (j === i ? { ...x, ...patch } : x)));
 
-  // Contenu de la carte ouverte au clic sur un signet.
+  // Petit signet cliquable, réutilisé dans les cartes pour les éléments associés.
+  const opsRat = rattachements.map((r, idx) => ({ r, idx })).filter((x) => x.r.kind === "operation");
+  const structRat = rattachements.map((r, idx) => ({ r, idx })).filter((x) => x.r.kind === "structure");
+  function AssocSignet({ label, kind, onClick }: { label: string; kind: string; onClick: () => void }) {
+    return <button type="button" className={`sig-d ${kind}`} onClick={onClick}>{label || "—"}</button>;
+  }
+  function SectionAssoc({ titre, icon, children }: { titre: string; icon: any; children: React.ReactNode }) {
+    return (
+      <div className="carte-sect">
+        <div className="carte-sect-h"><Icon name={icon} /> {titre}</div>
+        <div className="sig-wrap">{children}</div>
+      </div>
+    );
+  }
+
+  // Contenu de la carte : affichage d'abord, édition via « Modifier ».
   function carteContenu() {
     if (!openCard) return null;
     const { cat, i } = openCard;
+    const edit = cardMode === "edit";
 
+    // --- Repères (uniquement en édition, pas de vue). ---
     if (cat === "reperes") {
       return (
         <>
           <div className="carte-top"><h2>Repères</h2></div>
           <div className="carte-body">
-            <label className="field">
-              <span className="lab">Date du rendez-vous</span>
-              <input type="date" value={dateRdv} max={today} onChange={(e) => setDateRdv(e.target.value)} />
-            </label>
-            <label className="field">
-              <span className="lab">Type de rendez-vous</span>
+            <label className="field"><span className="lab">Date du rendez-vous</span>
+              <input type="date" value={dateRdv} max={today} onChange={(e) => setDateRdv(e.target.value)} /></label>
+            <label className="field"><span className="lab">Type de rendez-vous</span>
               <select value={typeRdv} onChange={(e) => setTypeRdv(e.target.value)}>
                 {TYPES_RDV.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
-              </select>
-            </label>
+              </select></label>
             <div className="carte-foot"><button type="button" className="btn" onClick={fermerCarte}>OK</button></div>
           </div>
         </>
       );
     }
 
+    // --- Structure / Opération. ---
     if (cat === "rat") {
       const r = rattachements[i];
       if (!r) return null;
       const enBase = ratEnBase(r);
       const structure = r.kind === "structure";
+      const typeLbl = LABEL_TYPE[(enBase ? entTypeByNom.get(r.name.trim().toLowerCase()) : r.type) ?? "autre"];
+      const persLiees = structure
+        ? personnes.map((p, idx) => ({ p, idx })).filter((x) => x.p.entite.trim().toLowerCase() === r.name.trim().toLowerCase())
+        : [];
+      const head = (
+        <div className="carte-top">
+          <span className={`carte-cat ${structure ? "struct" : "op"}`}>
+            <Icon name={structure ? "structure" : "operation"} /> {structure ? "Structure" : "Opération"}{structure ? ` · ${typeLbl}` : ""} · {enBase ? "en base" : "à créer"}
+          </span>
+          <h2 className="carte-nom-view">{r.name.trim() || "(à nommer)"}</h2>
+        </div>
+      );
+      if (!edit) {
+        return (
+          <>{head}
+            <div className="carte-body">
+              {structure && persLiees.length > 0 && (
+                <SectionAssoc titre="Personnes" icon="personne">
+                  {persLiees.map(({ p, idx }) => (
+                    <AssocSignet key={idx} kind="pers" label={[p.prenom, p.nom].filter(Boolean).join(" ")} onClick={() => ouvrirCarte("pers", idx)} />
+                  ))}
+                </SectionAssoc>
+              )}
+              {structure && opsRat.length > 0 && (
+                <SectionAssoc titre="Opérations évoquées" icon="operation">
+                  {opsRat.map(({ r: o, idx }) => <AssocSignet key={idx} kind="op" label={o.name} onClick={() => ouvrirCarte("rat", idx)} />)}
+                </SectionAssoc>
+              )}
+              {!structure && structRat.length > 0 && (
+                <SectionAssoc titre="Structures" icon="structure">
+                  {structRat.map(({ r: s, idx }) => <AssocSignet key={idx} kind="struct" label={s.name} onClick={() => ouvrirCarte("rat", idx)} />)}
+                </SectionAssoc>
+              )}
+              <p className="hint">L'historique complet de cette fiche (toutes ses opérations) apparaîtra dans le Réseau / Pipeline.</p>
+              <div className="carte-foot">
+                <button type="button" className="btn ghost mini danger" onClick={() => { setRattachements((p) => p.filter((_, j) => j !== i)); fermerCarte(); }}>Supprimer</button>
+                <button type="button" className="btn" onClick={() => setCardMode("edit")}>Modifier</button>
+              </div>
+            </div>
+          </>
+        );
+      }
       return (
-        <>
-          <div className="carte-top">
-            <span className={`carte-cat ${structure ? "struct" : "op"}`}>
-              <Icon name={structure ? "structure" : "operation"} /> {structure ? "Structure" : "Opération"} · {enBase ? "en base" : "à créer"}
-            </span>
-            <input className="carte-nom" list={structure ? "dl-structures" : "dl-operations"} value={r.name}
-              placeholder="Nom…" onChange={(e) => majRat(i, { name: e.target.value })} />
-          </div>
+        <>{head}
           <div className="carte-body">
-            <button type="button" className="btn ghost mini" onClick={() => majRat(i, { kind: structure ? "operation" : "structure" })}>
-              Basculer en {structure ? "opération" : "structure"}
-            </button>
+            <input className="carte-nom" list={structure ? "dl-structures" : "dl-operations"} value={r.name} placeholder="Nom…" onChange={(e) => majRat(i, { name: e.target.value })} />
+            <button type="button" className="btn ghost mini" onClick={() => majRat(i, { kind: structure ? "operation" : "structure" })}>Basculer en {structure ? "opération" : "structure"}</button>
             {structure && !enBase && (
-              <label className="field">
-                <span className="lab">Type de structure</span>
+              <label className="field"><span className="lab">Type de structure</span>
                 <select value={r.type ?? "autre"} onChange={(e) => majRat(i, { type: e.target.value })}>
                   {TYPE_STRUCTURE.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
-                </select>
-              </label>
+                </select></label>
             )}
-            <div className="carte-foot">
-              <button type="button" className="btn ghost mini danger" onClick={() => { setRattachements((p) => p.filter((_, j) => j !== i)); fermerCarte(); }}>Supprimer</button>
-              <button type="button" className="btn" onClick={fermerCarte}>OK</button>
-            </div>
+            <div className="carte-foot"><button type="button" className="btn" onClick={() => setCardMode("view")}>OK</button></div>
           </div>
         </>
       );
     }
 
+    // --- Personne. ---
     if (cat === "pers") {
       const p = personnes[i];
       if (!p) return null;
+      const enBase = persEnBase(p);
+      const nomComplet = [p.prenom, p.nom].filter(Boolean).join(" ") || "(à nommer)";
+      const head = (
+        <div className="carte-top">
+          <span className="carte-cat pers"><Icon name="personne" /> Personne · {enBase ? "en base" : "à créer"}</span>
+          <h2 className="carte-nom-view">{nomComplet}</h2>
+          {p.fonction.trim() && <div className="carte-meta">{p.fonction}</div>}
+        </div>
+      );
+      if (!edit) {
+        return (
+          <>{head}
+            <div className="carte-body">
+              {p.entite.trim() && (
+                <SectionAssoc titre="Structure" icon="structure">
+                  <span className="sig-d struct" style={{ cursor: "default" }}>{p.entite}</span>
+                </SectionAssoc>
+              )}
+              {opsRat.length > 0 && (
+                <SectionAssoc titre="Opérations évoquées" icon="operation">
+                  {opsRat.map(({ r: o, idx }) => <AssocSignet key={idx} kind="op" label={o.name} onClick={() => ouvrirCarte("rat", idx)} />)}
+                </SectionAssoc>
+              )}
+              <div className="carte-foot">
+                <button type="button" className="btn ghost mini danger" onClick={() => { setPersonnes((pp) => pp.filter((_, j) => j !== i)); fermerCarte(); }}>Supprimer</button>
+                <button type="button" className="btn" onClick={() => setCardMode("edit")}>Modifier</button>
+              </div>
+            </div>
+          </>
+        );
+      }
       return (
-        <>
-          <div className="carte-top">
-            <span className="carte-cat pers"><Icon name="personne" /> Personne · {persEnBase(p) ? "en base" : "à créer"}</span>
+        <>{head}
+          <div className="carte-body">
             <div className="carte-fields">
               <input className="pf" placeholder="Prénom" value={p.prenom} onChange={(e) => majPers(i, { prenom: e.target.value })} />
               <input className="pf" placeholder="Nom" value={p.nom} onChange={(e) => majPers(i, { nom: e.target.value })} />
             </div>
-          </div>
-          <div className="carte-body">
             <label className="field"><span className="lab">Fonction</span>
               <input value={p.fonction} placeholder="Fonction…" onChange={(e) => majPers(i, { fonction: e.target.value })} /></label>
             <label className="field"><span className="lab">Structure</span>
               <input list="dl-structures" value={p.entite} placeholder="Sa structure…" onChange={(e) => majPers(i, { entite: e.target.value })} /></label>
-            <div className="carte-foot">
-              <button type="button" className="btn ghost mini danger" onClick={() => { setPersonnes((pp) => pp.filter((_, j) => j !== i)); fermerCarte(); }}>Supprimer</button>
-              <button type="button" className="btn" onClick={fermerCarte}>OK</button>
-            </div>
+            <div className="carte-foot"><button type="button" className="btn" onClick={() => setCardMode("view")}>OK</button></div>
           </div>
         </>
       );
     }
 
+    // --- Relance. ---
     if (cat === "rel") {
       const r = relances[i];
       if (!r) return null;
+      const head = (
+        <div className="carte-top">
+          <span className="carte-cat rel"><Icon name="relance" /> Relance</span>
+          <h2 className="carte-nom-view">{r.objet.trim() || "(à préciser)"}</h2>
+          <div className="carte-meta">Échéance : {dateCourt(r.date)}</div>
+        </div>
+      );
+      if (!edit) {
+        return (
+          <>{head}
+            <div className="carte-body">
+              <div className="carte-foot">
+                <button type="button" className="btn ghost mini danger" onClick={() => { setRelances((rr) => rr.filter((_, j) => j !== i)); fermerCarte(); }}>Supprimer</button>
+                <button type="button" className="btn" onClick={() => setCardMode("edit")}>Modifier</button>
+              </div>
+            </div>
+          </>
+        );
+      }
       return (
-        <>
-          <div className="carte-top"><span className="carte-cat rel"><Icon name="relance" /> Relance</span></div>
+        <>{head}
           <div className="carte-body">
             <label className="field"><span className="lab">Action de suivi</span>
               <input value={r.objet} placeholder="Ex. Rappeler…" onChange={(e) => majRel(i, { objet: e.target.value })} /></label>
             <label className="field"><span className="lab">Échéance</span>
               <input type="date" value={r.date} onChange={(e) => majRel(i, { date: e.target.value })} /></label>
-            <div className="carte-foot">
-              <button type="button" className="btn ghost mini danger" onClick={() => { setRelances((rr) => rr.filter((_, j) => j !== i)); fermerCarte(); }}>Supprimer</button>
-              <button type="button" className="btn" onClick={fermerCarte}>OK</button>
-            </div>
+            <div className="carte-foot"><button type="button" className="btn" onClick={() => setCardMode("view")}>OK</button></div>
           </div>
         </>
       );
@@ -631,8 +722,8 @@ export default function VoiceCr({
         <div className="bloc">
           <div className="encart-h reperes">📌 Repères</div>
           <div className="sig-wrap">
-            <button type="button" className="sig-d date" onClick={() => setOpenCard({ cat: "reperes", i: 0 })}>{dateCourt(dateRdv)}</button>
-            <button type="button" className="sig-d type" onClick={() => setOpenCard({ cat: "reperes", i: 0 })}>{TYPES_RDV.find((t) => t.v === typeRdv)?.l ?? "Type"}</button>
+            <button type="button" className="sig-d date" onClick={() => ouvrirCarte("reperes", 0, "edit")}>{dateCourt(dateRdv)}</button>
+            <button type="button" className="sig-d type" onClick={() => ouvrirCarte("reperes", 0, "edit")}>{TYPES_RDV.find((t) => t.v === typeRdv)?.l ?? "Type"}</button>
           </div>
         </div>
 
@@ -645,14 +736,14 @@ export default function VoiceCr({
               const enBase = ratEnBase(r);
               const typeLbl = LABEL_TYPE[(enBase ? entTypeByNom.get(r.name.trim().toLowerCase()) : r.type) ?? "autre"];
               return (
-                <button type="button" className="sig-d struct" key={i} onClick={() => setOpenCard({ cat: "rat", i })}>
+                <button type="button" className="sig-d struct" key={i} onClick={() => ouvrirCarte("rat", i)}>
                   {r.name.trim() || "(à nommer)"}
                   {typeLbl && <span className="sig-sub">{typeLbl}</span>}
                   <span className={`sig-badge ${enBase ? "base" : "new"}`}>{enBase ? "en base" : "à créer"}</span>
                 </button>
               );
             })}
-            <button type="button" className="sig-add" onClick={() => { setRattachements((p) => [...p, { kind: "structure", name: "" }]); setOpenCard({ cat: "rat", i: rattachements.length }); }}>＋ Ajouter</button>
+            <button type="button" className="sig-add" onClick={() => { setRattachements((p) => [...p, { kind: "structure", name: "" }]); ouvrirCarte("rat", rattachements.length, "edit"); }}>＋ Ajouter</button>
           </div>
         </div>
 
@@ -664,13 +755,13 @@ export default function VoiceCr({
               if (r.kind !== "operation") return null;
               const enBase = ratEnBase(r);
               return (
-                <button type="button" className="sig-d op" key={i} onClick={() => setOpenCard({ cat: "rat", i })}>
+                <button type="button" className="sig-d op" key={i} onClick={() => ouvrirCarte("rat", i)}>
                   {r.name.trim() || "(à nommer)"}
                   <span className={`sig-badge ${enBase ? "base" : "new"}`}>{enBase ? "en base" : "à créer"}</span>
                 </button>
               );
             })}
-            <button type="button" className="sig-add" onClick={() => { setRattachements((p) => [...p, { kind: "operation", name: "" }]); setOpenCard({ cat: "rat", i: rattachements.length }); }}>＋ Ajouter</button>
+            <button type="button" className="sig-add" onClick={() => { setRattachements((p) => [...p, { kind: "operation", name: "" }]); ouvrirCarte("rat", rattachements.length, "edit"); }}>＋ Ajouter</button>
           </div>
         </div>
 
@@ -682,14 +773,14 @@ export default function VoiceCr({
               const nomComplet = [p.prenom, p.nom].filter(Boolean).join(" ") || "(à nommer)";
               const enBase = persEnBase(p);
               return (
-                <button type="button" className="sig-d pers" key={i} onClick={() => setOpenCard({ cat: "pers", i })}>
+                <button type="button" className="sig-d pers" key={i} onClick={() => ouvrirCarte("pers", i)}>
                   {nomComplet}
                   {p.entite.trim() && <span className="mini-sig">{p.entite}</span>}
                   <span className={`sig-badge ${enBase ? "base" : "new"}`}>{enBase ? "en base" : "à créer"}</span>
                 </button>
               );
             })}
-            <button type="button" className="sig-add" onClick={() => { setPersonnes((pp) => [...pp, { prenom: "", nom: "", fonction: "", entite: "" }]); setOpenCard({ cat: "pers", i: personnes.length }); }}>＋ Ajouter</button>
+            <button type="button" className="sig-add" onClick={() => { setPersonnes((pp) => [...pp, { prenom: "", nom: "", fonction: "", entite: "" }]); ouvrirCarte("pers", personnes.length, "edit"); }}>＋ Ajouter</button>
           </div>
         </div>
 
@@ -698,12 +789,12 @@ export default function VoiceCr({
           <div className="encart-h rel"><Icon name="relance" /> Relances</div>
           <div className="sig-wrap">
             {relances.map((r, i) => (
-              <button type="button" className="sig-d rel" key={i} onClick={() => setOpenCard({ cat: "rel", i })}>
+              <button type="button" className="sig-d rel" key={i} onClick={() => ouvrirCarte("rel", i)}>
                 {r.objet.trim() || "(à préciser)"}
                 <span className="sig-sub">{dateCourt(r.date)}</span>
               </button>
             ))}
-            <button type="button" className="sig-add" onClick={() => { setRelances((rr) => [...rr, { objet: "", date: addDays(today, 30) }]); setOpenCard({ cat: "rel", i: relances.length }); }}>＋ Ajouter</button>
+            <button type="button" className="sig-add" onClick={() => { setRelances((rr) => [...rr, { objet: "", date: addDays(today, 30) }]); ouvrirCarte("rel", relances.length, "edit"); }}>＋ Ajouter</button>
           </div>
         </div>
 
