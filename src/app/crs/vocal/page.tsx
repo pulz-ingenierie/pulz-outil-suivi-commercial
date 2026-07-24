@@ -22,7 +22,7 @@ export default async function VocalPage({
 
   const supabase = getServerSupabase()!;
   const [{ data: entites }, { data: operations }, { data: contactsBase }] = await Promise.all([
-    supabase.from("entites").select("id, nom").order("nom"),
+    supabase.from("entites").select("id, nom, type").order("nom"),
     supabase.from("operations").select("id, nom").order("created_at", { ascending: false }),
     supabase.from("contacts").select("nom, prenom"),
   ]);

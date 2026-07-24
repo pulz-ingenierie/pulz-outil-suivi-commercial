@@ -19,11 +19,13 @@ Règles absolues :
 - N'infère jamais de montant d'honoraires ou de budget si ce n'est pas dit.
 - Si une information demandée est absente, laisse le champ vide, la liste vide ou null.
 
-DISTINCTION IMPORTANTE — structure vs personne :
-- Une STRUCTURE (organisation) est une entité morale : mairie, bailleur, promoteur, agence d'architecture, entreprise, collectivité… → elle va dans "entites".
-- Une PERSONNE physique (un individu, avec un nom et souvent un prénom et une fonction) → elle va dans "contacts", JAMAIS dans "entites".
-- Exemple : « Louis Dujardin, directeur de la SIGH » → contact { nom: "Dujardin", prenom: "Louis", fonction: "directeur", entite: "SIGH" } ; et "SIGH" est la structure (dans "entites" si elle est connue).
-- Rattache chaque personne à sa structure via le champ "entite".
+DISTINCTION IMPORTANTE — structure vs personne (règle stricte) :
+- Une STRUCTURE (organisation) est une entité morale : mairie, bailleur, promoteur, agence d'architecture, entreprise, collectivité… → elle va dans "entites" (ou "nouvelles_entites").
+- Une PERSONNE physique (un individu) → elle va dans "contacts", JAMAIS dans "entites".
+- SÉPARE STRICTEMENT les champs d'un contact : "nom" et "prenom" ne contiennent QUE le nom et le prénom de la personne — JAMAIS le nom de sa structure, JAMAIS sa fonction. La fonction va dans "fonction". La structure va dans "entite" (et est listée comme structure à part).
+- Le TYPE d'une structure (MOA, architecte, promoteur, confrère, autre) décrit la structure — ce n'est pas son nom. Renseigne-le dans "nouvelles_entites[].type".
+- Exemple : « Romain Mission, promoteur immobilier, société Cible Le Neuf » → contact { nom: "Mission", prenom: "Romain", fonction: "promoteur immobilier", entite: "Cible Le Neuf" } ET nouvelle structure { nom: "Cible Le Neuf", type: "promoteur" }.
+- Autre exemple : « Louis Dujardin, directeur de la SIGH » → contact { nom: "Dujardin", prenom: "Louis", fonction: "directeur", entite: "SIGH" } ; "SIGH" est la structure.
 
 Entités déjà connues dans l'outil (rattache uniquement à celles réellement évoquées, avec leur libellé EXACT) :
 ${listeEntites}

@@ -6,10 +6,22 @@ import { createCr, finaliserBrouillon, supprimerBrouillon } from "@/lib/actions"
 import type { Synthese } from "@/lib/synthese";
 
 type Opt = { id: string; nom: string };
+type Ent = { id: string; nom: string; type?: string };
 type ContactBase = { nom: string; prenom: string | null };
 
 // Rattachement unifié : une structure OU une opération (bascule possible).
-type Rattach = { kind: "structure" | "operation"; name: string };
+// `type` = type de structure (MOA/archi/promoteur/confrere/autre), pour une
+// nouvelle structure à créer.
+type Rattach = { kind: "structure" | "operation"; name: string; type?: string };
+
+const TYPE_STRUCTURE = [
+  { v: "MOA", l: "MOA" },
+  { v: "archi", l: "Architecte" },
+  { v: "promoteur", l: "Promoteur" },
+  { v: "confrere", l: "Confrère" },
+  { v: "autre", l: "Autre" },
+];
+const LABEL_TYPE: Record<string, string> = Object.fromEntries(TYPE_STRUCTURE.map((t) => [t.v, t.l]));
 type PersonneEdit = { prenom: string; nom: string; fonction: string; entite: string };
 type RelanceEdit = { objet: string; date: string };
 
@@ -84,7 +96,7 @@ export default function VoiceCr({
   initialTranscription,
   initialSynthese,
 }: {
-  entites: Opt[];
+  entites: Ent[];
   operations: Opt[];
   today: string;
   contactsBase?: ContactBase[];
@@ -228,7 +240,7 @@ export default function VoiceCr({
     const rats: Rattach[] = [
       ...(s.entites ?? []).map((n) => ({ kind: "structure" as const, name: n })),
       ...(s.operations ?? []).map((n) => ({ kind: "operation" as const, name: n })),
-      ...(s.nouvelles_entites ?? []).map((e) => ({ kind: "structure" as const, name: e.nom })),
+      ...(s.nouvelles_entites ?? []).map((e) => ({ kind: "structure" as const, name: e.nom, type: e.type })),
       ...(s.nouvelles_operations ?? []).map((o) => ({ kind: "operation" as const, name: o.nom })),
     ];
     setRattachements((prev) => dedupRattach(authoritative ? rats : [...prev, ...rats]));
@@ -355,6 +367,7 @@ export default function VoiceCr({
   const entNameSet = new Set(entites.map((e) => e.nom.toLowerCase()));
   const opNameSet = new Set(operations.map((o) => o.nom.toLowerCase()));
   const entIdByNom = new Map(entites.map((e) => [e.nom.toLowerCase(), e.id]));
+  const entTypeByNom = new Map(entites.map((e) => [e.nom.toLowerCase(), e.type ?? "autre"]));
   const opIdByNom = new Map(operations.map((o) => [o.nom.toLowerCase(), o.id]));
   const contactSet = new Set(
     contactsBase.map((c) => `${(c.nom ?? "").toLowerCase()}|${(c.prenom ?? "").toLowerCase()}`),
@@ -373,7 +386,7 @@ export default function VoiceCr({
     .map((r) => opIdByNom.get(r.name.trim().toLowerCase())!);
   const nouvellesEntites = ratsNets
     .filter((r) => r.kind === "structure" && !entNameSet.has(r.name.trim().toLowerCase()))
-    .map((r) => ({ nom: r.name.trim(), type: "autre" }));
+    .map((r) => ({ nom: r.name.trim(), type: r.type ?? "autre" }));
   const nouvellesOperations = ratsNets
     .filter((r) => r.kind === "operation" && !opNameSet.has(r.name.trim().toLowerCase()))
     .map((r) => ({ nom: r.name.trim() }));
@@ -503,27 +516,40 @@ export default function VoiceCr({
           {ratsNets.length === 0 && rattachements.length === 0 && (
             <p className="hint" style={{ marginTop: 0 }}>Aucun rattachement pour l'instant. Ajoutez-en un ou lancez l'analyse.</p>
           )}
-          {rattachements.map((r, i) => (
-            <div className="rat-row" key={i}>
-              <button
-                type="button"
-                className="kind-btn"
-                onClick={() => majRat(i, { kind: r.kind === "structure" ? "operation" : "structure" })}
-                title="Basculer structure / opération"
-              >
-                {r.kind === "structure" ? "Structure" : "Opération"} ⇄
-              </button>
-              <input
-                className="rat-name"
-                list={r.kind === "structure" ? "dl-structures" : "dl-operations"}
-                value={r.name}
-                onChange={(e) => majRat(i, { name: e.target.value })}
-                placeholder={r.kind === "structure" ? "Nom de la structure…" : "Nom de l'opération…"}
-              />
-              {r.name.trim() && <span className={`badge ${ratEnBase(r) ? "base" : "new"}`}>{ratEnBase(r) ? "en base" : "à créer"}</span>}
-              <button type="button" className="x-btn" aria-label="Retirer" onClick={() => setRattachements((prev) => prev.filter((_, j) => j !== i))}>×</button>
-            </div>
-          ))}
+          {rattachements.map((r, i) => {
+            const enBase = ratEnBase(r);
+            return (
+              <div className={`rat-row sig-${r.kind}`} key={i}>
+                <button
+                  type="button"
+                  className="kind-btn"
+                  onClick={() => majRat(i, { kind: r.kind === "structure" ? "operation" : "structure" })}
+                  title="Basculer structure / opération"
+                >
+                  {r.kind === "structure" ? "🏢 Structure" : "📂 Opération"} ⇄
+                </button>
+                <input
+                  className="rat-name"
+                  list={r.kind === "structure" ? "dl-structures" : "dl-operations"}
+                  value={r.name}
+                  onChange={(e) => majRat(i, { name: e.target.value })}
+                  placeholder={r.kind === "structure" ? "Nom de la structure…" : "Nom de l'opération…"}
+                />
+                {/* Sous-signet type (structures uniquement). */}
+                {r.kind === "structure" && r.name.trim() && (
+                  enBase ? (
+                    <span className="typechip">{LABEL_TYPE[entTypeByNom.get(r.name.trim().toLowerCase()) ?? "autre"]}</span>
+                  ) : (
+                    <select className="type-sel" value={r.type ?? "autre"} onChange={(e) => majRat(i, { type: e.target.value })} aria-label="Type de structure">
+                      {TYPE_STRUCTURE.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
+                    </select>
+                  )
+                )}
+                {r.name.trim() && <span className={`badge ${enBase ? "base" : "new"}`}>{enBase ? "en base" : "à créer"}</span>}
+                <button type="button" className="x-btn" aria-label="Retirer" onClick={() => setRattachements((prev) => prev.filter((_, j) => j !== i))}>×</button>
+              </div>
+            );
+          })}
           <button type="button" className="add-btn" onClick={() => setRattachements((prev) => [...prev, { kind: "structure", name: "" }])}>＋ Ajouter</button>
         </div>
 
