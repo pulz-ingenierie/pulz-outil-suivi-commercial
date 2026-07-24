@@ -353,15 +353,55 @@ h1, h2, h3 { margin: 0; letter-spacing: -.01em; }
             border-radius: 9px; background: var(--surface); color: var(--ink); }
 .rel-row .rel-objet:focus, .rel-row .rel-ech:focus { outline: none; border-color: var(--accent); }
 
-/* Couleurs par catégorie de signet (barre de gauche). */
-.rat-row.sig-structure { border-left: 3px solid #3E9E7A; padding-left: 10px; }
-.rat-row.sig-operation { border-left: 3px solid #7C5CBF; padding-left: 10px; }
-.rat-row.sig-structure .kind-btn { color: #2c7a5e; }
-.rat-row.sig-operation .kind-btn { color: #6a4bb0; }
-.pers-row { border-left: 3px solid #2D7DD2; padding-left: 10px; }
-.rel-row { border-left: 3px solid #C07C10; padding-left: 10px; }
 .type-sel { flex: none; font: inherit; font-size: 12.5px; padding: 7px 9px; border: 1px solid var(--line);
-            border-radius: 8px; background: var(--surface-2); color: var(--ink); }
+            border-radius: 8px; background: var(--surface); color: var(--ink); }
+
+/* --- Signets : pastilles colorées compactes (affichage par défaut) --- */
+.sig-wrap { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.sig { display: inline-flex; align-items: stretch; max-width: 100%; border: 1px solid var(--line);
+       border-radius: 999px; overflow: hidden; background: var(--surface); box-shadow: var(--shadow); }
+.sig-body { font: inherit; font-size: 13px; font-weight: 650; padding: 7px 13px; border: none;
+       background: transparent; color: var(--ink); cursor: pointer; display: inline-flex; align-items: center;
+       gap: 7px; flex-wrap: wrap; text-align: left; min-width: 0; }
+.sig-body:hover { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.sig-sub { font-style: normal; font-weight: 500; font-size: 11.5px; color: var(--muted); }
+.sig-badge { font-style: normal; font-weight: 700; font-size: 9.5px; padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
+.sig-badge.base { background: var(--accent-soft); color: var(--accent-ink); }
+.sig-badge.new { background: color-mix(in srgb, var(--warn) 20%, transparent); color: var(--warn); }
+.sig-x { flex: none; border: none; border-left: 1px solid var(--line); background: transparent; color: var(--faint);
+       font-size: 15px; line-height: 1; padding: 0 11px; cursor: pointer; }
+.sig-x:hover { background: color-mix(in srgb, var(--crit) 13%, transparent); color: var(--crit); }
+
+/* Barre de couleur par catégorie. */
+.sig.sig-structure { border-left: 4px solid #3E9E7A; }
+.sig.sig-operation { border-left: 4px solid #7C5CBF; }
+.sig.sig-personne  { border-left: 4px solid #2D7DD2; }
+.sig.sig-relance   { border-left: 4px solid #C07C10; }
+.sig.sig-date      { border-left: 4px solid var(--faint); }
+.sig.sig-type      { border-left: 4px solid #C79A3A; }
+
+/* Bouton ajouter, façon pastille. */
+.sig-add { font: inherit; font-size: 12.5px; font-weight: 600; color: var(--accent-ink); background: transparent;
+       border: 1px dashed var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+.sig-add:hover { border-color: var(--accent); }
+
+/* Éditeur inline (au tap sur un signet). */
+.sig-editor { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; width: 100%; padding: 10px;
+       border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); }
+.sig-editor.sig-structure { border-left: 4px solid #3E9E7A; }
+.sig-editor.sig-operation { border-left: 4px solid #7C5CBF; }
+.sig-editor.sig-personne  { border-left: 4px solid #2D7DD2; }
+.sig-editor.sig-relance   { border-left: 4px solid #C07C10; }
+.mini-toggle { flex: none; font: inherit; font-size: 12px; font-weight: 700; padding: 7px 10px; border-radius: 8px;
+       border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; white-space: nowrap; }
+.sig-editor .pf, .sig-editor .rat-name, .sig-editor .rel-objet { flex: 1; min-width: 100px; font: inherit;
+       font-size: 13.5px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--ink); }
+.sig-editor .rel-ech { font: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line);
+       border-radius: 9px; background: var(--surface); color: var(--ink); }
+.sig-editor input:focus, .sig-editor select:focus { outline: none; border-color: var(--accent); }
+.sig-edit-date, .sig-edit-type { font: inherit; font-size: 13px; padding: 8px 11px; border: 1px solid var(--accent);
+       border-radius: 10px; background: var(--surface); color: var(--ink); }
 .recorder .hint, .synth-row .hint, .s-relances .hint { color: var(--faint); font-size: 12.5px; margin: 12px 0 0; }
 .notice.err { border-left-color: var(--crit); color: var(--crit); }
 

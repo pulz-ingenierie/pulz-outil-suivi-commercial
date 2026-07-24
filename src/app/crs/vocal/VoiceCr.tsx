@@ -72,6 +72,14 @@ function diffDays(fromIso: string, toIso: string): number {
   }
 }
 
+function dateCourt(iso: string): string {
+  try {
+    return new Date(iso + "T00:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  } catch {
+    return iso;
+  }
+}
+
 function dedupRattach(list: Rattach[]): Rattach[] {
   const seen = new Set<string>();
   const out: Rattach[] = [];
@@ -134,6 +142,12 @@ export default function VoiceCr({
   const [rattachements, setRattachements] = useState<Rattach[]>(initRattach);
   const [personnes, setPersonnes] = useState<PersonneEdit[]>([]);
   const [relances, setRelances] = useState<RelanceEdit[]>([]);
+  // Quel signet est ouvert en édition (sinon affichage compact).
+  const [editRat, setEditRat] = useState<number | null>(null);
+  const [editPers, setEditPers] = useState<number | null>(null);
+  const [editRel, setEditRel] = useState<number | null>(null);
+  const [editDate, setEditDate] = useState(false);
+  const [editType, setEditType] = useState(false);
 
   // Chat de correction.
   const [instr, setInstr] = useState("");
@@ -494,94 +508,134 @@ export default function VoiceCr({
           )}
         </div>
 
-        {/* Bloc — date + type. */}
+        {/* Bloc — repères (date + type en signets). */}
         <div className="bloc">
-          <div className="row2">
-            <label className="field">
-              <span className="lab">📅 Date du rendez-vous</span>
-              <input type="date" name="date_rdv" value={dateRdv} max={today} onChange={(e) => setDateRdv(e.target.value)} />
-            </label>
-            <label className="field">
-              <span className="lab">🏷️ Type de rendez-vous</span>
-              <select name="type_rdv" value={typeRdv} onChange={(e) => setTypeRdv(e.target.value)}>
+          <h3>📌 Repères</h3>
+          <div className="sig-wrap">
+            {editDate ? (
+              <input type="date" className="sig-edit-date" value={dateRdv} max={today} autoFocus
+                onChange={(e) => setDateRdv(e.target.value)} onBlur={() => setEditDate(false)} />
+            ) : (
+              <button type="button" className="sig sig-date" onClick={() => { setEditDate(true); setEditType(false); }}>
+                📅 {dateCourt(dateRdv)}
+              </button>
+            )}
+            {editType ? (
+              <select className="sig-edit-type" value={typeRdv} autoFocus
+                onChange={(e) => { setTypeRdv(e.target.value); setEditType(false); }} onBlur={() => setEditType(false)}>
                 {TYPES_RDV.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
               </select>
-            </label>
+            ) : (
+              <button type="button" className="sig sig-type" onClick={() => { setEditType(true); setEditDate(false); }}>
+                🏷️ {TYPES_RDV.find((t) => t.v === typeRdv)?.l ?? "Type"}
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Bloc — structures & opérations. */}
+        {/* Bloc — structures & opérations (signets). */}
         <div className="bloc">
           <h3>🏢 Structures &amp; opérations</h3>
-          {ratsNets.length === 0 && rattachements.length === 0 && (
-            <p className="hint" style={{ marginTop: 0 }}>Aucun rattachement pour l'instant. Ajoutez-en un ou lancez l'analyse.</p>
-          )}
-          {rattachements.map((r, i) => {
-            const enBase = ratEnBase(r);
-            return (
-              <div className={`rat-row sig-${r.kind}`} key={i}>
-                <button
-                  type="button"
-                  className="kind-btn"
-                  onClick={() => majRat(i, { kind: r.kind === "structure" ? "operation" : "structure" })}
-                  title="Basculer structure / opération"
-                >
-                  {r.kind === "structure" ? "🏢 Structure" : "📂 Opération"} ⇄
-                </button>
-                <input
-                  className="rat-name"
-                  list={r.kind === "structure" ? "dl-structures" : "dl-operations"}
-                  value={r.name}
-                  onChange={(e) => majRat(i, { name: e.target.value })}
-                  placeholder={r.kind === "structure" ? "Nom de la structure…" : "Nom de l'opération…"}
-                />
-                {/* Sous-signet type (structures uniquement). */}
-                {r.kind === "structure" && r.name.trim() && (
-                  enBase ? (
-                    <span className="typechip">{LABEL_TYPE[entTypeByNom.get(r.name.trim().toLowerCase()) ?? "autre"]}</span>
-                  ) : (
-                    <select className="type-sel" value={r.type ?? "autre"} onChange={(e) => majRat(i, { type: e.target.value })} aria-label="Type de structure">
-                      {TYPE_STRUCTURE.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
-                    </select>
-                  )
-                )}
-                {r.name.trim() && <span className={`badge ${enBase ? "base" : "new"}`}>{enBase ? "en base" : "à créer"}</span>}
-                <button type="button" className="x-btn" aria-label="Retirer" onClick={() => setRattachements((prev) => prev.filter((_, j) => j !== i))}>×</button>
-              </div>
-            );
-          })}
-          <button type="button" className="add-btn" onClick={() => setRattachements((prev) => [...prev, { kind: "structure", name: "" }])}>＋ Ajouter</button>
+          <div className="sig-wrap">
+            {rattachements.map((r, i) => {
+              const enBase = ratEnBase(r);
+              const typeLbl = r.kind === "structure"
+                ? LABEL_TYPE[(enBase ? entTypeByNom.get(r.name.trim().toLowerCase()) : r.type) ?? "autre"]
+                : null;
+              if (editRat === i) {
+                return (
+                  <div className={`sig-editor sig-${r.kind}`} key={i}>
+                    <button type="button" className="mini-toggle"
+                      onClick={() => majRat(i, { kind: r.kind === "structure" ? "operation" : "structure" })}>
+                      {r.kind === "structure" ? "🏢 Structure" : "📂 Opération"} ⇄
+                    </button>
+                    <input className="rat-name" autoFocus list={r.kind === "structure" ? "dl-structures" : "dl-operations"}
+                      value={r.name} onChange={(e) => majRat(i, { name: e.target.value })}
+                      placeholder={r.kind === "structure" ? "Nom de la structure…" : "Nom de l'opération…"} />
+                    {r.kind === "structure" && !enBase && (
+                      <select className="type-sel" value={r.type ?? "autre"} onChange={(e) => majRat(i, { type: e.target.value })}>
+                        {TYPE_STRUCTURE.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
+                      </select>
+                    )}
+                    <button type="button" className="btn ghost mini" onClick={() => setEditRat(null)}>OK</button>
+                  </div>
+                );
+              }
+              return (
+                <span className={`sig sig-${r.kind}`} key={i}>
+                  <button type="button" className="sig-body" onClick={() => setEditRat(i)}>
+                    {r.kind === "structure" ? "🏢" : "📂"} {r.name.trim() || "(à nommer)"}
+                    {typeLbl && <em className="sig-sub">{typeLbl}</em>}
+                    <em className={`sig-badge ${enBase ? "base" : "new"}`}>{enBase ? "en base" : "à créer"}</em>
+                  </button>
+                  <button type="button" className="sig-x" aria-label="Retirer" onClick={() => setRattachements((p) => p.filter((_, j) => j !== i))}>×</button>
+                </span>
+              );
+            })}
+            <button type="button" className="sig-add" onClick={() => { setRattachements((p) => [...p, { kind: "structure", name: "" }]); setEditRat(rattachements.length); }}>＋ Ajouter</button>
+          </div>
         </div>
 
-        {/* Bloc — personnes. */}
+        {/* Bloc — personnes (signets). */}
         <div className="bloc">
           <h3>👤 Personnes</h3>
-          {personnes.length === 0 && <p className="hint" style={{ marginTop: 0 }}>Aucune personne évoquée.</p>}
-          {personnes.map((p, i) => (
-            <div className="pers-row" key={i}>
-              <input className="pf" placeholder="Prénom" value={p.prenom} onChange={(e) => majPers(i, { prenom: e.target.value })} />
-              <input className="pf" placeholder="Nom" value={p.nom} onChange={(e) => majPers(i, { nom: e.target.value })} />
-              <input className="pf" placeholder="Fonction" value={p.fonction} onChange={(e) => majPers(i, { fonction: e.target.value })} />
-              <input className="pf" list="dl-structures" placeholder="Structure" value={p.entite} onChange={(e) => majPers(i, { entite: e.target.value })} />
-              {p.nom.trim() && <span className={`badge ${persEnBase(p) ? "base" : "new"}`}>{persEnBase(p) ? "en base" : "à créer"}</span>}
-              <button type="button" className="x-btn" aria-label="Retirer" onClick={() => setPersonnes((prev) => prev.filter((_, j) => j !== i))}>×</button>
-            </div>
-          ))}
-          <button type="button" className="add-btn" onClick={() => setPersonnes((prev) => [...prev, { prenom: "", nom: "", fonction: "", entite: "" }])}>＋ Ajouter</button>
+          <div className="sig-wrap">
+            {personnes.map((p, i) => {
+              const nomComplet = [p.prenom, p.nom].filter(Boolean).join(" ") || "(à nommer)";
+              const enBase = persEnBase(p);
+              if (editPers === i) {
+                return (
+                  <div className="sig-editor sig-personne" key={i}>
+                    <input className="pf" autoFocus placeholder="Prénom" value={p.prenom} onChange={(e) => majPers(i, { prenom: e.target.value })} />
+                    <input className="pf" placeholder="Nom" value={p.nom} onChange={(e) => majPers(i, { nom: e.target.value })} />
+                    <input className="pf" placeholder="Fonction" value={p.fonction} onChange={(e) => majPers(i, { fonction: e.target.value })} />
+                    <input className="pf" list="dl-structures" placeholder="Structure" value={p.entite} onChange={(e) => majPers(i, { entite: e.target.value })} />
+                    <button type="button" className="btn ghost mini" onClick={() => setEditPers(null)}>OK</button>
+                  </div>
+                );
+              }
+              return (
+                <span className="sig sig-personne" key={i}>
+                  <button type="button" className="sig-body" onClick={() => setEditPers(i)}>
+                    👤 {nomComplet}
+                    {p.fonction.trim() && <em className="sig-sub">{p.fonction}</em>}
+                    {p.entite.trim() && <em className="sig-sub">{p.entite}</em>}
+                    <em className={`sig-badge ${enBase ? "base" : "new"}`}>{enBase ? "en base" : "à créer"}</em>
+                  </button>
+                  <button type="button" className="sig-x" aria-label="Retirer" onClick={() => setPersonnes((pp) => pp.filter((_, j) => j !== i))}>×</button>
+                </span>
+              );
+            })}
+            <button type="button" className="sig-add" onClick={() => { setPersonnes((pp) => [...pp, { prenom: "", nom: "", fonction: "", entite: "" }]); setEditPers(personnes.length); }}>＋ Ajouter</button>
+          </div>
         </div>
 
-        {/* Bloc — relances. */}
+        {/* Bloc — relances (signets). */}
         <div className="bloc">
-          <h3>🔔 Relances (suites à donner)</h3>
-          {relances.length === 0 && <p className="hint" style={{ marginTop: 0 }}>Aucune relance suggérée.</p>}
-          {relances.map((r, i) => (
-            <div className="rel-row" key={i}>
-              <input className="rel-objet" placeholder="Action de suivi…" value={r.objet} onChange={(e) => majRel(i, { objet: e.target.value })} />
-              <input type="date" className="rel-ech" value={r.date} onChange={(e) => majRel(i, { date: e.target.value })} />
-              <button type="button" className="x-btn" aria-label="Retirer" onClick={() => setRelances((prev) => prev.filter((_, j) => j !== i))}>×</button>
-            </div>
-          ))}
-          <button type="button" className="add-btn" onClick={() => setRelances((prev) => [...prev, { objet: "", date: addDays(today, 30) }])}>＋ Ajouter</button>
+          <h3>🔔 Relances</h3>
+          <div className="sig-wrap">
+            {relances.map((r, i) => {
+              if (editRel === i) {
+                return (
+                  <div className="sig-editor sig-relance" key={i}>
+                    <input className="rel-objet" autoFocus placeholder="Action de suivi…" value={r.objet} onChange={(e) => majRel(i, { objet: e.target.value })} />
+                    <input type="date" className="rel-ech" value={r.date} onChange={(e) => majRel(i, { date: e.target.value })} />
+                    <button type="button" className="btn ghost mini" onClick={() => setEditRel(null)}>OK</button>
+                  </div>
+                );
+              }
+              return (
+                <span className="sig sig-relance" key={i}>
+                  <button type="button" className="sig-body" onClick={() => setEditRel(i)}>
+                    🔔 {r.objet.trim() || "(à préciser)"}
+                    <em className="sig-sub">{dateCourt(r.date)}</em>
+                  </button>
+                  <button type="button" className="sig-x" aria-label="Retirer" onClick={() => setRelances((rr) => rr.filter((_, j) => j !== i))}>×</button>
+                </span>
+              );
+            })}
+            <button type="button" className="sig-add" onClick={() => { setRelances((rr) => [...rr, { objet: "", date: addDays(today, 30) }]); setEditRel(relances.length); }}>＋ Ajouter</button>
+          </div>
         </div>
 
         {/* Bloc — corriger en parlant. */}
