@@ -70,11 +70,11 @@ function dateFr(d: string): string {
   }
 }
 
+// L'étape du pipeline est un signet (même langage visuel que partout ailleurs).
 function EtapeChip({ statut }: { statut: OperationStatut }) {
   return (
-    <span className="chip">
-      <span className="dot" style={{ background: `var(${STATUT_VAR[statut]})` }} />
-      {STATUT_LABELS[statut]}
+    <span className="sig-d phase" style={{ ["--cat" as string]: `var(${STATUT_VAR[statut]})` }}>
+      <span className="sig-lbl">{STATUT_LABELS[statut]}</span>
     </span>
   );
 }
@@ -101,8 +101,8 @@ function CarteOp({
           {avecEtape && <EtapeChip statut={op.statut} />}
           {avecProspects &&
             entites.map((e) => (
-              <span className="chip ent" key={e.id}>
-                {e.nom}
+              <span className="sig-d struct" key={e.id}>
+                <span className="sig-lbl">{e.nom}</span>
               </span>
             ))}
           {montant && <span className="amt">{montant}</span>}
@@ -244,7 +244,7 @@ function VueReseau({ reseau }: { reseau: Structure[] }) {
             <span className="cnt tnum">{s.ops.length}</span>
           </h3>
           <div className="grp-meta">
-            <span className="chip">{s.type}</span>
+            <span className="sig-d type"><span className="sig-lbl">{s.type}</span></span>
             {s.ville && <span className="last">{s.ville}</span>}
             <span className="last">
               {s.dernierContact ? `Dernier contact : ${dateFr(s.dernierContact)}` : "Jamais rencontré"}

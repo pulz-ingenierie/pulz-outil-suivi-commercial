@@ -447,7 +447,7 @@ export default function VoiceCr({
   const opsRat = rattachements.map((r, idx) => ({ r, idx })).filter((x) => x.r.kind === "operation");
   const structRat = rattachements.map((r, idx) => ({ r, idx })).filter((x) => x.r.kind === "structure");
   function AssocSignet({ label, kind, onClick }: { label: string; kind: string; onClick: () => void }) {
-    return <button type="button" className={`sig-d ${kind}`} onClick={onClick}>{label || "—"}</button>;
+    return <button type="button" className={`sig-d ${kind}`} onClick={onClick}><span className="sig-lbl">{label || "—"}</span></button>;
   }
   function SectionAssoc({ titre, icon, children }: { titre: string; icon: any; children: React.ReactNode }) {
     return (
@@ -737,7 +737,7 @@ export default function VoiceCr({
               const typeLbl = LABEL_TYPE[(enBase ? entTypeByNom.get(r.name.trim().toLowerCase()) : r.type) ?? "autre"];
               return (
                 <button type="button" className="sig-d struct" key={i} onClick={() => ouvrirCarte("rat", i)}>
-                  {r.name.trim() || "(à nommer)"}
+                  <span className="sig-lbl">{r.name.trim() || "(à nommer)"}</span>
                   {typeLbl && <span className="sig-sub">{typeLbl}</span>}
                   <span className={`sig-badge ${enBase ? "base" : "new"}`}>{enBase ? "en base" : "à créer"}</span>
                 </button>
@@ -756,7 +756,7 @@ export default function VoiceCr({
               const enBase = ratEnBase(r);
               return (
                 <button type="button" className="sig-d op" key={i} onClick={() => ouvrirCarte("rat", i)}>
-                  {r.name.trim() || "(à nommer)"}
+                  <span className="sig-lbl">{r.name.trim() || "(à nommer)"}</span>
                   <span className={`sig-badge ${enBase ? "base" : "new"}`}>{enBase ? "en base" : "à créer"}</span>
                 </button>
               );
@@ -774,7 +774,7 @@ export default function VoiceCr({
               const enBase = persEnBase(p);
               return (
                 <button type="button" className="sig-d pers" key={i} onClick={() => ouvrirCarte("pers", i)}>
-                  {nomComplet}
+                  <span className="sig-lbl">{nomComplet}</span>
                   {p.entite.trim() && <span className="mini-sig">{p.entite}</span>}
                   <span className={`sig-badge ${enBase ? "base" : "new"}`}>{enBase ? "en base" : "à créer"}</span>
                 </button>
@@ -784,18 +784,23 @@ export default function VoiceCr({
           </div>
         </div>
 
-        {/* Encart — relances. */}
+        {/* Bloc — suites à donner. Une relance est une ACTION à faire, pas un
+            signet (elle ne se recoupe pas d'une fiche à l'autre) : liste dédiée. */}
         <div className="bloc">
-          <div className="encart-h rel"><Icon name="relance" /> Relances</div>
-          <div className="sig-wrap">
+          <div className="encart-h rel"><Icon name="relance" /> Suites à donner</div>
+          <ul className="rel-list">
             {relances.map((r, i) => (
-              <button type="button" className="sig-d rel" key={i} onClick={() => ouvrirCarte("rel", i)}>
-                {r.objet.trim() || "(à préciser)"}
-                <span className="sig-sub">{dateCourt(r.date)}</span>
-              </button>
+              <li key={i}>
+                <button type="button" className="rel-item" onClick={() => ouvrirCarte("rel", i)}>
+                  <span className="rel-item-obj">{r.objet.trim() || "(à préciser)"}</span>
+                  <span className="rel-item-date">{dateCourt(r.date)}</span>
+                </button>
+              </li>
             ))}
-            <button type="button" className="sig-add" onClick={() => { setRelances((rr) => [...rr, { objet: "", date: addDays(today, 30) }]); ouvrirCarte("rel", relances.length, "edit"); }}>＋ Ajouter</button>
-          </div>
+            <li>
+              <button type="button" className="rel-add" onClick={() => { setRelances((rr) => [...rr, { objet: "", date: addDays(today, 30) }]); ouvrirCarte("rel", relances.length, "edit"); }}>＋ Ajouter une relance</button>
+            </li>
+          </ul>
         </div>
 
         {/* Bloc — corriger en parlant. */}

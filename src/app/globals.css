@@ -309,6 +309,24 @@ h1, h2, h3 { margin: 0; letter-spacing: -.01em; }
 .bloc { background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
         padding: 14px 15px; box-shadow: var(--shadow); margin-bottom: 12px; }
 .bloc > h3 { font-size: 14px; margin: 0 0 11px; display: flex; align-items: center; gap: 7px; }
+/* Zone de rédaction du compte rendu : au ton de l'appli, pas de fond blanc cru. */
+.bloc textarea { width: 100%; font: inherit; font-size: 15px; line-height: 1.5; padding: 12px 14px;
+       border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); color: var(--ink);
+       resize: vertical; }
+.bloc textarea:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+.bloc textarea::placeholder { color: var(--faint); }
+/* Suites à donner (relances) : une liste d'actions, pas des signets. */
+.rel-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.rel-item { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+       font: inherit; font-size: 14px; text-align: left; padding: 11px 13px; cursor: pointer;
+       border: 1px solid var(--line); border-radius: 11px; background: var(--surface-2); color: var(--ink); }
+.rel-item:hover { border-color: color-mix(in srgb, var(--c-rel) 45%, var(--line)); }
+.rel-item-obj { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rel-item-date { flex: none; font-size: 12px; font-weight: 700; color: var(--c-rel);
+       background: color-mix(in srgb, var(--c-rel) 14%, transparent); padding: 3px 9px; border-radius: 999px; }
+.rel-add { font: inherit; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer;
+       padding: 9px 13px; border: 1px dashed var(--line); border-radius: 11px; background: transparent; text-align: left; }
+.rel-add:hover { color: var(--ink); border-color: var(--muted); }
 .bloc .row2 { margin: 0; }
 .bloc .resume { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 .bloc .s-resume { margin: 0 0 8px; font-size: 14.5px; }
@@ -389,16 +407,22 @@ h1, h2, h3 { margin: 0; letter-spacing: -.01em; }
 
 /* Signet Format D (contour coloré). --cat porté par la catégorie. */
 .sig-d { --cat: var(--c-struct); display: inline-flex; align-items: center; gap: 7px; font: inherit; font-size: 13px;
-       font-weight: 650; padding: 7px 12px; border-radius: 10px; cursor: pointer;
+       font-weight: 650; padding: 7px 12px; border-radius: 10px; cursor: pointer; max-width: 100%;
        border: 1.5px solid color-mix(in srgb, var(--cat) 55%, var(--line));
        background: var(--surface); color: color-mix(in srgb, var(--cat) 62%, var(--ink));
-       text-transform: uppercase; letter-spacing: .02em; }
-/* Sous-mentions internes d'un signet : pas de majuscule forcée. */
-.sig-d .sig-sub, .sig-d .sig-badge, .sig-d .mini-sig { text-transform: none; letter-spacing: 0; }
+       text-transform: uppercase; letter-spacing: .02em; white-space: nowrap; }
+/* Un signet ne dépasse JAMAIS une ligne : le libellé se tronque à l'ellipse. */
+.sig-d .sig-lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+/* Sous-mentions internes d'un signet : pas de majuscule forcée, jamais coupées. */
+.sig-d .sig-sub, .sig-d .sig-badge, .sig-d .mini-sig { text-transform: none; letter-spacing: 0; flex: none; }
 .sig-d:hover { background: color-mix(in srgb, var(--cat) 11%, var(--surface)); }
 .sig-d.struct { --cat: var(--c-struct); } .sig-d.op { --cat: var(--c-op); }
 .sig-d.pers { --cat: var(--c-pers); } .sig-d.rel { --cat: var(--c-rel); }
 .sig-d.date { --cat: var(--faint); } .sig-d.type { --cat: var(--c-type); }
+/* Signet « phase » (étape du pipeline). --cat porté en inline selon l'étape. */
+.sig-d.phase { --cat: var(--muted); }
+/* Un signet peut être un lien (carte associée) : garder l'aspect signet. */
+a.sig-d { text-decoration: none; }
 .sig-d .sig-sub { color: var(--muted); font-weight: 500; font-size: 11px; font-style: normal; }
 .sig-d .sig-badge { font-size: 9.5px; font-weight: 800; padding: 1px 6px; border-radius: 999px; font-style: normal; }
 .sig-d .sig-badge.new { background: color-mix(in srgb, var(--warn) 22%, transparent); color: var(--warn); }

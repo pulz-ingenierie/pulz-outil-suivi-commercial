@@ -110,8 +110,8 @@ export default async function PhasePage({ params }: { params: Promise<{ statut: 
                 {(ents.length > 0 || montant) && (
                   <div className="ometa">
                     {ents.map((nom, i) => (
-                      <span className="chip ent" key={i}>
-                        {nom}
+                      <span className="sig-d struct" key={i}>
+                        <span className="sig-lbl">{nom}</span>
                       </span>
                     ))}
                     {montant && <span className="amt">{montant}</span>}

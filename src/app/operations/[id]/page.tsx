@@ -87,10 +87,9 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
           <h1>{operation.nom}</h1>
         </div>
         <div className="head-actions">
-          <span className="statut-badge" style={{ background: `color-mix(in srgb, var(${STATUT_VAR[st]}) 16%, transparent)`, color: `var(${STATUT_VAR[st]})` }}>
-            <span className="dot" style={{ background: `var(${STATUT_VAR[st]})` }} />
-            {STATUT_LABELS[st]}
-          </span>
+          <Link className="sig-d phase" href={`/operations/phase/${st}`} style={{ ["--cat" as string]: `var(${STATUT_VAR[st]})` }}>
+            <span className="sig-lbl">{STATUT_LABELS[st]}</span>
+          </Link>
           <div className="btns">
             <Link className="btn ghost" href={`/crs/vocal?operation=${operation.id}`}>🎙 Dicter un CR</Link>
             <Link className="btn" href={`/operations/${operation.id}/modifier`}>Modifier</Link>
@@ -112,12 +111,15 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
         </div>
 
         <div className="block">
-          <div className="eyebrow">Entités — portes d'entrée</div>
+          <div className="eyebrow">Structures — portes d'entrée</div>
           {entites.length ? (
-            <div>{entites.map((e: any) => (
-              <span className="ent-chip" key={e.id}><b>{e.nom}</b><small>{e.role || e.type}{e.ville ? ` · ${e.ville}` : ""}</small></span>
+            <div className="sig-wrap">{entites.map((e: any) => (
+              <span className="sig-d struct" key={e.id}>
+                <span className="sig-lbl">{e.nom}</span>
+                {(e.role || e.type) && <span className="sig-sub">{e.role || e.type}{e.ville ? ` · ${e.ville}` : ""}</span>}
+              </span>
             ))}</div>
-          ) : <div className="empty">Aucune entité rattachée.</div>}
+          ) : <div className="empty">Aucune structure rattachée.</div>}
         </div>
 
         <div className="block">
