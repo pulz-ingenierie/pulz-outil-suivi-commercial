@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
 import { createRelance, updateRelance } from "@/lib/actions";
-import { envoyerRappelsMaintenant } from "@/lib/admin-actions";
+import { envoyerRappelsMaintenant, envoyerEmailTest } from "@/lib/admin-actions";
 import { getIdentite } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -77,7 +77,7 @@ function RelanceCard({ r, today }: { r: Rel; today: string }) {
 export default async function Relances({
   searchParams,
 }: {
-  searchParams: Promise<{ dest?: string; rel?: string; ign?: string; cfg?: string }>;
+  searchParams: Promise<{ dest?: string; rel?: string; ign?: string; cfg?: string; mailtest?: string }>;
 }) {
   const sp = await searchParams;
   if (!isSupabaseConfigured()) {
@@ -123,11 +123,28 @@ export default async function Relances({
           <h1>Relances <span className="count-badge">{list.length}</span></h1>
         </div>
         {estPilote && (
-          <form action={envoyerRappelsMaintenant}>
-            <button className="btn ghost" type="submit">✉️ Envoyer les rappels maintenant</button>
-          </form>
+          <div className="rel-acts">
+            <form action={envoyerEmailTest}>
+              <button className="btn ghost" type="submit">✉️ E-mail de test</button>
+            </form>
+            <form action={envoyerRappelsMaintenant}>
+              <button className="btn ghost" type="submit">Envoyer les rappels maintenant</button>
+            </form>
+          </div>
         )}
       </div>
+
+      {sp.mailtest !== undefined && (
+        <div className={`card notice${sp.mailtest === "ok" ? "" : " err"}`} style={{ marginBottom: 14 }}>
+          {sp.mailtest === "ok"
+            ? "E-mail de test envoyé ✅ — vérifiez votre boîte de réception (et les spams au cas où). La connexion Gmail fonctionne."
+            : sp.mailtest === "noconf"
+              ? "Envoi non configuré : vérifiez GMAIL_USER et GMAIL_APP_PASSWORD dans Vercel, puis redéployez."
+              : sp.mailtest === "noemail"
+                ? "Aucune adresse e-mail enregistrée pour votre compte."
+                : `Échec de l'envoi : ${decodeURIComponent(sp.mailtest.replace(/^err:/, ""))}`}
+        </div>
+      )}
 
       {aEnvoye && (
         <div className={`card notice${envoiConfigure ? "" : " err"}`} style={{ marginBottom: 14 }}>

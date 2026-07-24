@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { getIdentite } from "@/lib/auth";
 import { envoyerRappelsRelances } from "@/lib/relances-digest";
+import { sendEmail, isEmailConfigured } from "@/lib/email";
 
 const ROLES = ["membre", "pilote"] as const;
 
@@ -83,6 +84,42 @@ export async function setUtilisateurRole(fd: FormData) {
 
   revalidatePath("/admin/utilisateurs");
   redirect("/admin/utilisateurs");
+}
+
+// Envoi d'un e-mail de test au pilote lui-même, pour vérifier que la connexion
+// d'envoi (Gmail) fonctionne — indépendamment des relances. Réservé pilotes.
+export async function envoyerEmailTest() {
+  const { supabase, profil } = await requirePilote();
+  const { data: u } = await supabase
+    .from("utilisateurs")
+    .select("email, nom")
+    .eq("id", profil.id)
+    .single();
+
+  let status: string;
+  if (!isEmailConfigured()) {
+    status = "noconf";
+  } else if (!u?.email) {
+    status = "noemail";
+  } else {
+    try {
+      const { sent } = await sendEmail({
+        to: u.email,
+        subject: "Test — Suivi commercial (moeïa)",
+        html: `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:520px;color:#16212B">
+          <p style="font-size:15px">Bonjour ${u.nom ?? ""},</p>
+          <p style="font-size:15px">Cet e-mail confirme que l'<strong>envoi depuis l'outil fonctionne</strong> ✅.</p>
+          <p style="font-size:13px;color:#8496A2;margin-top:20px">Suivi commercial · moeïa — message de test.</p>
+        </div>`,
+      });
+      status = sent ? "ok" : "noconf";
+    } catch (e) {
+      status = "err:" + (e instanceof Error ? e.message : "inconnue");
+    }
+  }
+
+  revalidatePath("/relances");
+  redirect(`/relances?mailtest=${encodeURIComponent(status)}`);
 }
 
 // Envoi manuel des rappels (pour tester / relancer à la demande). Réservé pilotes.
