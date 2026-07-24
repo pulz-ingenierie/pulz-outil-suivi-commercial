@@ -49,25 +49,26 @@ type Structure = {
   contacts: Personne[];
 };
 
+type PersonneListe = {
+  id: string;
+  nom: string;
+  prenom: string | null;
+  fonction: string | null;
+  entiteNom: string | null;
+};
+
 type Props = {
   operations: Op[];
   opEntites: Record<string, Ent[]>;
   reseau: Structure[];
+  personnes: PersonneListe[];
 };
 
-type Vue = "phase" | "operation" | "reseau";
+type Vue = "phase" | "operation" | "structure" | "personne";
 
 function euro(n: number | null): string | null {
   if (n == null) return null;
   return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n) + " €";
-}
-
-function dateFr(d: string): string {
-  try {
-    return new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
-  } catch {
-    return d;
-  }
 }
 
 // L'étape du pipeline est un signet CLIQUABLE (→ toutes les affaires de l'étape).
@@ -112,37 +113,31 @@ function CarteOp({
   );
 }
 
-// Boutons pour joindre une personne.
-function ContactActions({ tel, email }: { tel: string | null; email: string | null }) {
-  if (!tel && !email) return null;
-  return (
-    <div className="contact-acts">
-      {tel && <a className="btn ghost mini" href={`tel:${tel}`}>Appeler</a>}
-      {email && <a className="btn ghost mini" href={`mailto:${email}`}>E-mail</a>}
-    </div>
-  );
-}
 
-export default function PipelineViews({ operations, opEntites, reseau }: Props) {
+export default function PipelineViews({ operations, opEntites, reseau, personnes }: Props) {
   const [vue, setVue] = useState<Vue>("phase");
 
   return (
     <>
-      <div className="seg" role="tablist" aria-label="Manière de classer les affaires">
+      <div className="seg" role="tablist" aria-label="Manière de classer">
         <button className={vue === "phase" ? "on" : ""} onClick={() => setVue("phase")}>
-          Par phase
+          Phases
         </button>
         <button className={vue === "operation" ? "on" : ""} onClick={() => setVue("operation")}>
-          Par opération
+          Opérations
         </button>
-        <button className={vue === "reseau" ? "on" : ""} onClick={() => setVue("reseau")}>
-          Réseau
+        <button className={vue === "structure" ? "on" : ""} onClick={() => setVue("structure")}>
+          Structures
+        </button>
+        <button className={vue === "personne" ? "on" : ""} onClick={() => setVue("personne")}>
+          Personnes
         </button>
       </div>
 
       {vue === "phase" && <VuePhase operations={operations} opEntites={opEntites} />}
       {vue === "operation" && <VueOperation operations={operations} opEntites={opEntites} />}
-      {vue === "reseau" && <VueReseau reseau={reseau} />}
+      {vue === "structure" && <VueStructures reseau={reseau} />}
+      {vue === "personne" && <VuePersonnes personnes={personnes} />}
     </>
   );
 }
@@ -229,56 +224,88 @@ function VueOperation({ operations, opEntites }: { operations: Op[]; opEntites: 
   );
 }
 
-// --- Vue « Réseau » : les structures, avec leurs affaires et leurs personnes.
-function VueReseau({ reseau }: { reseau: Structure[] }) {
+// --- Vue « Structures » : cartes ÉPURÉES, cliquables → carte complète.
+function VueStructures({ reseau }: { reseau: Structure[] }) {
+  const [q, setQ] = useState("");
+  const terme = q.trim().toLowerCase();
+  const list = terme ? reseau.filter((s) => s.nom.toLowerCase().includes(terme)) : reseau;
   if (!reseau.length) {
     return <div className="card"><span className="empty">Aucune structure enregistrée pour le moment.</span></div>;
   }
   return (
-    <div className="vlist">
-      {reseau.map((s) => (
-        <div className="grp" key={s.id}>
-          <h3>
-            <span className="dot ent-dot" />
-            <Link className="grp-nom" href={`/entites/${s.id}`}>{s.nom}</Link>
-            <span className="cnt tnum">{s.ops.length}</span>
-          </h3>
-          <div className="grp-meta">
-            <span className="sig-d type"><span className="sig-lbl">{s.type}</span></span>
-            {s.ville && <span className="last">{s.ville}</span>}
-            <span className="last">
-              {s.dernierContact ? `Dernier contact : ${dateFr(s.dernierContact)}` : "Jamais rencontré"}
-            </span>
-            {s.dormant && <span className="pill dormant">en sommeil</span>}
-            {s.silencieux && s.ops.length === 0 && <span className="pill silence">à réchauffer</span>}
-          </div>
-
-          {s.ops.map((o) => (
-            <CarteOp key={o.id} op={o} entites={[]} avecEtape />
+    <>
+      <input
+        className="search"
+        type="search"
+        placeholder="Rechercher une structure…"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        aria-label="Rechercher une structure"
+      />
+      {list.length ? (
+        <div className="minigrid">
+          {list.map((s) => (
+            <Link className="minicard" href={`/entites/${s.id}`} key={s.id}>
+              <div className="mc-top">
+                <span className="mc-nom">{s.nom}</span>
+                <span className="sig-d type"><span className="sig-lbl">{s.type}</span></span>
+              </div>
+              <div className="mc-meta">
+                <span>{s.ops.length} affaire{s.ops.length > 1 ? "s" : ""}</span>
+                {s.ville && <span>· {s.ville}</span>}
+                {s.dormant && <span className="pill dormant">en sommeil</span>}
+                {s.silencieux && s.ops.length === 0 && <span className="pill silence">à réchauffer</span>}
+              </div>
+            </Link>
           ))}
-
-          {s.contacts.length > 0 && (
-            <div className="persons">
-              {s.contacts.map((c) => {
-                const nomComplet = [c.prenom, c.nom].filter(Boolean).join(" ") || c.nom;
-                return (
-                  <div className="person" key={c.id}>
-                    <div className="pmain">
-                      <span className="pnm">{nomComplet}</span>
-                      {c.fonction && <span className="pfn">{c.fonction}</span>}
-                    </div>
-                    <ContactActions tel={c.tel} email={c.email} />
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {s.ops.length === 0 && s.contacts.length === 0 && (
-            <div className="grp-vide">Aucune affaire ni personne enregistrée — piste du réseau.</div>
-          )}
         </div>
-      ))}
-    </div>
+      ) : (
+        <div className="card"><span className="empty">Aucune structure ne correspond à votre recherche.</span></div>
+      )}
+    </>
+  );
+}
+
+// --- Vue « Personnes » : cartes ÉPURÉES, cliquables → carte complète.
+function VuePersonnes({ personnes }: { personnes: PersonneListe[] }) {
+  const [q, setQ] = useState("");
+  const terme = q.trim().toLowerCase();
+  const list = terme
+    ? personnes.filter((p) =>
+        `${p.prenom ?? ""} ${p.nom} ${p.entiteNom ?? ""}`.toLowerCase().includes(terme),
+      )
+    : personnes;
+  if (!personnes.length) {
+    return <div className="card"><span className="empty">Aucune personne enregistrée pour le moment.</span></div>;
+  }
+  return (
+    <>
+      <input
+        className="search"
+        type="search"
+        placeholder="Rechercher une personne…"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        aria-label="Rechercher une personne"
+      />
+      {list.length ? (
+        <div className="minigrid">
+          {list.map((p) => {
+            const nomComplet = [p.prenom, p.nom].filter(Boolean).join(" ") || p.nom;
+            return (
+              <Link className="minicard" href={`/personnes/${p.id}`} key={p.id}>
+                <div className="mc-top">
+                  <span className="mc-nom">{nomComplet}</span>
+                  {p.entiteNom && <span className="sig-d struct"><span className="sig-lbl">{p.entiteNom}</span></span>}
+                </div>
+                {p.fonction && <div className="mc-meta"><span>{p.fonction}</span></div>}
+              </Link>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="card"><span className="empty">Aucune personne ne correspond à votre recherche.</span></div>
+      )}
+    </>
   );
 }

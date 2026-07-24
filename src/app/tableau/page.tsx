@@ -156,6 +156,18 @@ export default async function Dashboard() {
   // Indicateur « à réchauffer » : structures silencieuses sans affaire en cours.
   const silence = reseau.filter((p) => p.silencieux && p.ops.length === 0).length;
 
+  // Liste à plat des personnes (onglet « Personnes »), avec leur structure.
+  const nomStructById = new Map(toutesEntites.map((e) => [e.id, e.nom]));
+  const personnes = (contactsRaw ?? [])
+    .map((c: any) => ({
+      id: c.id,
+      nom: c.nom,
+      prenom: c.prenom ?? null,
+      fonction: c.fonction ?? null,
+      entiteNom: c.entite_id ? nomStructById.get(c.entite_id) ?? null : null,
+    }))
+    .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+
   return (
     <main className="wrap">
       <div className="page-actions">
@@ -181,6 +193,7 @@ export default async function Dashboard() {
         operations={operations.map(slim)}
         opEntites={opEntites}
         reseau={reseau}
+        personnes={personnes}
       />
     </main>
   );
