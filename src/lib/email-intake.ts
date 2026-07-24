@@ -2,7 +2,11 @@ import "server-only";
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 import { getServerSupabase } from "@/lib/supabase/server";
-import { analyseCompteRendu } from "@/lib/ia-synthese";
+import { analyseCompteRendu, type PieceJointeIA } from "@/lib/ia-synthese";
+
+const TYPES_IMAGE = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const MAX_PIECES = 5;
+const MAX_PIECE_OCTETS = 15 * 1024 * 1024; // 15 Mo par pièce
 
 // Relevé de la boîte mail dédiée (Gmail, IMAP). Pour chaque nouveau message :
 //  - on identifie l'expéditeur ; s'il n'est pas un MEMBRE connu → on ignore ;
@@ -89,9 +93,22 @@ export async function releverEmails(): Promise<IntakeResult> {
           const corps = (parsed.text ?? htmlTexte ?? "").trim();
           const texte = `Objet : ${sujet}\n\n${corps}`.slice(0, 8000);
 
+          // Pièces jointes lisibles par l'IA : PDF et images.
+          const pieces: PieceJointeIA[] = [];
+          for (const att of parsed.attachments ?? []) {
+            if (pieces.length >= MAX_PIECES) break;
+            const ct = String(att.contentType ?? "").toLowerCase();
+            if (!att.content || (att.size && att.size > MAX_PIECE_OCTETS)) continue;
+            if (ct === "application/pdf") {
+              pieces.push({ kind: "pdf", mediaType: ct, base64: att.content.toString("base64") });
+            } else if (TYPES_IMAGE.has(ct)) {
+              pieces.push({ kind: "image", mediaType: ct, base64: att.content.toString("base64") });
+            }
+          }
+
           let synth = null;
           try {
-            synth = await analyseCompteRendu(texte, knownEntites, knownOps, today);
+            synth = await analyseCompteRendu(texte, knownEntites, knownOps, today, pieces);
           } catch {
             synth = null; // l'analyse a échoué : on crée quand même le brouillon brut
           }

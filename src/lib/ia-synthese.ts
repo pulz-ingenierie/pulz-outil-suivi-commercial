@@ -9,21 +9,45 @@ import { extractJsonObject, validateSynthese, type Synthese } from "@/lib/synthe
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
 
+// Pièce jointe transmise à l'IA (PDF ou image), en base64.
+export interface PieceJointeIA {
+  kind: "pdf" | "image";
+  mediaType: string; // application/pdf, image/jpeg, image/png, image/webp, image/gif
+  base64: string;
+}
+
 export async function analyseCompteRendu(
   transcription: string,
   knownEntites: string[],
   knownOps: string[],
   today: string,
+  attachments: PieceJointeIA[] = [],
 ): Promise<Synthese | null> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey || !transcription.trim()) return null;
+  if (!apiKey) return null;
+  if (!transcription.trim() && attachments.length === 0) return null;
+
+  // Message = texte + pièces jointes (Claude lit nativement PDF et images).
+  const content: Anthropic.ContentBlockParam[] = [
+    { type: "text", text: SYNTHESE_USER_PREFIX + (transcription || "(voir la ou les pièces jointes)") },
+  ];
+  for (const a of attachments) {
+    if (a.kind === "pdf") {
+      content.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: a.base64 } });
+    } else {
+      content.push({
+        type: "image",
+        source: { type: "base64", media_type: a.mediaType as any, data: a.base64 },
+      });
+    }
+  }
 
   const client = new Anthropic({ apiKey });
   const response = await client.messages.create({
     model: MODEL,
     max_tokens: 2000,
     system: syntheseSystemPrompt(knownEntites, knownOps, today),
-    messages: [{ role: "user", content: SYNTHESE_USER_PREFIX + transcription }],
+    messages: [{ role: "user", content }],
   });
 
   const text = response.content

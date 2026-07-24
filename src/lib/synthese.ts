@@ -12,6 +12,11 @@ export interface ContactExtrait {
   entite: string | null; // structure de rattachement (libellé)
 }
 
+export interface NouvelleEntite {
+  nom: string;
+  type: string; // MOA | archi | promoteur | confrere | autre
+}
+
 export interface Synthese {
   type_rdv: string;
   date_rdv: string | null;
@@ -19,9 +24,13 @@ export interface Synthese {
   points_cles: string[];
   entites: string[];
   operations: string[];
+  nouvelles_entites: NouvelleEntite[];
+  nouvelles_operations: { nom: string }[];
   contacts: ContactExtrait[];
   relances: { objet: string; dans_jours: number }[];
 }
+
+const ENTITE_TYPES = ["MOA", "archi", "promoteur", "confrere", "autre"];
 
 // Date au format AAAA-MM-JJ ? (contrôle simple, anti-invention.)
 export function isIsoDate(v: unknown): v is string {
@@ -85,6 +94,35 @@ export function validateSynthese(
         }))
         .filter((c) => c.nom.length > 0)
     : [];
+
+  // Propositions de création : on écarte celles qui existent déjà (par nom) et
+  // les doublons internes.
+  const knownEntLower = new Set(knownEntites.map((s) => s.toLowerCase()));
+  const knownOpLower = new Set(knownOps.map((s) => s.toLowerCase()));
+  const vusEnt = new Set<string>();
+  const nouvelles_entites = (Array.isArray(o.nouvelles_entites) ? o.nouvelles_entites : [])
+    .map((e) => (e ?? {}) as Record<string, unknown>)
+    .map((e) => ({
+      nom: typeof e.nom === "string" ? e.nom.trim() : "",
+      type: typeof e.type === "string" && ENTITE_TYPES.includes(e.type) ? e.type : "autre",
+    }))
+    .filter((e) => {
+      const k = e.nom.toLowerCase();
+      if (!e.nom || knownEntLower.has(k) || vusEnt.has(k)) return false;
+      vusEnt.add(k);
+      return true;
+    });
+  const vusOp = new Set<string>();
+  const nouvelles_operations = (Array.isArray(o.nouvelles_operations) ? o.nouvelles_operations : [])
+    .map((op) => (op ?? {}) as Record<string, unknown>)
+    .map((op) => ({ nom: typeof op.nom === "string" ? op.nom.trim() : "" }))
+    .filter((op) => {
+      const k = op.nom.toLowerCase();
+      if (!op.nom || knownOpLower.has(k) || vusOp.has(k)) return false;
+      vusOp.add(k);
+      return true;
+    });
+
   return {
     type_rdv,
     date_rdv,
@@ -92,6 +130,8 @@ export function validateSynthese(
     points_cles: asStringArray(o.points_cles),
     entites: keepKnown(asStringArray(o.entites), knownEntites),
     operations: keepKnown(asStringArray(o.operations), knownOps),
+    nouvelles_entites,
+    nouvelles_operations,
     contacts,
     relances,
   };

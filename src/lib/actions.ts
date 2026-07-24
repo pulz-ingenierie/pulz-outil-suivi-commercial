@@ -159,6 +159,131 @@ export async function createEntite(fd: FormData) {
 }
 
 // -----------------------------------------------------------------------------
+// Comptes rendus — helpers de matérialisation (partagés saisie / brouillons)
+// -----------------------------------------------------------------------------
+function jsonArray(fd: FormData, key: string): any[] {
+  const raw = str(fd, key);
+  if (!raw) return [];
+  try { const v = JSON.parse(raw); return Array.isArray(v) ? v : []; } catch { return []; }
+}
+
+// Y a-t-il au moins un rattachement — existant OU à créer ?
+function aUnRattachement(fd: FormData): boolean {
+  const e = fd.getAll("entite_ids").map(String).filter(Boolean);
+  const o = fd.getAll("operation_ids").map(String).filter(Boolean);
+  return (
+    e.length > 0 ||
+    o.length > 0 ||
+    jsonArray(fd, "nouvelles_entites_json").length > 0 ||
+    jsonArray(fd, "nouvelles_operations_json").length > 0
+  );
+}
+
+// Matérialise les effets d'un compte rendu : crée les nouvelles structures /
+// opérations proposées, rattache le CR, crée les contacts (structure résolue par
+// nom) et les relances. Renvoie les identifiants finaux de rattachement.
+async function materialiserCr(
+  supabase: ReturnType<typeof getServerSupabase>,
+  org_id: string,
+  crId: string,
+  fd: FormData,
+): Promise<{ entiteIds: string[]; operationIds: string[] }> {
+  const sb = supabase!;
+  const entiteIds = fd.getAll("entite_ids").map(String).filter(Boolean);
+  const operationIds = fd.getAll("operation_ids").map(String).filter(Boolean);
+
+  // Nouvelles structures.
+  for (const e of jsonArray(fd, "nouvelles_entites_json")) {
+    const nom = typeof e?.nom === "string" ? e.nom.trim() : "";
+    if (!nom) continue;
+    const type =
+      typeof e?.type === "string" && (ENTITE_TYPES as readonly string[]).includes(e.type) ? e.type : "autre";
+    const { data } = await sb.from("entites").insert({ org_id, nom, type }).select("id").single();
+    if (data?.id) entiteIds.push(data.id);
+  }
+  // Nouvelles opérations (statut de départ : contact).
+  for (const o of jsonArray(fd, "nouvelles_operations_json")) {
+    const nom = typeof o?.nom === "string" ? o.nom.trim() : "";
+    if (!nom) continue;
+    const { data } = await sb.from("operations").insert({ org_id, nom, statut: "contact" }).select("id").single();
+    if (data?.id) operationIds.push(data.id);
+  }
+
+  if (entiteIds.length) {
+    await sb.from("cr_entites").insert(entiteIds.map((entite_id) => ({ cr_id: crId, entite_id })));
+  }
+  if (operationIds.length) {
+    await sb.from("cr_operations").insert(operationIds.map((operation_id) => ({ cr_id: crId, operation_id })));
+  }
+
+  // Contacts : structure résolue par NOM (connue ou fraîchement créée).
+  const persons = jsonArray(fd, "contacts_json");
+  if (persons.length) {
+    const { data: allEnt } = await sb.from("entites").select("id, nom").eq("org_id", org_id);
+    const idByNom = new Map((allEnt ?? []).map((e: any) => [String(e.nom).toLowerCase(), e.id]));
+    const nets = persons
+      .map((p) => ({
+        nom: typeof p?.nom === "string" ? p.nom.trim() : "",
+        prenom: typeof p?.prenom === "string" && p.prenom.trim() ? p.prenom.trim() : null,
+        fonction: typeof p?.fonction === "string" && p.fonction.trim() ? p.fonction.trim() : null,
+        entite_id:
+          typeof p?.entite === "string" && p.entite.trim()
+            ? idByNom.get(p.entite.trim().toLowerCase()) ?? null
+            : null,
+      }))
+      .filter((p) => p.nom && p.entite_id) as {
+      nom: string; prenom: string | null; fonction: string | null; entite_id: string;
+    }[];
+    if (nets.length) {
+      const entIds = [...new Set(nets.map((p) => p.entite_id))];
+      const { data: existing } = await sb.from("contacts").select("nom, prenom, entite_id").in("entite_id", entIds);
+      const key = (eid: string, nom: string, prenom: string | null) =>
+        `${eid}|${nom.toLowerCase()}|${(prenom ?? "").toLowerCase()}`;
+      const seen = new Set((existing ?? []).map((c: any) => key(c.entite_id, c.nom ?? "", c.prenom ?? null)));
+      const toInsert = nets.filter((p) => {
+        const k = key(p.entite_id, p.nom, p.prenom);
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+      if (toInsert.length) {
+        await sb.from("contacts").insert(
+          toInsert.map((p) => ({ entite_id: p.entite_id, nom: p.nom, prenom: p.prenom, fonction: p.fonction, source: "vocal" })),
+        );
+      }
+    }
+  }
+
+  // Suites suggérées par l'IA → relances (auto).
+  let synth: any = null;
+  const synthRaw = str(fd, "synthese_json");
+  if (synthRaw) { try { synth = JSON.parse(synthRaw); } catch { synth = null; } }
+  if (synth && Array.isArray(synth.relances)) {
+    const suites = synth.relances
+      .map((r: any) => ({
+        objet: typeof r?.objet === "string" ? r.objet.trim() : "",
+        dans_jours: Number.isFinite(r?.dans_jours) ? Math.max(1, Math.round(r.dans_jours)) : 14,
+      }))
+      .filter((r: any) => r.objet.length > 0);
+    if (suites.length) {
+      await sb.from("relances").insert(
+        suites.map((r: any) => ({
+          org_id,
+          operation_id: operationIds[0] ?? null,
+          entite_id: operationIds.length ? null : (entiteIds[0] ?? null),
+          cr_origine_id: crId,
+          objet: r.objet,
+          date_echeance: dateInDays(r.dans_jours),
+          auto: true,
+        })),
+      );
+    }
+  }
+
+  return { entiteIds, operationIds };
+}
+
+// -----------------------------------------------------------------------------
 // Comptes rendus (saisie manuelle ; la voie vocale viendra ensuite)
 // -----------------------------------------------------------------------------
 export async function createCr(fd: FormData) {
@@ -175,10 +300,8 @@ export async function createCr(fd: FormData) {
   const transcription = strOrNull(fd, "transcription");
   if (!transcription) throw new Error("Le compte rendu ne peut pas être vide.");
 
-  const entiteIds = fd.getAll("entite_ids").map((v) => String(v)).filter(Boolean);
-  const operationIds = fd.getAll("operation_ids").map((v) => String(v)).filter(Boolean);
-  if (!entiteIds.length && !operationIds.length) {
-    throw new Error("Rattachez le compte rendu à au moins une entité ou une opération.");
+  if (!aUnRattachement(fd)) {
+    throw new Error("Rattachez le compte rendu à au moins une entité ou une opération (existante ou à créer).");
   }
 
   // Structure produite par l'IA (facultative) : on la conserve telle quelle.
@@ -198,80 +321,7 @@ export async function createCr(fd: FormData) {
     .single();
   if (error) throw new Error(error.message);
 
-  if (entiteIds.length) {
-    await supabase.from("cr_entites").insert(entiteIds.map((entite_id) => ({ cr_id: cr.id, entite_id })));
-  }
-  if (operationIds.length) {
-    await supabase.from("cr_operations").insert(operationIds.map((operation_id) => ({ cr_id: cr.id, operation_id })));
-  }
-
-  // Personnes détectées par l'IA → contacts (créés s'ils n'existent pas déjà,
-  // rattachés à leur structure). On ne garde que celles dont la structure a été
-  // résolue à une entité connue (entite_id).
-  const contactsRaw = str(fd, "contacts_json");
-  if (contactsRaw) {
-    let persons: any[] = [];
-    try { const p = JSON.parse(contactsRaw); if (Array.isArray(p)) persons = p; } catch { persons = []; }
-    const nets = persons
-      .map((p) => ({
-        nom: typeof p?.nom === "string" ? p.nom.trim() : "",
-        prenom: typeof p?.prenom === "string" && p.prenom.trim() ? p.prenom.trim() : null,
-        fonction: typeof p?.fonction === "string" && p.fonction.trim() ? p.fonction.trim() : null,
-        entite_id: typeof p?.entite_id === "string" && p.entite_id ? p.entite_id : null,
-      }))
-      .filter((p) => p.nom && p.entite_id);
-    if (nets.length) {
-      const entIds = [...new Set(nets.map((p) => p.entite_id as string))];
-      const { data: existing } = await supabase
-        .from("contacts")
-        .select("nom, prenom, entite_id")
-        .in("entite_id", entIds);
-      const key = (eid: string, nom: string, prenom: string | null) =>
-        `${eid}|${nom.toLowerCase()}|${(prenom ?? "").toLowerCase()}`;
-      const seen = new Set((existing ?? []).map((c: any) => key(c.entite_id, c.nom ?? "", c.prenom ?? null)));
-      const toInsert = nets.filter((p) => {
-        const k = key(p.entite_id as string, p.nom, p.prenom);
-        if (seen.has(k)) return false;
-        seen.add(k);
-        return true;
-      });
-      if (toInsert.length) {
-        await supabase.from("contacts").insert(
-          toInsert.map((p) => ({
-            entite_id: p.entite_id,
-            nom: p.nom,
-            prenom: p.prenom,
-            fonction: p.fonction,
-            source: "vocal",
-          })),
-        );
-      }
-    }
-  }
-
-  // Suites suggérées par l'IA → relances (auto) rattachées au compte rendu et à
-  // la 1re opération/entité concernée. L'utilisateur pourra les gérer ensuite.
-  if (synthese && typeof synthese === "object" && Array.isArray((synthese as any).relances)) {
-    const suites = (synthese as any).relances
-      .map((r: any) => ({
-        objet: typeof r?.objet === "string" ? r.objet.trim() : "",
-        dans_jours: Number.isFinite(r?.dans_jours) ? Math.max(1, Math.round(r.dans_jours)) : 14,
-      }))
-      .filter((r: any) => r.objet.length > 0);
-    if (suites.length) {
-      await supabase.from("relances").insert(
-        suites.map((r: any) => ({
-          org_id,
-          operation_id: operationIds[0] ?? null,
-          entite_id: operationIds.length ? null : (entiteIds[0] ?? null),
-          cr_origine_id: cr.id,
-          objet: r.objet,
-          date_echeance: dateInDays(r.dans_jours),
-          auto: true,
-        })),
-      );
-    }
-  }
+  const { operationIds } = await materialiserCr(supabase, org_id, cr.id, fd);
 
   // Compte rendu généré depuis une relance : on la clôt (faite) et on la relie
   // au compte rendu qui la « résout ».
@@ -316,10 +366,8 @@ export async function finaliserBrouillon(fd: FormData) {
   const date_rdv = str(fd, "date_rdv") || new Date().toISOString().slice(0, 10);
   const transcription = strOrNull(fd, "transcription");
 
-  const entiteIds = fd.getAll("entite_ids").map((v) => String(v)).filter(Boolean);
-  const operationIds = fd.getAll("operation_ids").map((v) => String(v)).filter(Boolean);
-  if (!entiteIds.length && !operationIds.length) {
-    throw new Error("Rattachez le compte rendu à au moins une entité ou une opération.");
+  if (!aUnRattachement(fd)) {
+    throw new Error("Rattachez le compte rendu à au moins une entité ou une opération (existante ou à créer).");
   }
 
   let synthese: unknown = existing.synthese ?? null;
@@ -333,69 +381,7 @@ export async function finaliserBrouillon(fd: FormData) {
   const { error: upErr } = await supabase.from("crs").update(update).eq("id", crId);
   if (upErr) throw new Error(upErr.message);
 
-  if (entiteIds.length) {
-    await supabase.from("cr_entites").insert(entiteIds.map((entite_id) => ({ cr_id: crId, entite_id })));
-  }
-  if (operationIds.length) {
-    await supabase.from("cr_operations").insert(operationIds.map((operation_id) => ({ cr_id: crId, operation_id })));
-  }
-
-  // Personnes → contacts (créés s'ils n'existent pas déjà).
-  const contactsRaw = str(fd, "contacts_json");
-  if (contactsRaw) {
-    let persons: any[] = [];
-    try { const p = JSON.parse(contactsRaw); if (Array.isArray(p)) persons = p; } catch { persons = []; }
-    const nets = persons
-      .map((p) => ({
-        nom: typeof p?.nom === "string" ? p.nom.trim() : "",
-        prenom: typeof p?.prenom === "string" && p.prenom.trim() ? p.prenom.trim() : null,
-        fonction: typeof p?.fonction === "string" && p.fonction.trim() ? p.fonction.trim() : null,
-        entite_id: typeof p?.entite_id === "string" && p.entite_id ? p.entite_id : null,
-      }))
-      .filter((p) => p.nom && p.entite_id);
-    if (nets.length) {
-      const entIds = [...new Set(nets.map((p) => p.entite_id as string))];
-      const { data: existants } = await supabase
-        .from("contacts").select("nom, prenom, entite_id").in("entite_id", entIds);
-      const key = (eid: string, nom: string, prenom: string | null) =>
-        `${eid}|${nom.toLowerCase()}|${(prenom ?? "").toLowerCase()}`;
-      const seen = new Set((existants ?? []).map((c: any) => key(c.entite_id, c.nom ?? "", c.prenom ?? null)));
-      const toInsert = nets.filter((p) => {
-        const k = key(p.entite_id as string, p.nom, p.prenom);
-        if (seen.has(k)) return false;
-        seen.add(k);
-        return true;
-      });
-      if (toInsert.length) {
-        await supabase.from("contacts").insert(
-          toInsert.map((p) => ({ entite_id: p.entite_id, nom: p.nom, prenom: p.prenom, fonction: p.fonction, source: "vocal" })),
-        );
-      }
-    }
-  }
-
-  // Suites suggérées → relances (auto).
-  if (synthese && typeof synthese === "object" && Array.isArray((synthese as any).relances)) {
-    const suites = (synthese as any).relances
-      .map((r: any) => ({
-        objet: typeof r?.objet === "string" ? r.objet.trim() : "",
-        dans_jours: Number.isFinite(r?.dans_jours) ? Math.max(1, Math.round(r.dans_jours)) : 14,
-      }))
-      .filter((r: any) => r.objet.length > 0);
-    if (suites.length) {
-      await supabase.from("relances").insert(
-        suites.map((r: any) => ({
-          org_id,
-          operation_id: operationIds[0] ?? null,
-          entite_id: operationIds.length ? null : (entiteIds[0] ?? null),
-          cr_origine_id: crId,
-          objet: r.objet,
-          date_echeance: dateInDays(r.dans_jours),
-          auto: true,
-        })),
-      );
-    }
-  }
+  const { operationIds } = await materialiserCr(supabase, org_id, crId, fd);
 
   revalidatePath("/tableau");
   revalidatePath("/relances");

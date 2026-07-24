@@ -31,6 +31,8 @@ ${listeEntites}
 Opérations déjà connues (même règle) :
 ${listeOps}
 
+Structures et affaires NOUVELLES : si une structure ou une affaire est clairement nommée dans le texte mais N'EXISTE PAS dans les listes connues ci-dessus, propose-la dans "nouvelles_entites" / "nouvelles_operations" (et NON dans "entites"/"operations"). Ne propose que ce qui est réellement évoqué — n'invente jamais.
+
 Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, de la forme :
 {
   "type_rdv": "dejeuner" | "appel" | "visite" | "salon" | "autre",
@@ -39,7 +41,9 @@ Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, de la forme :
   "points_cles": ["point important", "..."],
   "entites": ["libellé exact d'une STRUCTURE connue évoquée"],
   "operations": ["libellé exact d'une opération connue évoquée"],
-  "contacts": [{ "nom": "nom de famille", "prenom": "prénom ou null", "fonction": "fonction ou null", "entite": "libellé de sa structure ou null" }],
+  "nouvelles_entites": [{ "nom": "structure évoquée mais absente des connues", "type": "MOA|archi|promoteur|confrere|autre" }],
+  "nouvelles_operations": [{ "nom": "affaire/projet évoqué mais absent des connues" }],
+  "contacts": [{ "nom": "nom de famille", "prenom": "prénom ou null", "fonction": "fonction ou null", "entite": "libellé de sa structure (connue ou nouvelle) ou null" }],
   "relances": [{ "objet": "action de suivi à faire", "dans_jours": 14 }]
 }`;
 }
@@ -80,6 +84,8 @@ Réponds UNIQUEMENT par l'objet JSON complet et corrigé, sans texte autour, de 
   "points_cles": ["…"],
   "entites": ["libellé exact d'une STRUCTURE connue"],
   "operations": ["libellé exact d'une opération connue"],
+  "nouvelles_entites": [{ "nom": "structure nouvelle", "type": "MOA|archi|promoteur|confrere|autre" }],
+  "nouvelles_operations": [{ "nom": "affaire nouvelle" }],
   "contacts": [{ "nom": "…", "prenom": "… ou null", "fonction": "… ou null", "entite": "structure ou null" }],
   "relances": [{ "objet": "…", "dans_jours": 14 }]
 }`;

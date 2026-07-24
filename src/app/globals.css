@@ -136,6 +136,11 @@ h1, h2, h3 { margin: 0; letter-spacing: -.01em; }
 .chip.ent { background: var(--accent-soft); color: var(--accent-ink); border-color: transparent; }
 /* Étiquette de rattachement retirable (× pour enlever). */
 .rattach-chips { display: flex; flex-wrap: wrap; gap: 7px; margin: 2px 0 4px; }
+/* Ligne « nouvel élément à créer » : étiquette + nom éditable + retirer. */
+.newrow { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.newrow .newname { flex: 1; min-width: 160px; font: inherit; font-size: 14px; padding: 8px 11px;
+       border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--ink); }
+.newrow .newname:focus { outline: none; border-color: var(--accent); }
 .chip.rm button { border: none; background: transparent; color: inherit; cursor: pointer;
        font-size: 15px; line-height: 1; padding: 0 0 0 3px; opacity: .7; }
 .chip.rm button:hover { opacity: 1; }

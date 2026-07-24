@@ -78,6 +78,9 @@ export default function VoiceCr({
   const [selOp, setSelOp] = useState<Set<string>>(new Set(prefillOperation ? [prefillOperation] : []));
   // Personnes (contacts) détectées par l'IA, à créer à l'enregistrement.
   const [persons, setPersons] = useState<ContactExtrait[]>([]);
+  // Nouvelles structures / opérations proposées par l'IA (à créer à la volée).
+  const [nouvEnt, setNouvEnt] = useState<{ nom: string; type: string }[]>([]);
+  const [nouvOp, setNouvOp] = useState<{ nom: string }[]>([]);
   // La liste de rattachement à la main est masquée par défaut : on ne coche
   // rien au préalable. L'IA propose, et on ouvre ce volet pour corriger.
   const [rattachOpen, setRattachOpen] = useState<boolean>(Boolean(prefillEntite || prefillOperation));
@@ -185,6 +188,8 @@ export default function VoiceCr({
     setTypeRdv(s.type_rdv || "autre");
     if (s.date_rdv) setDateRdv(s.date_rdv);
     setPersons(s.contacts ?? []);
+    setNouvEnt(s.nouvelles_entites ?? []);
+    setNouvOp(s.nouvelles_operations ?? []);
     const entByName = new Map(entites.map((e) => [e.nom, e.id]));
     const opByName = new Map(operations.map((o) => [o.nom, o.id]));
     const eIds = s.entites.map((n) => entByName.get(n)).filter((x): x is string => Boolean(x));
@@ -326,17 +331,22 @@ export default function VoiceCr({
   const selEntNames = [...selEnt].map((id) => ({ id, nom: entName.get(id) ?? "?" }));
   const selOpNames = [...selOp].map((id) => ({ id, nom: opName.get(id) ?? "?" }));
 
-  // Personnes → on résout la structure (libellé) vers une entité connue.
-  const entIdByNom = new Map(entites.map((e) => [e.nom.toLowerCase(), e.id]));
+  // Personnes → on poste le NOM de la structure ; le serveur la résout (connue
+  // ou fraîchement créée).
   const personsPayload = persons.map((p) => ({
     nom: p.nom,
     prenom: p.prenom,
     fonction: p.fonction,
-    entite_id: p.entite ? entIdByNom.get(p.entite.toLowerCase()) ?? null : null,
+    entite: p.entite,
   }));
   const removePerson = (idx: number) => setPersons((prev) => prev.filter((_, i) => i !== idx));
 
-  const canSave = transcription.trim().length > 0 && (selEnt.size > 0 || selOp.size > 0);
+  const nouvEntNets = nouvEnt.filter((e) => e.nom.trim());
+  const nouvOpNets = nouvOp.filter((o) => o.nom.trim());
+
+  const canSave =
+    transcription.trim().length > 0 &&
+    (selEnt.size > 0 || selOp.size > 0 || nouvEntNets.length > 0 || nouvOpNets.length > 0);
 
   return (
     <>
@@ -560,6 +570,45 @@ export default function VoiceCr({
             </div>
           )}
         </div>
+
+        {/* Nouvelles structures / opérations proposées, à créer à la volée. */}
+        {(nouvEnt.length > 0 || nouvOp.length > 0) && (
+          <div className="field">
+            <span className="lab">Nouveau — à créer</span>
+            <p className="hint" style={{ marginTop: 0 }}>
+              L'IA a repéré des éléments absents de la base. Vérifiez l'orthographe : ils seront
+              créés et rattachés à la validation. Retirez ceux à ne pas créer.
+            </p>
+            {nouvEnt.map((e, i) => (
+              <div className="newrow" key={`e${i}`}>
+                <span className="chip ent">structure</span>
+                <input
+                  className="newname"
+                  value={e.nom}
+                  onChange={(ev) => setNouvEnt((prev) => prev.map((x, j) => (j === i ? { ...x, nom: ev.target.value } : x)))}
+                />
+                <button type="button" className="btn ghost mini" onClick={() => setNouvEnt((prev) => prev.filter((_, j) => j !== i))}>
+                  Retirer
+                </button>
+              </div>
+            ))}
+            {nouvOp.map((o, i) => (
+              <div className="newrow" key={`o${i}`}>
+                <span className="chip">opération</span>
+                <input
+                  className="newname"
+                  value={o.nom}
+                  onChange={(ev) => setNouvOp((prev) => prev.map((x, j) => (j === i ? { ...x, nom: ev.target.value } : x)))}
+                />
+                <button type="button" className="btn ghost mini" onClick={() => setNouvOp((prev) => prev.filter((_, j) => j !== i))}>
+                  Retirer
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <input type="hidden" name="nouvelles_entites_json" value={JSON.stringify(nouvEntNets)} />
+        <input type="hidden" name="nouvelles_operations_json" value={JSON.stringify(nouvOpNets)} />
 
         {persons.length > 0 && (
           <div className="field">
