@@ -71,7 +71,6 @@ export default async function Dashboard() {
   const rels = (relances ?? []) as Relance[];
   const today = new Date().toISOString().slice(0, 10);
 
-  const actives = operations.filter((o) => o.statut !== "gagne" && o.statut !== "perdu").length;
   const enRetard = rels.filter((r) => r.date_echeance < today).length;
 
   // Pour chaque opération : les prospects (entités) qui y sont rattachés.
@@ -178,10 +177,9 @@ export default async function Dashboard() {
       </div>
 
       <div className="kpis">
-        <div className="kpi"><div className="n tnum">{actives}</div><div className="l">Opérations actives</div></div>
-        <Link className="kpi crit link" href="/relances"><div className="n tnum">{enRetard}</div><div className="l">Relances en retard</div></Link>
-        <Link className="kpi warn link" href="/relances"><div className="n tnum">{rels.length}</div><div className="l">Relances à faire</div></Link>
-        <div className="kpi"><div className="n tnum">{silence}</div><div className="l">Contacts à réchauffer (+2 mois)</div></div>
+        <Link className="kpi crit link" href="/relances"><span className="n tnum">{enRetard}</span><span className="l">en retard</span></Link>
+        <Link className="kpi warn link" href="/relances"><span className="n tnum">{rels.length}</span><span className="l">relances à faire</span></Link>
+        <div className="kpi"><span className="n tnum">{silence}</span><span className="l">contacts à réchauffer</span></div>
       </div>
 
       <div className="section-t">
