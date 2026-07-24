@@ -240,7 +240,7 @@ function VueReseau({ reseau }: { reseau: Structure[] }) {
         <div className="grp" key={s.id}>
           <h3>
             <span className="dot ent-dot" />
-            {s.nom}
+            <Link className="grp-nom" href={`/entites/${s.id}`}>{s.nom}</Link>
             <span className="cnt tnum">{s.ops.length}</span>
           </h3>
           <div className="grp-meta">

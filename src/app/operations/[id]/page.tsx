@@ -114,10 +114,10 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
           <div className="eyebrow">Structures — portes d'entrée</div>
           {entites.length ? (
             <div className="sig-wrap">{entites.map((e: any) => (
-              <span className="sig-d struct" key={e.id}>
+              <Link className="sig-d struct" href={`/entites/${e.id}`} key={e.id}>
                 <span className="sig-lbl">{e.nom}</span>
                 {(e.role || e.type) && <span className="sig-sub">{e.role || e.type}{e.ville ? ` · ${e.ville}` : ""}</span>}
-              </span>
+              </Link>
             ))}</div>
           ) : <div className="empty">Aucune structure rattachée.</div>}
         </div>

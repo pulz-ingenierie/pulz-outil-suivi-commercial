@@ -117,6 +117,9 @@ h1, h2, h3 { margin: 0; letter-spacing: -.01em; }
 .grp > h3 .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
 .grp > h3 .ent-dot { background: var(--accent); }
 .grp > h3 .cnt { margin-left: auto; color: var(--faint); font-weight: 600; }
+/* Nom de structure cliquable (ouvre sa carte). */
+.grp > h3 .grp-nom { color: var(--ink); text-decoration: none; font-weight: 700; }
+.grp > h3 .grp-nom:hover { color: var(--accent); text-decoration: underline; }
 .grp-vide { color: var(--faint); font-size: 12.5px; padding: 2px 4px 12px; }
 
 /* Carte d'une affaire. */
