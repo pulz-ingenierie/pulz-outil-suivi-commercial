@@ -30,7 +30,7 @@ export default async function Brouillons({
   if (!profil) redirect("/crs/vocal");
 
   const supabase = getServerSupabase()!;
-  const [{ data: drafts }, { data: entites }, { data: operations }] = await Promise.all([
+  const [{ data: drafts }, { data: entites }, { data: operations }, { data: contactsBase }] = await Promise.all([
     supabase
       .from("crs")
       .select("id, transcription, synthese, created_at")
@@ -39,6 +39,7 @@ export default async function Brouillons({
       .order("created_at", { ascending: true }),
     supabase.from("entites").select("id, nom").order("nom"),
     supabase.from("operations").select("id, nom").order("created_at", { ascending: false }),
+    supabase.from("contacts").select("nom, prenom"),
   ]);
 
   const list = (drafts ?? []) as { id: string; transcription: string | null; synthese: any }[];
@@ -101,6 +102,7 @@ export default async function Brouillons({
       <VoiceCr
         entites={entites ?? []}
         operations={operations ?? []}
+        contactsBase={contactsBase ?? []}
         today={today}
         draftId={current.id}
         initialTranscription={current.transcription ?? ""}

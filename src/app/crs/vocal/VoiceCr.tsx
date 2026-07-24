@@ -3,9 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createCr, finaliserBrouillon, supprimerBrouillon } from "@/lib/actions";
-import type { ContactExtrait, Synthese } from "@/lib/synthese";
+import type { Synthese } from "@/lib/synthese";
 
 type Opt = { id: string; nom: string };
+type ContactBase = { nom: string; prenom: string | null };
+
+// Rattachement unifié : une structure OU une opération (bascule possible).
+type Rattach = { kind: "structure" | "operation"; name: string };
+type PersonneEdit = { prenom: string; nom: string; fonction: string; entite: string };
+type RelanceEdit = { objet: string; date: string };
 
 const TYPES_RDV = [
   { v: "dejeuner", l: "Déjeuner" },
@@ -15,7 +21,6 @@ const TYPES_RDV = [
   { v: "autre", l: "Autre" },
 ];
 
-// Choisit un format audio réellement supporté par le navigateur (iOS inclus).
 function pickMime(): string {
   const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/aac"];
   if (typeof MediaRecorder === "undefined") return "";
@@ -35,10 +40,43 @@ function mmss(s: number): string {
   return `${m}:${r.toString().padStart(2, "0")}`;
 }
 
+function addDays(iso: string, days: number): string {
+  try {
+    const d = new Date(iso + "T00:00:00");
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+  } catch {
+    return iso;
+  }
+}
+
+function diffDays(fromIso: string, toIso: string): number {
+  try {
+    const a = new Date(fromIso + "T00:00:00").getTime();
+    const b = new Date(toIso + "T00:00:00").getTime();
+    return Math.max(1, Math.round((b - a) / 86400000));
+  } catch {
+    return 14;
+  }
+}
+
+function dedupRattach(list: Rattach[]): Rattach[] {
+  const seen = new Set<string>();
+  const out: Rattach[] = [];
+  for (const r of list) {
+    const k = `${r.kind}|${r.name.trim().toLowerCase()}`;
+    if (!r.name.trim() || seen.has(k)) continue;
+    seen.add(k);
+    out.push(r);
+  }
+  return out;
+}
+
 export default function VoiceCr({
   entites,
   operations,
   today,
+  contactsBase = [],
   prefillEntite,
   prefillOperation,
   relanceId,
@@ -49,10 +87,10 @@ export default function VoiceCr({
   entites: Opt[];
   operations: Opt[];
   today: string;
+  contactsBase?: ContactBase[];
   prefillEntite?: string;
   prefillOperation?: string;
   relanceId?: string;
-  // Mode « brouillon » : on relit/valide un brouillon existant (issu d'un e-mail).
   draftId?: string;
   initialTranscription?: string;
   initialSynthese?: Synthese | null;
@@ -70,28 +108,31 @@ export default function VoiceCr({
   const [typeRdv, setTypeRdv] = useState("autre");
   const [dateRdv, setDateRdv] = useState(today);
   const [statut, setStatut] = useState("valide");
-  // Chat de correction (texte ou voix) de la fiche proposée par l'IA.
+
+  // Blocs éditables.
+  const initRattach: Rattach[] = [];
+  if (prefillOperation) {
+    const o = operations.find((x) => x.id === prefillOperation);
+    if (o) initRattach.push({ kind: "operation", name: o.nom });
+  }
+  if (prefillEntite) {
+    const e = entites.find((x) => x.id === prefillEntite);
+    if (e) initRattach.push({ kind: "structure", name: e.nom });
+  }
+  const [rattachements, setRattachements] = useState<Rattach[]>(initRattach);
+  const [personnes, setPersonnes] = useState<PersonneEdit[]>([]);
+  const [relances, setRelances] = useState<RelanceEdit[]>([]);
+
+  // Chat de correction.
   const [instr, setInstr] = useState("");
   const [correcting, setCorrecting] = useState(false);
   const [instrRec, setInstrRec] = useState<"idle" | "recording">("idle");
-  const [selEnt, setSelEnt] = useState<Set<string>>(new Set(prefillEntite ? [prefillEntite] : []));
-  const [selOp, setSelOp] = useState<Set<string>>(new Set(prefillOperation ? [prefillOperation] : []));
-  // Personnes (contacts) détectées par l'IA, à créer à l'enregistrement.
-  const [persons, setPersons] = useState<ContactExtrait[]>([]);
-  // Nouvelles structures / opérations proposées par l'IA (à créer à la volée).
-  const [nouvEnt, setNouvEnt] = useState<{ nom: string; type: string }[]>([]);
-  const [nouvOp, setNouvOp] = useState<{ nom: string }[]>([]);
-  // La liste de rattachement à la main est masquée par défaut : on ne coche
-  // rien au préalable. L'IA propose, et on ouvre ce volet pour corriger.
-  const [rattachOpen, setRattachOpen] = useState<boolean>(Boolean(prefillEntite || prefillOperation));
 
   const recRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const instrRecRef = useRef<MediaRecorder | null>(null);
   const instrChunksRef = useRef<BlobPart[]>([]);
-  // Réf vers la dernière version du traitement auto, pour l'appeler depuis
-  // l'événement d'arrêt du micro sans capturer un état périmé.
   const pipelineRef = useRef<(b: Blob) => void>(() => {});
 
   const stopTimer = () => {
@@ -107,7 +148,7 @@ export default function VoiceCr({
     };
   }, [audioUrl]);
 
-  // Mode brouillon : applique une fois la synthèse déjà calculée (issue du mail).
+  // Mode brouillon : applique une fois la synthèse déjà calculée.
   useEffect(() => {
     if (draftId && initialSynthese) applySynthese(initialSynthese, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -131,7 +172,6 @@ export default function VoiceCr({
           return URL.createObjectURL(blob);
         });
         stream.getTracks().forEach((t) => t.stop());
-        // Enchaînement automatique : transcription → structuration.
         pipelineRef.current(blob);
       };
       recRef.current = rec;
@@ -162,7 +202,6 @@ export default function VoiceCr({
     });
   }, []);
 
-  // --- Appels IA (fonctions « pures » : renvoient le résultat, gèrent l'erreur).
   async function doTranscribe(blob: Blob): Promise<string | null> {
     try {
       const fd = new FormData();
@@ -180,28 +219,28 @@ export default function VoiceCr({
     }
   }
 
-  // Applique une synthèse aux champs. `authoritative` = la liste de rattachements
-  // remplace la sélection (cas d'une correction, qui peut aussi retirer un
-  // rattachement) ; sinon on ajoute aux rattachements déjà présents (analyse).
+  // Applique une synthèse aux blocs. `authoritative` (correction) remplace ;
+  // sinon (analyse initiale) on fusionne les rattachements avec l'existant.
   function applySynthese(s: Synthese, authoritative: boolean) {
     setSynthese(s);
     setTypeRdv(s.type_rdv || "autre");
     if (s.date_rdv) setDateRdv(s.date_rdv);
-    setPersons(s.contacts ?? []);
-    setNouvEnt(s.nouvelles_entites ?? []);
-    setNouvOp(s.nouvelles_operations ?? []);
-    const entByName = new Map(entites.map((e) => [e.nom, e.id]));
-    const opByName = new Map(operations.map((o) => [o.nom, o.id]));
-    const eIds = s.entites.map((n) => entByName.get(n)).filter((x): x is string => Boolean(x));
-    const oIds = s.operations.map((n) => opByName.get(n)).filter((x): x is string => Boolean(x));
-    if (authoritative) {
-      setSelEnt(new Set(eIds));
-      setSelOp(new Set(oIds));
-    } else {
-      setSelEnt((prev) => new Set([...prev, ...eIds]));
-      setSelOp((prev) => new Set([...prev, ...oIds]));
-      if (eIds.length + oIds.length === 0) setRattachOpen(true);
-    }
+    const rats: Rattach[] = [
+      ...(s.entites ?? []).map((n) => ({ kind: "structure" as const, name: n })),
+      ...(s.operations ?? []).map((n) => ({ kind: "operation" as const, name: n })),
+      ...(s.nouvelles_entites ?? []).map((e) => ({ kind: "structure" as const, name: e.nom })),
+      ...(s.nouvelles_operations ?? []).map((o) => ({ kind: "operation" as const, name: o.nom })),
+    ];
+    setRattachements((prev) => dedupRattach(authoritative ? rats : [...prev, ...rats]));
+    setPersonnes(
+      (s.contacts ?? []).map((c) => ({
+        prenom: c.prenom ?? "",
+        nom: c.nom,
+        fonction: c.fonction ?? "",
+        entite: c.entite ?? "",
+      })),
+    );
+    setRelances((s.relances ?? []).map((r) => ({ objet: r.objet, date: addDays(today, r.dans_jours) })));
   }
 
   async function doSynth(text: string): Promise<void> {
@@ -227,7 +266,6 @@ export default function VoiceCr({
     }
   }
 
-  // Correction en langage naturel (texte ou voix) de la fiche déjà structurée.
   async function applyCorrection(instruction: string): Promise<void> {
     if (!instruction.trim() || !synthese || correcting) return;
     setCorrecting(true);
@@ -259,8 +297,6 @@ export default function VoiceCr({
     }
   }
 
-  // Petit micro dédié à la correction : on enregistre une consigne, on la
-  // transcrit, puis on l'applique directement.
   async function startInstrRec() {
     setError(null);
     try {
@@ -276,11 +312,8 @@ export default function VoiceCr({
         stream.getTracks().forEach((t) => t.stop());
         setCorrecting(true);
         const text = await doTranscribe(blob);
-        if (text && text.trim()) {
-          await applyCorrection(text);
-        } else {
-          setCorrecting(false);
-        }
+        if (text && text.trim()) await applyCorrection(text);
+        else setCorrecting(false);
       };
       instrRecRef.current = rec;
       rec.start();
@@ -295,7 +328,6 @@ export default function VoiceCr({
     setInstrRec("idle");
   }
 
-  // Traitement automatique complet après un enregistrement.
   async function runPipeline(blob: Blob) {
     setError(null);
     setBusy("transcribe");
@@ -311,7 +343,6 @@ export default function VoiceCr({
   }
   pipelineRef.current = runPipeline;
 
-  // Structuration manuelle (chemin « j'écris à la main »).
   async function synthesizeManuel() {
     if (!transcription.trim() || busy) return;
     setError(null);
@@ -320,132 +351,217 @@ export default function VoiceCr({
     setBusy(null);
   }
 
-  const toggle = (set: Set<string>, setter: (s: Set<string>) => void, id: string) => {
-    const next = new Set(set);
-    if (next.has(id)) next.delete(id); else next.add(id);
-    setter(next);
-  };
+  // --- Dérivés pour l'envoi + les badges « en base / à créer ».
+  const entNameSet = new Set(entites.map((e) => e.nom.toLowerCase()));
+  const opNameSet = new Set(operations.map((o) => o.nom.toLowerCase()));
+  const entIdByNom = new Map(entites.map((e) => [e.nom.toLowerCase(), e.id]));
+  const opIdByNom = new Map(operations.map((o) => [o.nom.toLowerCase(), o.id]));
+  const contactSet = new Set(
+    contactsBase.map((c) => `${(c.nom ?? "").toLowerCase()}|${(c.prenom ?? "").toLowerCase()}`),
+  );
 
-  const entName = new Map(entites.map((e) => [e.id, e.nom]));
-  const opName = new Map(operations.map((o) => [o.id, o.nom]));
-  const selEntNames = [...selEnt].map((id) => ({ id, nom: entName.get(id) ?? "?" }));
-  const selOpNames = [...selOp].map((id) => ({ id, nom: opName.get(id) ?? "?" }));
+  const ratEnBase = (r: Rattach) =>
+    r.kind === "structure" ? entNameSet.has(r.name.trim().toLowerCase()) : opNameSet.has(r.name.trim().toLowerCase());
+  const persEnBase = (p: PersonneEdit) => contactSet.has(`${p.nom.trim().toLowerCase()}|${p.prenom.trim().toLowerCase()}`);
 
-  // Personnes → on poste le NOM de la structure ; le serveur la résout (connue
-  // ou fraîchement créée).
-  const personsPayload = persons.map((p) => ({
-    nom: p.nom,
-    prenom: p.prenom,
-    fonction: p.fonction,
-    entite: p.entite,
-  }));
-  const removePerson = (idx: number) => setPersons((prev) => prev.filter((_, i) => i !== idx));
+  const ratsNets = rattachements.filter((r) => r.name.trim());
+  const entiteIds = ratsNets
+    .filter((r) => r.kind === "structure" && entIdByNom.has(r.name.trim().toLowerCase()))
+    .map((r) => entIdByNom.get(r.name.trim().toLowerCase())!);
+  const operationIds = ratsNets
+    .filter((r) => r.kind === "operation" && opIdByNom.has(r.name.trim().toLowerCase()))
+    .map((r) => opIdByNom.get(r.name.trim().toLowerCase())!);
+  const nouvellesEntites = ratsNets
+    .filter((r) => r.kind === "structure" && !entNameSet.has(r.name.trim().toLowerCase()))
+    .map((r) => ({ nom: r.name.trim(), type: "autre" }));
+  const nouvellesOperations = ratsNets
+    .filter((r) => r.kind === "operation" && !opNameSet.has(r.name.trim().toLowerCase()))
+    .map((r) => ({ nom: r.name.trim() }));
+  const contactsPayload = personnes
+    .filter((p) => p.nom.trim())
+    .map((p) => ({
+      nom: p.nom.trim(),
+      prenom: p.prenom.trim() || null,
+      fonction: p.fonction.trim() || null,
+      entite: p.entite.trim() || null,
+    }));
+  const relancesPayload = relances
+    .filter((r) => r.objet.trim())
+    .map((r) => ({ objet: r.objet.trim(), dans_jours: diffDays(today, r.date) }));
+  const syntheseOut = { ...(synthese ?? {}), relances: relancesPayload };
 
-  const nouvEntNets = nouvEnt.filter((e) => e.nom.trim());
-  const nouvOpNets = nouvOp.filter((o) => o.nom.trim());
+  const canSave = transcription.trim().length > 0 && ratsNets.length > 0;
 
-  const canSave =
-    transcription.trim().length > 0 &&
-    (selEnt.size > 0 || selOp.size > 0 || nouvEntNets.length > 0 || nouvOpNets.length > 0);
+  // Mises à jour des blocs.
+  const majRat = (i: number, patch: Partial<Rattach>) =>
+    setRattachements((prev) => prev.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  const majPers = (i: number, patch: Partial<PersonneEdit>) =>
+    setPersonnes((prev) => prev.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  const majRel = (i: number, patch: Partial<RelanceEdit>) =>
+    setRelances((prev) => prev.map((x, j) => (j === i ? { ...x, ...patch } : x)));
 
   return (
     <>
-      {/* Capture vocale — masquée quand on relit un brouillon (texte déjà là). */}
+      {/* Listes de suggestions (choix OU saisie libre). */}
+      <datalist id="dl-structures">{entites.map((e) => <option key={e.id} value={e.nom} />)}</datalist>
+      <datalist id="dl-operations">{operations.map((o) => <option key={o.id} value={o.nom} />)}</datalist>
+
+      {/* Capture vocale — masquée en mode brouillon. */}
       {!draftId && (
-      <div className="card recorder">
-        <div className="eyebrow">Dicter</div>
-        {phase === "idle" && (
-          <button type="button" className="rec-btn" onClick={startRecording}>
-            <span className="rec-dot" /> Démarrer l'enregistrement
-          </button>
-        )}
-        {phase === "recording" && (
-          <div className="rec-live">
-            <button type="button" className="rec-btn stop" onClick={stopRecording}>
-              <span className="rec-sq" /> Terminé
+        <div className="card recorder">
+          <div className="eyebrow">Dicter</div>
+          {phase === "idle" && (
+            <button type="button" className="rec-btn" onClick={startRecording}>
+              <span className="rec-dot" /> Démarrer l'enregistrement
             </button>
-            <span className="rec-time tnum">● {mmss(seconds)}</span>
-          </div>
-        )}
-        {phase === "recorded" && (
-          <div className="rec-done">
-            {audioUrl && <audio className="player" src={audioUrl} controls />}
-            {busy === "transcribe" && <p className="proc">✍️ Transcription en cours…</p>}
-            {busy === "synth" && <p className="proc">✨ L'IA structure le compte rendu…</p>}
-            {!busy && synthese && <p className="proc ok">✓ Compte rendu analysé — relisez et corrigez ci-dessous.</p>}
-            <div className="rec-acts">
-              {!busy && error && audioBlob && (
-                <button type="button" className="btn" onClick={() => runPipeline(audioBlob)}>
-                  Réessayer l'analyse
-                </button>
-              )}
-              <button type="button" className="btn ghost" onClick={resetAudio} disabled={busy !== null}>
-                Recommencer
+          )}
+          {phase === "recording" && (
+            <div className="rec-live">
+              <button type="button" className="rec-btn stop" onClick={stopRecording}>
+                <span className="rec-sq" /> Terminé
               </button>
+              <span className="rec-time tnum">● {mmss(seconds)}</span>
             </div>
-          </div>
-        )}
-        <p className="hint">
-          Vous pouvez aussi ignorer le micro et écrire directement le compte rendu ci-dessous.
-        </p>
-      </div>
+          )}
+          {phase === "recorded" && (
+            <div className="rec-done">
+              {audioUrl && <audio className="player" src={audioUrl} controls />}
+              {busy === "transcribe" && <p className="proc">✍️ Transcription en cours…</p>}
+              {busy === "synth" && <p className="proc">✨ L'IA structure le compte rendu…</p>}
+              {!busy && synthese && <p className="proc ok">✓ Analysé — relisez les blocs ci-dessous.</p>}
+              <div className="rec-acts">
+                {!busy && error && audioBlob && (
+                  <button type="button" className="btn" onClick={() => runPipeline(audioBlob)}>Réessayer l'analyse</button>
+                )}
+                <button type="button" className="btn ghost" onClick={resetAudio} disabled={busy !== null}>Recommencer</button>
+              </div>
+            </div>
+          )}
+          <p className="hint">Vous pouvez aussi ignorer le micro et écrire directement le compte rendu ci-dessous.</p>
+        </div>
       )}
 
       {error && <div className="card notice err">{error}</div>}
 
-      {/* Formulaire — posté au serveur (action validée) */}
       <form action={draftId ? finaliserBrouillon : createCr} className="form">
-        <input type="hidden" name="synthese_json" value={synthese ? JSON.stringify(synthese) : ""} />
         {relanceId && <input type="hidden" name="relance_id" value={relanceId} />}
         {draftId && <input type="hidden" name="cr_id" value={draftId} />}
 
-        <label className="field">
-          <span className="lab">Compte rendu <em>*</em></span>
+        {/* Champs postés (dérivés des blocs). */}
+        {entiteIds.map((id) => <input key={`e${id}`} type="hidden" name="entite_ids" value={id} />)}
+        {operationIds.map((id) => <input key={`o${id}`} type="hidden" name="operation_ids" value={id} />)}
+        <input type="hidden" name="nouvelles_entites_json" value={JSON.stringify(nouvellesEntites)} />
+        <input type="hidden" name="nouvelles_operations_json" value={JSON.stringify(nouvellesOperations)} />
+        <input type="hidden" name="contacts_json" value={JSON.stringify(contactsPayload)} />
+        <input type="hidden" name="synthese_json" value={JSON.stringify(syntheseOut)} />
+
+        {/* Bloc — le compte rendu (texte). */}
+        <div className="bloc">
+          <h3>📝 Compte rendu</h3>
           <textarea
             name="transcription"
-            rows={7}
+            rows={draftId ? 6 : 7}
             required
             value={transcription}
             onChange={(e) => setTranscription(e.target.value)}
             placeholder="Le texte dicté apparaîtra ici — corrigez-le librement, ou écrivez directement."
           />
-        </label>
-
-        <div className="synth-row">
-          <button
-            type="button"
-            className="btn ghost"
-            onClick={synthesizeManuel}
-            disabled={busy !== null || !transcription.trim()}
-          >
-            {busy === "synth" ? "L'IA structure…" : synthese ? "✨ Relancer l'analyse" : "✨ Structurer avec l'IA"}
-          </button>
-          <span className="hint">L'IA propose la date, un résumé, les rattachements et les suites — vous gardez la main.</span>
+          <div className="synth-row">
+            <button type="button" className="btn ghost" onClick={synthesizeManuel} disabled={busy !== null || !transcription.trim()}>
+              {busy === "synth" ? "L'IA structure…" : synthese ? "✨ Relancer l'analyse" : "✨ Analyser avec l'IA"}
+            </button>
+          </div>
+          {synthese?.resume && (
+            <div className="resume">
+              <p className="s-resume">{synthese.resume}</p>
+              {synthese.points_cles.length > 0 && (
+                <ul className="s-points">{synthese.points_cles.map((p, i) => <li key={i}>{p}</li>)}</ul>
+              )}
+            </div>
+          )}
         </div>
 
-        {synthese && (
-          <div className="card synth-preview">
-            <div className="eyebrow">Proposition de l'IA</div>
-            {synthese.resume && <p className="s-resume">{synthese.resume}</p>}
-            {synthese.points_cles.length > 0 && (
-              <ul className="s-points">{synthese.points_cles.map((p, i) => <li key={i}>{p}</li>)}</ul>
-            )}
-            {synthese.relances.length > 0 && (
-              <div className="s-relances">
-                <span className="lab">Suites suggérées</span>
-                {synthese.relances.map((r, i) => (
-                  <span className="pill auto" key={i}>{r.objet} · sous {r.dans_jours} j</span>
-                ))}
-                <p className="hint">Les relances seront créables à l'étape « relances » (brique suivante).</p>
-              </div>
-            )}
+        {/* Bloc — date + type. */}
+        <div className="bloc">
+          <div className="row2">
+            <label className="field">
+              <span className="lab">📅 Date du rendez-vous</span>
+              <input type="date" name="date_rdv" value={dateRdv} max={today} onChange={(e) => setDateRdv(e.target.value)} />
+            </label>
+            <label className="field">
+              <span className="lab">🏷️ Type de rendez-vous</span>
+              <select name="type_rdv" value={typeRdv} onChange={(e) => setTypeRdv(e.target.value)}>
+                {TYPES_RDV.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
+              </select>
+            </label>
           </div>
-        )}
+        </div>
 
-        {/* Chat de correction : on parle ou on écrit ce qu'il faut changer. */}
+        {/* Bloc — structures & opérations. */}
+        <div className="bloc">
+          <h3>🏢 Structures &amp; opérations</h3>
+          {ratsNets.length === 0 && rattachements.length === 0 && (
+            <p className="hint" style={{ marginTop: 0 }}>Aucun rattachement pour l'instant. Ajoutez-en un ou lancez l'analyse.</p>
+          )}
+          {rattachements.map((r, i) => (
+            <div className="rat-row" key={i}>
+              <button
+                type="button"
+                className="kind-btn"
+                onClick={() => majRat(i, { kind: r.kind === "structure" ? "operation" : "structure" })}
+                title="Basculer structure / opération"
+              >
+                {r.kind === "structure" ? "Structure" : "Opération"} ⇄
+              </button>
+              <input
+                className="rat-name"
+                list={r.kind === "structure" ? "dl-structures" : "dl-operations"}
+                value={r.name}
+                onChange={(e) => majRat(i, { name: e.target.value })}
+                placeholder={r.kind === "structure" ? "Nom de la structure…" : "Nom de l'opération…"}
+              />
+              {r.name.trim() && <span className={`badge ${ratEnBase(r) ? "base" : "new"}`}>{ratEnBase(r) ? "en base" : "à créer"}</span>}
+              <button type="button" className="x-btn" aria-label="Retirer" onClick={() => setRattachements((prev) => prev.filter((_, j) => j !== i))}>×</button>
+            </div>
+          ))}
+          <button type="button" className="add-btn" onClick={() => setRattachements((prev) => [...prev, { kind: "structure", name: "" }])}>＋ Ajouter</button>
+        </div>
+
+        {/* Bloc — personnes. */}
+        <div className="bloc">
+          <h3>👤 Personnes</h3>
+          {personnes.length === 0 && <p className="hint" style={{ marginTop: 0 }}>Aucune personne évoquée.</p>}
+          {personnes.map((p, i) => (
+            <div className="pers-row" key={i}>
+              <input className="pf" placeholder="Prénom" value={p.prenom} onChange={(e) => majPers(i, { prenom: e.target.value })} />
+              <input className="pf" placeholder="Nom" value={p.nom} onChange={(e) => majPers(i, { nom: e.target.value })} />
+              <input className="pf" placeholder="Fonction" value={p.fonction} onChange={(e) => majPers(i, { fonction: e.target.value })} />
+              <input className="pf" list="dl-structures" placeholder="Structure" value={p.entite} onChange={(e) => majPers(i, { entite: e.target.value })} />
+              {p.nom.trim() && <span className={`badge ${persEnBase(p) ? "base" : "new"}`}>{persEnBase(p) ? "en base" : "à créer"}</span>}
+              <button type="button" className="x-btn" aria-label="Retirer" onClick={() => setPersonnes((prev) => prev.filter((_, j) => j !== i))}>×</button>
+            </div>
+          ))}
+          <button type="button" className="add-btn" onClick={() => setPersonnes((prev) => [...prev, { prenom: "", nom: "", fonction: "", entite: "" }])}>＋ Ajouter</button>
+        </div>
+
+        {/* Bloc — relances. */}
+        <div className="bloc">
+          <h3>🔔 Relances (suites à donner)</h3>
+          {relances.length === 0 && <p className="hint" style={{ marginTop: 0 }}>Aucune relance suggérée.</p>}
+          {relances.map((r, i) => (
+            <div className="rel-row" key={i}>
+              <input className="rel-objet" placeholder="Action de suivi…" value={r.objet} onChange={(e) => majRel(i, { objet: e.target.value })} />
+              <input type="date" className="rel-ech" value={r.date} onChange={(e) => majRel(i, { date: e.target.value })} />
+              <button type="button" className="x-btn" aria-label="Retirer" onClick={() => setRelances((prev) => prev.filter((_, j) => j !== i))}>×</button>
+            </div>
+          ))}
+          <button type="button" className="add-btn" onClick={() => setRelances((prev) => [...prev, { objet: "", date: addDays(today, 30) }])}>＋ Ajouter</button>
+        </div>
+
+        {/* Bloc — corriger en parlant. */}
         {synthese && (
           <div className="correct-box">
-            <span className="lab">Corriger en parlant (ou en écrivant)</span>
+            <span className="lab">🎙️ Corriger en parlant (ou en écrivant)</span>
             <div className="correct-row">
               <input
                 className="correct-input"
@@ -457,178 +573,14 @@ export default function VoiceCr({
                 disabled={correcting || instrRec === "recording"}
               />
               {instrRec === "recording" ? (
-                <button type="button" className="btn mic on" onClick={stopInstrRec}>
-                  ● Stop
-                </button>
+                <button type="button" className="btn mic on" onClick={stopInstrRec}>● Stop</button>
               ) : (
-                <button type="button" className="btn ghost mic" onClick={startInstrRec} disabled={correcting} aria-label="Dicter la correction">
-                  🎤
-                </button>
+                <button type="button" className="btn ghost mic" onClick={startInstrRec} disabled={correcting} aria-label="Dicter la correction">🎤</button>
               )}
-              <button
-                type="button"
-                className="btn"
-                onClick={() => applyCorrection(instr)}
-                disabled={correcting || instrRec === "recording" || !instr.trim()}
-              >
-                Corriger
-              </button>
+              <button type="button" className="btn" onClick={() => applyCorrection(instr)} disabled={correcting || instrRec === "recording" || !instr.trim()}>Corriger</button>
             </div>
             {instrRec === "recording" && <p className="proc">🎤 J'écoute… tapez « Stop » quand c'est dit.</p>}
             {correcting && <p className="proc">✨ Je corrige la fiche…</p>}
-            <p className="hint">Dites simplement ce qui ne va pas : la date, un rattachement, le résumé… L'IA met la fiche à jour.</p>
-          </div>
-        )}
-
-        <div className="row2">
-          <label className="field">
-            <span className="lab">Date du rendez-vous</span>
-            <input
-              type="date"
-              name="date_rdv"
-              value={dateRdv}
-              max={today}
-              onChange={(e) => setDateRdv(e.target.value)}
-            />
-          </label>
-          <label className="field">
-            <span className="lab">Type de rendez-vous</span>
-            <select name="type_rdv" value={typeRdv} onChange={(e) => setTypeRdv(e.target.value)}>
-              {TYPES_RDV.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
-            </select>
-          </label>
-        </div>
-
-        <div className="field">
-          <span className="lab">Rattachements</span>
-          {selEntNames.length + selOpNames.length === 0 ? (
-            <p className="hint" style={{ marginTop: 0 }}>
-              {synthese
-                ? "L'IA n'a rien reconnu automatiquement — rattachez à la main ci-dessous."
-                : "Après l'analyse, les entités et opérations concernées seront proposées ici. Vous pourrez toujours ajuster."}
-            </p>
-          ) : (
-            <div className="rattach-chips">
-              {selEntNames.map((e) => (
-                <span className="chip ent rm" key={e.id}>
-                  {e.nom}
-                  <button type="button" aria-label={`Retirer ${e.nom}`} onClick={() => toggle(selEnt, setSelEnt, e.id)}>×</button>
-                </span>
-              ))}
-              {selOpNames.map((o) => (
-                <span className="chip rm" key={o.id}>
-                  {o.nom}
-                  <button type="button" aria-label={`Retirer ${o.nom}`} onClick={() => toggle(selOp, setSelOp, o.id)}>×</button>
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Champs réellement postés au serveur (cachés) */}
-          {[...selEnt].map((id) => <input key={id} type="hidden" name="entite_ids" value={id} />)}
-          {[...selOp].map((id) => <input key={id} type="hidden" name="operation_ids" value={id} />)}
-          <input type="hidden" name="contacts_json" value={JSON.stringify(personsPayload)} />
-
-          <button
-            type="button"
-            className="btn ghost mini"
-            onClick={() => setRattachOpen((o) => !o)}
-            style={{ marginTop: 4 }}
-          >
-            {rattachOpen ? "Masquer" : "Rattacher / corriger à la main"}
-          </button>
-
-          {rattachOpen && (
-            <div className="row2" style={{ marginTop: 12 }}>
-              <fieldset className="field pickset">
-                <legend className="lab">Entités</legend>
-                {entites.length ? (
-                  <div className="picklist">
-                    {entites.map((e) => (
-                      <label className="check" key={e.id}>
-                        <input type="checkbox" checked={selEnt.has(e.id)} onChange={() => toggle(selEnt, setSelEnt, e.id)} />
-                        <span>{e.nom}</span>
-                      </label>
-                    ))}
-                  </div>
-                ) : <div className="empty">Aucune entité. <Link href="/entites/nouvelle">En créer une.</Link></div>}
-              </fieldset>
-
-              <fieldset className="field pickset">
-                <legend className="lab">Opérations</legend>
-                {operations.length ? (
-                  <div className="picklist">
-                    {operations.map((o) => (
-                      <label className="check" key={o.id}>
-                        <input type="checkbox" checked={selOp.has(o.id)} onChange={() => toggle(selOp, setSelOp, o.id)} />
-                        <span>{o.nom}</span>
-                      </label>
-                    ))}
-                  </div>
-                ) : <div className="empty">Aucune opération.</div>}
-              </fieldset>
-            </div>
-          )}
-        </div>
-
-        {/* Nouvelles structures / opérations proposées, à créer à la volée. */}
-        {(nouvEnt.length > 0 || nouvOp.length > 0) && (
-          <div className="field">
-            <span className="lab">Nouveau — à créer</span>
-            <p className="hint" style={{ marginTop: 0 }}>
-              L'IA a repéré des éléments absents de la base. Vérifiez l'orthographe : ils seront
-              créés et rattachés à la validation. Retirez ceux à ne pas créer.
-            </p>
-            {nouvEnt.map((e, i) => (
-              <div className="newrow" key={`e${i}`}>
-                <span className="chip ent">structure</span>
-                <input
-                  className="newname"
-                  value={e.nom}
-                  onChange={(ev) => setNouvEnt((prev) => prev.map((x, j) => (j === i ? { ...x, nom: ev.target.value } : x)))}
-                />
-                <button type="button" className="btn ghost mini" onClick={() => setNouvEnt((prev) => prev.filter((_, j) => j !== i))}>
-                  Retirer
-                </button>
-              </div>
-            ))}
-            {nouvOp.map((o, i) => (
-              <div className="newrow" key={`o${i}`}>
-                <span className="chip">opération</span>
-                <input
-                  className="newname"
-                  value={o.nom}
-                  onChange={(ev) => setNouvOp((prev) => prev.map((x, j) => (j === i ? { ...x, nom: ev.target.value } : x)))}
-                />
-                <button type="button" className="btn ghost mini" onClick={() => setNouvOp((prev) => prev.filter((_, j) => j !== i))}>
-                  Retirer
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        <input type="hidden" name="nouvelles_entites_json" value={JSON.stringify(nouvEntNets)} />
-        <input type="hidden" name="nouvelles_operations_json" value={JSON.stringify(nouvOpNets)} />
-
-        {persons.length > 0 && (
-          <div className="field">
-            <span className="lab">Personnes évoquées</span>
-            <div className="rattach-chips">
-              {persons.map((p, i) => {
-                const nomComplet = [p.prenom, p.nom].filter(Boolean).join(" ") || p.nom;
-                return (
-                  <span className="chip rm" key={i}>
-                    {nomComplet}
-                    {p.fonction ? ` · ${p.fonction}` : ""}
-                    {p.entite ? ` — ${p.entite}` : ""}
-                    <button type="button" aria-label={`Retirer ${nomComplet}`} onClick={() => removePerson(i)}>×</button>
-                  </span>
-                );
-              })}
-            </div>
-            <p className="hint" style={{ marginTop: 2 }}>
-              Les personnes rattachées à une structure connue seront ajoutées à l'annuaire (onglet Réseau → la structure → ses contacts).
-            </p>
           </div>
         )}
 
@@ -644,9 +596,7 @@ export default function VoiceCr({
 
         {draftId ? (
           <div className="form-foot">
-            <button className="btn ghost" type="submit" formAction={supprimerBrouillon} formNoValidate>
-              Supprimer
-            </button>
+            <button className="btn ghost" type="submit" formAction={supprimerBrouillon} formNoValidate>Supprimer</button>
             <Link className="btn ghost" href="/crs/vocal">Passer (plus tard)</Link>
             <button className="btn" type="submit" disabled={!canSave}>Valider et consolider</button>
           </div>

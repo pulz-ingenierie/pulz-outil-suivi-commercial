@@ -304,6 +304,54 @@ h1, h2, h3 { margin: 0; letter-spacing: -.01em; }
 .btn.mic.on { background: var(--crit); border-color: var(--crit); color: #fff; }
 .correct-box .hint { color: var(--faint); font-size: 12.5px; margin: 0; }
 .correct-box .proc { margin: 0; }
+
+/* --- Fiche compte rendu en blocs éditables (dictée ET brouillons) --- */
+.bloc { background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+        padding: 14px 15px; box-shadow: var(--shadow); margin-bottom: 12px; }
+.bloc > h3 { font-size: 14px; margin: 0 0 11px; display: flex; align-items: center; gap: 7px; }
+.bloc .row2 { margin: 0; }
+.bloc .resume { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.bloc .s-resume { margin: 0 0 8px; font-size: 14.5px; }
+.bloc .s-points { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14px; }
+.bloc .s-points li { margin: 3px 0; }
+
+/* Étiquette « en base » / « à créer ». */
+.badge { flex: none; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.badge.base { background: var(--accent-soft); color: var(--accent-ink); }
+.badge.new { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); }
+
+/* Croix de suppression. */
+.x-btn { flex: none; width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--line);
+         background: var(--surface); color: var(--muted); font-size: 17px; line-height: 1; cursor: pointer; }
+.x-btn:hover { border-color: var(--crit); color: var(--crit); }
+
+/* Bouton « ＋ Ajouter ». */
+.add-btn { margin-top: 4px; font: inherit; font-size: 13px; font-weight: 600; color: var(--accent-ink);
+           background: transparent; border: 1px dashed var(--line); border-radius: 9px; padding: 8px 12px; cursor: pointer; }
+.add-btn:hover { border-color: var(--accent); }
+
+/* Ligne rattachement : bascule + nom + badge + croix. */
+.rat-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.kind-btn { flex: none; font: inherit; font-size: 12px; font-weight: 700; padding: 7px 11px; border-radius: 8px;
+            border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); cursor: pointer; white-space: nowrap; }
+.kind-btn:hover { border-color: var(--accent); }
+.rat-name { flex: 1; min-width: 150px; font: inherit; font-size: 14px; padding: 8px 11px;
+            border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--ink); }
+.rat-name:focus { outline: none; border-color: var(--accent); }
+
+/* Ligne personne : plusieurs champs. */
+.pers-row { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; flex-wrap: wrap; }
+.pers-row .pf { flex: 1; min-width: 110px; font: inherit; font-size: 13.5px; padding: 8px 10px;
+            border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--ink); }
+.pers-row .pf:focus { outline: none; border-color: var(--accent); }
+
+/* Ligne relance : objet + échéance + croix. */
+.rel-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.rel-row .rel-objet { flex: 1; min-width: 160px; font: inherit; font-size: 14px; padding: 8px 11px;
+            border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--ink); }
+.rel-row .rel-ech { font: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line);
+            border-radius: 9px; background: var(--surface); color: var(--ink); }
+.rel-row .rel-objet:focus, .rel-row .rel-ech:focus { outline: none; border-color: var(--accent); }
 .recorder .hint, .synth-row .hint, .s-relances .hint { color: var(--faint); font-size: 12.5px; margin: 12px 0 0; }
 .notice.err { border-left-color: var(--crit); color: var(--crit); }
 

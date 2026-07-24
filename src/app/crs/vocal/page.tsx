@@ -21,9 +21,10 @@ export default async function VocalPage({
   }
 
   const supabase = getServerSupabase()!;
-  const [{ data: entites }, { data: operations }] = await Promise.all([
+  const [{ data: entites }, { data: operations }, { data: contactsBase }] = await Promise.all([
     supabase.from("entites").select("id, nom").order("nom"),
     supabase.from("operations").select("id, nom").order("created_at", { ascending: false }),
+    supabase.from("contacts").select("nom, prenom"),
   ]);
 
   const today = new Date().toISOString().slice(0, 10);
@@ -54,6 +55,7 @@ export default async function VocalPage({
       <VoiceCr
         entites={entites ?? []}
         operations={operations ?? []}
+        contactsBase={contactsBase ?? []}
         today={today}
         prefillEntite={entPre}
         prefillOperation={opPre}
