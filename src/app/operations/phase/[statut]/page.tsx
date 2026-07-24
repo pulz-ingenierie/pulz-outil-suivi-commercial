@@ -51,7 +51,7 @@ export default async function PhasePage({ params }: { params: Promise<{ statut: 
       .select("*")
       .eq("statut", st)
       .order("created_at", { ascending: false }),
-    supabase.from("entite_operation").select("operation_id, entites(nom)"),
+    supabase.from("entite_operation").select("operation_id, entites(id, nom)"),
   ]);
 
   if (error) {
@@ -67,11 +67,12 @@ export default async function PhasePage({ params }: { params: Promise<{ statut: 
 
   const operations = (ops ?? []) as Operation[];
 
-  // Prospects rattachés à chaque affaire (les portes d'entrée).
-  const opEntites: Record<string, string[]> = {};
+  // Prospects rattachés à chaque affaire (les portes d'entrée), avec leur id
+  // pour ouvrir leur carte.
+  const opEntites: Record<string, { id: string; nom: string }[]> = {};
   for (const l of (liens ?? []) as any[]) {
-    if (!l.operation_id) continue;
-    (opEntites[l.operation_id] ??= []).push(l.entites?.nom ?? "—");
+    if (!l.operation_id || !l.entites?.id) continue;
+    (opEntites[l.operation_id] ??= []).push({ id: l.entites.id, nom: l.entites.nom ?? "—" });
   }
 
   return (
@@ -105,19 +106,19 @@ export default async function PhasePage({ params }: { params: Promise<{ statut: 
             const montant = euro(o.montant_estime);
             const ents = opEntites[o.id] ?? [];
             return (
-              <Link className="op" href={`/operations/${o.id}`} key={o.id}>
-                <div className="onm">{o.nom}</div>
+              <div className="op" key={o.id}>
+                <Link className="onm" href={`/operations/${o.id}`}>{o.nom}</Link>
                 {(ents.length > 0 || montant) && (
                   <div className="ometa">
-                    {ents.map((nom, i) => (
-                      <span className="sig-d struct" key={i}>
-                        <span className="sig-lbl">{nom}</span>
-                      </span>
+                    {ents.map((e) => (
+                      <Link className="sig-d struct" href={`/entites/${e.id}`} key={e.id}>
+                        <span className="sig-lbl">{e.nom}</span>
+                      </Link>
                     ))}
                     {montant && <span className="amt">{montant}</span>}
                   </div>
                 )}
-              </Link>
+              </div>
             );
           })}
         </div>

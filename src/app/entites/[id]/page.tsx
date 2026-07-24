@@ -87,23 +87,23 @@ export default async function FicheStructure({ params }: { params: Promise<{ id:
     <main className="wrap">
       <Link className="back" href="/tableau">← Retour au tableau de bord</Link>
 
+      <div className="page-actions">
+        <Link className="btn ghost" href={`/crs/vocal?entite=${entite.id}`}>🎙 Dicter un CR</Link>
+      </div>
+
       <div className="fiche-head">
         <div>
           <div className="eyebrow">Fiche structure</div>
           <h1>{entite.nom}</h1>
         </div>
-        <div className="head-actions">
-          <span className="sig-d type"><span className="sig-lbl">{typeLbl}</span></span>
-          <div className="btns">
-            <Link className="btn ghost" href={`/crs/vocal?entite=${entite.id}`}>🎙 Dicter un CR</Link>
-          </div>
-        </div>
       </div>
 
       <div className="blocks">
         <div className="block">
-          <div className="eyebrow">Repères</div>
-          <div className="kv"><span className="k">Type</span><span>{typeLbl}</span></div>
+          <div className="block-h">
+            <div className="eyebrow">Repères</div>
+            <span className="sig-d type"><span className="sig-lbl">{typeLbl}</span></span>
+          </div>
           <div className="kv"><span className="k">Ville</span><span>{entite.ville || "—"}</span></div>
           <div className="kv"><span className="k">Dernier contact</span><span>{dateFr(dernierContact)}</span></div>
           {entite.statut_vie === "dormant" && (
@@ -119,16 +119,16 @@ export default async function FicheStructure({ params }: { params: Promise<{ id:
                 const montant = euro(o.montant_estime);
                 const st = o.statut as OperationStatut;
                 return (
-                  <Link className="op" href={`/operations/${o.id}`} key={o.id}>
-                    <div className="onm">{o.nom}</div>
+                  <div className="op" key={o.id}>
+                    <Link className="onm" href={`/operations/${o.id}`}>{o.nom}</Link>
                     <div className="ometa">
-                      <span className="sig-d phase" style={{ ["--cat" as string]: `var(${STATUT_VAR[st]})` }}>
+                      <Link className="sig-d phase" href={`/operations/phase/${st}`} style={{ ["--cat" as string]: `var(${STATUT_VAR[st]})` }}>
                         <span className="sig-lbl">{STATUT_LABELS[st] ?? st}</span>
-                      </span>
+                      </Link>
                       {o.role && <span className="sig-d struct"><span className="sig-lbl">{o.role}</span></span>}
                       {montant && <span className="amt">{montant}</span>}
                     </div>
-                  </Link>
+                  </div>
                 );
               })}
             </div>

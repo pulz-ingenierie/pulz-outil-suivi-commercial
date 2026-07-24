@@ -122,12 +122,13 @@ h1, h2, h3 { margin: 0; letter-spacing: -.01em; }
 .grp > h3 .grp-nom:hover { color: var(--accent); text-decoration: underline; }
 .grp-vide { color: var(--faint); font-size: 12.5px; padding: 2px 4px 12px; }
 
-/* Carte d'une affaire. */
+/* Carte d'une affaire. Le nom mène à la fiche ; les signets sont cliquables
+   à part (chacun ouvre sa propre carte). */
 .op { display: block; background: var(--surface); border: 1px solid var(--line); border-radius: 11px;
-      padding: 11px 12px; margin-bottom: 9px; box-shadow: var(--shadow);
-      text-decoration: none; color: inherit; cursor: pointer; transition: transform .1s, border-color .1s; }
-.op:hover { transform: translateY(-1px); border-color: var(--accent); }
-.op .onm { font-weight: 650; font-size: 14.5px; line-height: 1.25; }
+      padding: 11px 12px; margin-bottom: 9px; box-shadow: var(--shadow); }
+.op .onm { display: block; font-weight: 650; font-size: 14.5px; line-height: 1.25;
+      text-decoration: none; color: var(--ink); }
+.op .onm:hover { color: var(--accent); text-decoration: underline; }
 .op .ometa { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 8px; }
 .op .amt { font-size: 11.5px; color: var(--muted); font-weight: 650; }
 
@@ -215,6 +216,9 @@ h1, h2, h3 { margin: 0; letter-spacing: -.01em; }
 .blocks { display: grid; grid-template-columns: 1fr; gap: 16px; max-width: 780px; }
 .block { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: var(--shadow); }
 .block .eyebrow { margin-bottom: 11px; }
+/* En-tête d'un encart avec un signet dans l'angle (ex. la phase sur Repères). */
+.block-h { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 11px; }
+.block-h .eyebrow { margin-bottom: 0; padding-top: 3px; }
 .kv { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
 .kv:last-child { border-bottom: 0; }
 .kv .k { color: var(--muted); }

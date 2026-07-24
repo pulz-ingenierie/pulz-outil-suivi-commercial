@@ -74,27 +74,30 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
     <main className="wrap">
       <Link className="back" href="/tableau">← Retour au tableau de bord</Link>
 
+      <div className="page-actions">
+        <Link className="btn ghost" href={`/crs/vocal?operation=${operation.id}`}>🎙 Dicter un CR</Link>
+        <Link className="btn" href={`/operations/${operation.id}/modifier`}>Modifier</Link>
+      </div>
+
       <div className="fiche-head">
         <div>
           <div className="eyebrow">Fiche opération</div>
           <h1>{operation.nom}</h1>
         </div>
-        <div className="head-actions">
-          <Link className="sig-d phase" href={`/operations/phase/${st}`} style={{ ["--cat" as string]: `var(${STATUT_VAR[st]})` }}>
-            <span className="sig-lbl">{STATUT_LABELS[st]}</span>
-          </Link>
-          <div className="btns">
-            <Link className="btn ghost" href={`/crs/vocal?operation=${operation.id}`}>🎙 Dicter un CR</Link>
-            <Link className="btn" href={`/operations/${operation.id}/modifier`}>Modifier</Link>
-          </div>
-        </div>
       </div>
 
       <div className="blocks">
         <div className="block">
-          <div className="eyebrow">Repères</div>
+          <div className="block-h">
+            <div className="eyebrow">Repères</div>
+            <Link className="sig-d phase" href={`/operations/phase/${st}`} style={{ ["--cat" as string]: `var(${STATUT_VAR[st]})` }}>
+              <span className="sig-lbl">{STATUT_LABELS[st]}</span>
+            </Link>
+          </div>
           <div className="kv"><span className="k">Référent</span><span>{referent?.nom ?? "—"}</span></div>
-          <div className="kv"><span className="k">Montant estimé</span><span>{euro(operation.montant_estime)}</span></div>
+          {operation.montant_estime != null && (
+            <div className="kv"><span className="k">Montant estimé</span><span>{euro(operation.montant_estime)}</span></div>
+          )}
           {operation.description && (
             <div className="kv"><span className="k">Description</span><span style={{ maxWidth: "60%", textAlign: "right" }}>{operation.description}</span></div>
           )}

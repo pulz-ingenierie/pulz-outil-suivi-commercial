@@ -70,12 +70,12 @@ function dateFr(d: string): string {
   }
 }
 
-// L'étape du pipeline est un signet (même langage visuel que partout ailleurs).
+// L'étape du pipeline est un signet CLIQUABLE (→ toutes les affaires de l'étape).
 function EtapeChip({ statut }: { statut: OperationStatut }) {
   return (
-    <span className="sig-d phase" style={{ ["--cat" as string]: `var(${STATUT_VAR[statut]})` }}>
+    <Link className="sig-d phase" href={`/operations/phase/${statut}`} style={{ ["--cat" as string]: `var(${STATUT_VAR[statut]})` }}>
       <span className="sig-lbl">{STATUT_LABELS[statut]}</span>
-    </span>
+    </Link>
   );
 }
 
@@ -94,21 +94,21 @@ function CarteOp({
   const montant = euro(op.montant_estime);
   const aMeta = avecEtape || (avecProspects && entites.length > 0) || montant;
   return (
-    <Link className="op" href={`/operations/${op.id}`}>
-      <div className="onm">{op.nom}</div>
+    <div className="op">
+      <Link className="onm" href={`/operations/${op.id}`}>{op.nom}</Link>
       {aMeta && (
         <div className="ometa">
           {avecEtape && <EtapeChip statut={op.statut} />}
           {avecProspects &&
             entites.map((e) => (
-              <span className="sig-d struct" key={e.id}>
+              <Link className="sig-d struct" href={`/entites/${e.id}`} key={e.id}>
                 <span className="sig-lbl">{e.nom}</span>
-              </span>
+              </Link>
             ))}
           {montant && <span className="amt">{montant}</span>}
         </div>
       )}
-    </Link>
+    </div>
   );
 }
 
