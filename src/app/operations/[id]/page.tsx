@@ -1,20 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
-import { STATUT_LABELS, type Operation, type OperationStatut } from "@/lib/types";
+import { type Operation, type OperationStatut } from "@/lib/types";
 import FilCr from "@/components/FilCr";
+import PhaseSelect from "./PhaseSelect";
 
 export const dynamic = "force-dynamic";
-
-const STATUT_VAR: Record<OperationStatut, string> = {
-  contact: "--s-contact",
-  qualifie: "--s-qualifie",
-  ao_attente: "--s-ao",
-  offre_remise: "--s-offre",
-  nego: "--s-nego",
-  gagne: "--s-gagne",
-  perdu: "--s-perdu",
-};
 
 function euro(n: number | null): string {
   if (n == null) return "— (non renseigné)";
@@ -89,10 +80,11 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
       <div className="blocks">
         <div className="block">
           <div className="block-h">
-            <div className="eyebrow">Repères</div>
-            <Link className="sig-d phase" href={`/operations/phase/${st}`} style={{ ["--cat" as string]: `var(${STATUT_VAR[st]})` }}>
-              <span className="sig-lbl">{STATUT_LABELS[st]}</span>
-            </Link>
+            <div>
+              <div className="eyebrow">Repères</div>
+              <Link className="phase-voir" href={`/operations/phase/${st}`}>Voir toutes les affaires de cette étape ›</Link>
+            </div>
+            <PhaseSelect id={operation.id} statut={st} />
           </div>
           <div className="kv"><span className="k">Référent</span><span>{referent?.nom ?? "—"}</span></div>
           {operation.montant_estime != null && (

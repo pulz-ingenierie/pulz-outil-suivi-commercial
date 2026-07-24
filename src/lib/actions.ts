@@ -100,6 +100,22 @@ export async function createOperation(fd: FormData) {
   redirect(`/operations/${op.id}`);
 }
 
+// Changement rapide d'étape depuis la fiche opération (sans passer par le
+// formulaire complet). Ne touche qu'au statut.
+export async function changerPhase(fd: FormData) {
+  const supabase = requireSupabase();
+  const id = str(fd, "id");
+  if (!id) throw new Error("Opération introuvable.");
+  const statut = pickStatut(fd);
+
+  const { error } = await supabase.from("operations").update({ statut }).eq("id", id);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/tableau");
+  revalidatePath(`/operations/${id}`);
+  redirect(`/operations/${id}`);
+}
+
 export async function updateOperation(fd: FormData) {
   const supabase = requireSupabase();
   const id = str(fd, "id");
