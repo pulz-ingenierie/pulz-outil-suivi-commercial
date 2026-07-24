@@ -235,9 +235,22 @@ h1, h2, h3 { margin: 0; letter-spacing: -.01em; }
 .pill.dormant { background: var(--surface-2); color: var(--faint); }
 .empty { color: var(--faint); font-size: 14px; }
 
+/* Fil des comptes rendus : contenu structuré (résumé + points clés + signets),
+   jamais la dictée / l'e-mail brut. */
+.fil { display: flex; flex-direction: column; gap: 12px; }
+.fil-item { border: 1px solid var(--line); border-radius: 12px; padding: 13px 15px; background: var(--surface-2); }
+.fil-h { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.fil-date { font-size: 12px; font-weight: 700; color: var(--muted); }
+.fil-resume { margin: 0; font-size: 14.5px; line-height: 1.5; }
+.fil-points { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 13.5px; }
+.fil-points li { margin: 3px 0; }
+.fil-sigs { margin-top: 10px; }
+.fil-brut { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
+
 /* Annuaire réseau : les entités « au chaud » sans opération en cours. */
 .netgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
-.netcard { background: var(--surface); border: 1px solid var(--line); border-radius: 13px; padding: 13px 15px; box-shadow: var(--shadow); }
+.netcard { display: block; background: var(--surface); border: 1px solid var(--line); border-radius: 13px; padding: 13px 15px; box-shadow: var(--shadow); text-decoration: none; color: var(--ink); }
+a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); transition: transform .1s, border-color .1s; }
 .netcard .nhead { display: flex; align-items: flex-start; justify-content: space-between; gap: 9px; }
 .netcard .nnm { font-weight: 650; font-size: 14.5px; line-height: 1.25; }
 .typechip { flex: none; font-size: 10.5px; font-weight: 700; letter-spacing: .02em; padding: 3px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); }

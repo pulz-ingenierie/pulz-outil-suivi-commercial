@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
 import { STATUT_LABELS, type OperationStatut } from "@/lib/types";
+import FilCr from "@/components/FilCr";
 
 export const dynamic = "force-dynamic";
 
@@ -23,14 +24,6 @@ const TYPE_ENTITE: Record<string, string> = {
   bet: "Bureau d'études (BET)",
   confrere: "Confrère",
   autre: "Structure",
-};
-
-const TYPE_RDV: Record<string, string> = {
-  dejeuner: "Déjeuner",
-  appel: "Appel",
-  visite: "Visite",
-  salon: "Salon",
-  autre: "RDV",
 };
 
 function euro(n: number | null): string | null {
@@ -74,7 +67,7 @@ export default async function FicheStructure({ params }: { params: Promise<{ id:
   const [{ data: liens }, { data: contacts }, { data: crLiens }] = await Promise.all([
     supabase.from("entite_operation").select("role_entree, operations(id, nom, statut, montant_estime)").eq("entite_id", id),
     supabase.from("contacts").select("id, nom, prenom, fonction, tel, email").eq("entite_id", id),
-    supabase.from("cr_entites").select("crs(id, date_rdv, type_rdv, transcription)").eq("entite_id", id),
+    supabase.from("cr_entites").select("crs(id, date_rdv, type_rdv, transcription, synthese)").eq("entite_id", id),
   ]);
 
   const operations = (liens ?? [])
@@ -173,14 +166,7 @@ export default async function FicheStructure({ params }: { params: Promise<{ id:
 
         <div className="block">
           <div className="eyebrow">Fil des comptes rendus</div>
-          {crs.length ? (
-            <div className="tl">{crs.map((c: any) => (
-              <div className="ev" key={c.id}>
-                <div className="d">{dateFr(c.date_rdv)} · {TYPE_RDV[c.type_rdv] ?? "RDV"}</div>
-                <div className="x">{c.transcription || "—"}</div>
-              </div>
-            ))}</div>
-          ) : <div className="empty">Aucun compte rendu pour l'instant.</div>}
+          <FilCr crs={crs} />
         </div>
       </div>
     </main>

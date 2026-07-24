@@ -7,8 +7,9 @@ const TYPE_ENTITE: Record<string, string> = {
   MOA: "Maître d'ouvrage",
   archi: "Architecte",
   promoteur: "Promoteur",
+  bet: "Bureau d'études (BET)",
   confrere: "Confrère",
-  autre: "Entité",
+  autre: "Structure",
 };
 
 export default async function Entites() {
@@ -43,16 +44,16 @@ export default async function Entites() {
       {list.length ? (
         <div className="netgrid">
           {list.map((e: any) => (
-            <div className="netcard" key={e.id}>
+            <Link className="netcard" href={`/entites/${e.id}`} key={e.id}>
               <div className="nhead">
                 <span className="nnm">{e.nom}</span>
-                <span className="typechip">{TYPE_ENTITE[e.type] ?? e.type}</span>
+                <span className="sig-d type"><span className="sig-lbl">{TYPE_ENTITE[e.type] ?? e.type}</span></span>
               </div>
               {e.ville && <div className="loc">{e.ville}</div>}
               {e.statut_vie === "dormant" && (
                 <div className="nfoot"><span className="pill dormant">en sommeil</span></div>
               )}
-            </div>
+            </Link>
           ))}
         </div>
       ) : (
