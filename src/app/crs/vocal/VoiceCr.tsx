@@ -598,8 +598,7 @@ export default function VoiceCr({
                 <span className="sig sig-personne" key={i}>
                   <button type="button" className="sig-body" onClick={() => setEditPers(i)}>
                     👤 {nomComplet}
-                    {p.fonction.trim() && <em className="sig-sub">· {p.fonction}</em>}
-                    {p.entite.trim() && <em className="sig-sub sig-struct-ref">🏢 {p.entite}</em>}
+                    {p.entite.trim() && <span className="mini-sig">🏢 {p.entite}</span>}
                     <em className={`sig-badge ${enBase ? "base" : "new"}`}>{enBase ? "en base" : "à créer"}</em>
                   </button>
                   <button type="button" className="sig-x" aria-label="Retirer" onClick={() => setPersonnes((pp) => pp.filter((_, j) => j !== i))}>×</button>
