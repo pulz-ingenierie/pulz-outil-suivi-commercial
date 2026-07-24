@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { createCr } from "@/lib/actions";
+import { createCr, finaliserBrouillon, supprimerBrouillon } from "@/lib/actions";
 import type { ContactExtrait, Synthese } from "@/lib/synthese";
 
 type Opt = { id: string; nom: string };
@@ -42,6 +42,9 @@ export default function VoiceCr({
   prefillEntite,
   prefillOperation,
   relanceId,
+  draftId,
+  initialTranscription,
+  initialSynthese,
 }: {
   entites: Opt[];
   operations: Opt[];
@@ -49,6 +52,10 @@ export default function VoiceCr({
   prefillEntite?: string;
   prefillOperation?: string;
   relanceId?: string;
+  // Mode « brouillon » : on relit/valide un brouillon existant (issu d'un e-mail).
+  draftId?: string;
+  initialTranscription?: string;
+  initialSynthese?: Synthese | null;
 }) {
   const [phase, setPhase] = useState<"idle" | "recording" | "recorded">("idle");
   const [seconds, setSeconds] = useState(0);
@@ -57,7 +64,7 @@ export default function VoiceCr({
 
   const [busy, setBusy] = useState<null | "transcribe" | "synth">(null);
   const [error, setError] = useState<string | null>(null);
-  const [transcription, setTranscription] = useState("");
+  const [transcription, setTranscription] = useState(initialTranscription ?? "");
   const [synthese, setSynthese] = useState<Synthese | null>(null);
 
   const [typeRdv, setTypeRdv] = useState("autre");
@@ -96,6 +103,12 @@ export default function VoiceCr({
       recRef.current?.stream.getTracks().forEach((t) => t.stop());
     };
   }, [audioUrl]);
+
+  // Mode brouillon : applique une fois la synthèse déjà calculée (issue du mail).
+  useEffect(() => {
+    if (draftId && initialSynthese) applySynthese(initialSynthese, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const startRecording = useCallback(async () => {
     setError(null);
@@ -327,7 +340,8 @@ export default function VoiceCr({
 
   return (
     <>
-      {/* Capture vocale — dès l'arrêt, l'outil transcrit puis structure tout seul. */}
+      {/* Capture vocale — masquée quand on relit un brouillon (texte déjà là). */}
+      {!draftId && (
       <div className="card recorder">
         <div className="eyebrow">Dicter</div>
         {phase === "idle" && (
@@ -365,13 +379,15 @@ export default function VoiceCr({
           Vous pouvez aussi ignorer le micro et écrire directement le compte rendu ci-dessous.
         </p>
       </div>
+      )}
 
       {error && <div className="card notice err">{error}</div>}
 
       {/* Formulaire — posté au serveur (action validée) */}
-      <form action={createCr} className="form">
+      <form action={draftId ? finaliserBrouillon : createCr} className="form">
         <input type="hidden" name="synthese_json" value={synthese ? JSON.stringify(synthese) : ""} />
         {relanceId && <input type="hidden" name="relance_id" value={relanceId} />}
+        {draftId && <input type="hidden" name="cr_id" value={draftId} />}
 
         <label className="field">
           <span className="lab">Compte rendu <em>*</em></span>
@@ -567,18 +583,30 @@ export default function VoiceCr({
           </div>
         )}
 
-        <label className="field">
-          <span className="lab">État</span>
-          <select name="statut" value={statut} onChange={(e) => setStatut(e.target.value)}>
-            <option value="valide">Validé (visible dans les fiches)</option>
-            <option value="brouillon">Brouillon (masqué pour l'instant)</option>
-          </select>
-        </label>
+        {!draftId && (
+          <label className="field">
+            <span className="lab">État</span>
+            <select name="statut" value={statut} onChange={(e) => setStatut(e.target.value)}>
+              <option value="valide">Validé (visible dans les fiches)</option>
+              <option value="brouillon">Brouillon (masqué pour l'instant)</option>
+            </select>
+          </label>
+        )}
 
-        <div className="form-foot">
-          <Link className="btn ghost" href={prefillOperation ? `/operations/${prefillOperation}` : "/tableau"}>Annuler</Link>
-          <button className="btn" type="submit" disabled={!canSave}>Enregistrer le compte rendu</button>
-        </div>
+        {draftId ? (
+          <div className="form-foot">
+            <button className="btn ghost" type="submit" formAction={supprimerBrouillon} formNoValidate>
+              Supprimer
+            </button>
+            <Link className="btn ghost" href="/crs/vocal">Passer (plus tard)</Link>
+            <button className="btn" type="submit" disabled={!canSave}>Valider et consolider</button>
+          </div>
+        ) : (
+          <div className="form-foot">
+            <Link className="btn ghost" href={prefillOperation ? `/operations/${prefillOperation}` : "/tableau"}>Annuler</Link>
+            <button className="btn" type="submit" disabled={!canSave}>Enregistrer le compte rendu</button>
+          </div>
+        )}
       </form>
     </>
   );

@@ -9,6 +9,7 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { getIdentite } from "@/lib/auth";
 import { envoyerRappelsRelances } from "@/lib/relances-digest";
 import { sendEmail, isEmailConfigured } from "@/lib/email";
+import { releverEmails } from "@/lib/email-intake";
 
 const ROLES = ["membre", "pilote"] as const;
 
@@ -120,6 +121,30 @@ export async function envoyerEmailTest() {
 
   revalidatePath("/relances");
   redirect(`/relances?mailtest=${encodeURIComponent(status)}`);
+}
+
+// Relevé manuel de la boîte mail (pour tester à la demande). Réservé pilotes.
+export async function releverEmailsMaintenant() {
+  await requirePilote();
+  let q: string;
+  try {
+    const r = await releverEmails();
+    q = new URLSearchParams({
+      releve: "1",
+      lus: String(r.lus),
+      br: String(r.brouillons),
+      ign: String(r.ignores),
+      err: String(r.erreurs),
+      cfg: r.configured ? "1" : "0",
+    }).toString();
+  } catch (e) {
+    q = new URLSearchParams({
+      releve: "1",
+      erreur: e instanceof Error ? e.message : "inconnue",
+    }).toString();
+  }
+  revalidatePath("/brouillons");
+  redirect(`/brouillons?${q}`);
 }
 
 // Envoi manuel des rappels (pour tester / relancer à la demande). Réservé pilotes.

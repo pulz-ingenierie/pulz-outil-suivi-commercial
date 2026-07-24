@@ -292,6 +292,136 @@ export async function createCr(fd: FormData) {
 }
 
 // -----------------------------------------------------------------------------
+// Brouillons (issus des e-mails) — validation / suppression
+// -----------------------------------------------------------------------------
+// Valide un brouillon de compte rendu : le passe en « validé », crée les
+// rattachements, les contacts et les relances (comme une saisie normale).
+export async function finaliserBrouillon(fd: FormData) {
+  const supabase = requireSupabase();
+  const org_id = await currentOrgId(supabase);
+
+  const crId = str(fd, "cr_id");
+  if (!crId) throw new Error("Brouillon introuvable.");
+
+  const { data: existing, error: exErr } = await supabase
+    .from("crs")
+    .select("id, statut, org_id, synthese")
+    .eq("id", crId)
+    .single();
+  if (exErr || !existing) throw new Error("Brouillon introuvable.");
+  if (existing.org_id !== org_id) throw new Error("Accès refusé.");
+
+  const type_rdv = str(fd, "type_rdv") || "autre";
+  if (!(TYPES_RDV as readonly string[]).includes(type_rdv)) throw new Error("Type de RDV invalide.");
+  const date_rdv = str(fd, "date_rdv") || new Date().toISOString().slice(0, 10);
+  const transcription = strOrNull(fd, "transcription");
+
+  const entiteIds = fd.getAll("entite_ids").map((v) => String(v)).filter(Boolean);
+  const operationIds = fd.getAll("operation_ids").map((v) => String(v)).filter(Boolean);
+  if (!entiteIds.length && !operationIds.length) {
+    throw new Error("Rattachez le compte rendu à au moins une entité ou une opération.");
+  }
+
+  let synthese: unknown = existing.synthese ?? null;
+  const synthRaw = str(fd, "synthese_json");
+  if (synthRaw) {
+    try { synthese = JSON.parse(synthRaw); } catch { /* garde l'existant */ }
+  }
+
+  const update: Record<string, unknown> = { statut: "valide", type_rdv, date_rdv, synthese };
+  if (transcription) update.transcription = transcription;
+  const { error: upErr } = await supabase.from("crs").update(update).eq("id", crId);
+  if (upErr) throw new Error(upErr.message);
+
+  if (entiteIds.length) {
+    await supabase.from("cr_entites").insert(entiteIds.map((entite_id) => ({ cr_id: crId, entite_id })));
+  }
+  if (operationIds.length) {
+    await supabase.from("cr_operations").insert(operationIds.map((operation_id) => ({ cr_id: crId, operation_id })));
+  }
+
+  // Personnes → contacts (créés s'ils n'existent pas déjà).
+  const contactsRaw = str(fd, "contacts_json");
+  if (contactsRaw) {
+    let persons: any[] = [];
+    try { const p = JSON.parse(contactsRaw); if (Array.isArray(p)) persons = p; } catch { persons = []; }
+    const nets = persons
+      .map((p) => ({
+        nom: typeof p?.nom === "string" ? p.nom.trim() : "",
+        prenom: typeof p?.prenom === "string" && p.prenom.trim() ? p.prenom.trim() : null,
+        fonction: typeof p?.fonction === "string" && p.fonction.trim() ? p.fonction.trim() : null,
+        entite_id: typeof p?.entite_id === "string" && p.entite_id ? p.entite_id : null,
+      }))
+      .filter((p) => p.nom && p.entite_id);
+    if (nets.length) {
+      const entIds = [...new Set(nets.map((p) => p.entite_id as string))];
+      const { data: existants } = await supabase
+        .from("contacts").select("nom, prenom, entite_id").in("entite_id", entIds);
+      const key = (eid: string, nom: string, prenom: string | null) =>
+        `${eid}|${nom.toLowerCase()}|${(prenom ?? "").toLowerCase()}`;
+      const seen = new Set((existants ?? []).map((c: any) => key(c.entite_id, c.nom ?? "", c.prenom ?? null)));
+      const toInsert = nets.filter((p) => {
+        const k = key(p.entite_id as string, p.nom, p.prenom);
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+      if (toInsert.length) {
+        await supabase.from("contacts").insert(
+          toInsert.map((p) => ({ entite_id: p.entite_id, nom: p.nom, prenom: p.prenom, fonction: p.fonction, source: "vocal" })),
+        );
+      }
+    }
+  }
+
+  // Suites suggérées → relances (auto).
+  if (synthese && typeof synthese === "object" && Array.isArray((synthese as any).relances)) {
+    const suites = (synthese as any).relances
+      .map((r: any) => ({
+        objet: typeof r?.objet === "string" ? r.objet.trim() : "",
+        dans_jours: Number.isFinite(r?.dans_jours) ? Math.max(1, Math.round(r.dans_jours)) : 14,
+      }))
+      .filter((r: any) => r.objet.length > 0);
+    if (suites.length) {
+      await supabase.from("relances").insert(
+        suites.map((r: any) => ({
+          org_id,
+          operation_id: operationIds[0] ?? null,
+          entite_id: operationIds.length ? null : (entiteIds[0] ?? null),
+          cr_origine_id: crId,
+          objet: r.objet,
+          date_echeance: dateInDays(r.dans_jours),
+          auto: true,
+        })),
+      );
+    }
+  }
+
+  revalidatePath("/tableau");
+  revalidatePath("/relances");
+  revalidatePath("/entites");
+  revalidatePath("/brouillons");
+  for (const opId of operationIds) revalidatePath(`/operations/${opId}`);
+  redirect("/brouillons");
+}
+
+// Supprime un brouillon (mail sans intérêt / doublon).
+export async function supprimerBrouillon(fd: FormData) {
+  const supabase = requireSupabase();
+  const org_id = await currentOrgId(supabase);
+  const crId = str(fd, "cr_id");
+  if (!crId) throw new Error("Brouillon introuvable.");
+
+  const { data: ex } = await supabase.from("crs").select("id, statut, org_id").eq("id", crId).single();
+  if (!ex || ex.org_id !== org_id) throw new Error("Accès refusé.");
+  if (ex.statut !== "brouillon") throw new Error("Seul un brouillon peut être supprimé ici.");
+
+  await supabase.from("crs").delete().eq("id", crId);
+  revalidatePath("/brouillons");
+  redirect("/brouillons");
+}
+
+// -----------------------------------------------------------------------------
 // Relances — les suites à donner (créées à la main ou par l'IA)
 // -----------------------------------------------------------------------------
 export async function createRelance(fd: FormData) {
