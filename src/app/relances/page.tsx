@@ -33,7 +33,12 @@ type Rel = {
 
 function RelanceCard({ r, today }: { r: Rel; today: string }) {
   const enRetard = r.date_echeance < today;
-  const cible = r.operations?.nom ?? r.entites?.nom ?? null;
+  // La cible (opération ou structure) est un signet cliquable vers sa carte.
+  const cible = r.operation_id && r.operations?.nom
+    ? { kind: "op" as const, nom: r.operations.nom, href: `/operations/${r.operation_id}` }
+    : r.entite_id && r.entites?.nom
+      ? { kind: "struct" as const, nom: r.entites.nom, href: `/entites/${r.entite_id}` }
+      : null;
   // « Traiter » une relance = raconter le recontact dans un nouveau compte rendu,
   // pré-rattaché à l'opération/entité de la relance (qui sera close à l'enregistrement).
   const crHref = r.operation_id
@@ -46,7 +51,11 @@ function RelanceCard({ r, today }: { r: Rel; today: string }) {
       <div className="rel-main">
         <div className="rel-obj">{r.objet}</div>
         <div className="rel-meta">
-          {cible && <span className="rel-cible">{cible}</span>}
+          {cible && (
+            <Link className={`sig-d ${cible.kind}`} href={cible.href}>
+              <span className="sig-lbl">{cible.nom}</span>
+            </Link>
+          )}
           <span className={`rel-date${enRetard ? " crit" : ""}`}>{dateFr(r.date_echeance)}</span>
           {r.auto && <span className="pill auto">proposée par l'IA</span>}
         </div>
