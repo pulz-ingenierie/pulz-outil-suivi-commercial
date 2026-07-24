@@ -104,6 +104,7 @@ export default async function Brouillons({
         operations={operations ?? []}
         contactsBase={contactsBase ?? []}
         today={today}
+        moiNom={profil.nom ?? null}
         draftId={current.id}
         initialTranscription={current.transcription ?? ""}
         initialSynthese={(current.synthese as Synthese) ?? null}

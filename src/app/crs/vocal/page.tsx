@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
+import { getIdentite } from "@/lib/auth";
 import VoiceCr from "./VoiceCr";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +29,7 @@ export default async function VocalPage({
   ]);
 
   const today = new Date().toISOString().slice(0, 10);
+  const { profil } = await getIdentite();
 
   return (
     <main className="wrap">
@@ -57,6 +59,7 @@ export default async function VocalPage({
         operations={operations ?? []}
         contactsBase={contactsBase ?? []}
         today={today}
+        moiNom={profil?.nom ?? null}
         prefillEntite={entPre}
         prefillOperation={opPre}
         relanceId={relPre}

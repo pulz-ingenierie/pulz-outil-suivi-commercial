@@ -67,7 +67,7 @@ export default async function FicheStructure({ params }: { params: Promise<{ id:
   const [{ data: liens }, { data: contacts }, { data: crLiens }] = await Promise.all([
     supabase.from("entite_operation").select("role_entree, operations(id, nom, statut, montant_estime)").eq("entite_id", id),
     supabase.from("contacts").select("id, nom, prenom, fonction, tel, email").eq("entite_id", id),
-    supabase.from("cr_entites").select("crs(id, date_rdv, type_rdv, transcription, synthese)").eq("entite_id", id),
+    supabase.from("cr_entites").select("crs(id, date_rdv, type_rdv, transcription, synthese, auteur:utilisateurs(nom))").eq("entite_id", id),
   ]);
 
   const operations = (liens ?? [])

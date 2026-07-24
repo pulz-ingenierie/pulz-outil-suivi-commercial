@@ -25,6 +25,7 @@ export type CrItem = {
   type_rdv: string;
   transcription: string | null;
   synthese: any;
+  auteur?: { nom: string } | null;
 };
 
 export default function FilCr({ crs }: { crs: CrItem[] }) {
@@ -44,6 +45,16 @@ export default function FilCr({ crs }: { crs: CrItem[] }) {
         const structure = !resume && !points.length; // pas de synthèse : on retombe sur le texte
         const typeLbl = TYPE_RDV_LABELS[c.type_rdv] ?? "RDV";
 
+        // Participants : l'auteur (celui qui a fait le CR, présent au RDV) en
+        // premier, puis les personnes évoquées par l'IA.
+        const auteurNom = typeof c.auteur?.nom === "string" ? c.auteur.nom.trim() : "";
+        const participants: { nom: string; moi: boolean }[] = [];
+        if (auteurNom) participants.push({ nom: auteurNom, moi: true });
+        for (const ct of contacts) {
+          const nom = [ct?.prenom, ct?.nom].filter(Boolean).join(" ").trim();
+          if (nom) participants.push({ nom, moi: false });
+        }
+
         return (
           <article className="fil-item" key={c.id}>
             <div className="fil-h">
@@ -56,15 +67,14 @@ export default function FilCr({ crs }: { crs: CrItem[] }) {
               <ul className="fil-points">{points.map((p, i) => <li key={i}>{p}</li>)}</ul>
             )}
 
-            {contacts.length > 0 && (
+            {participants.length > 0 && (
               <div className="sig-wrap fil-sigs">
-                {contacts.map((ct, i) => {
-                  const nom = [ct?.prenom, ct?.nom].filter(Boolean).join(" ").trim();
-                  if (!nom) return null;
-                  return (
-                    <span className="sig-d pers" key={i}><span className="sig-lbl">{nom}</span></span>
-                  );
-                })}
+                {participants.map((p, i) => (
+                  <span className={`sig-d pers${p.moi ? " moi" : ""}`} key={i}>
+                    <span className="sig-lbl">{p.nom}</span>
+                    {p.moi && <span className="sig-sub">moi</span>}
+                  </span>
+                ))}
               </div>
             )}
 

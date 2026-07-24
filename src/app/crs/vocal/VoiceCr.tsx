@@ -110,6 +110,7 @@ export default function VoiceCr({
   operations,
   today,
   contactsBase = [],
+  moiNom,
   prefillEntite,
   prefillOperation,
   relanceId,
@@ -121,6 +122,7 @@ export default function VoiceCr({
   operations: Opt[];
   today: string;
   contactsBase?: ContactBase[];
+  moiNom?: string | null;
   prefillEntite?: string;
   prefillOperation?: string;
   relanceId?: string;
@@ -769,6 +771,12 @@ export default function VoiceCr({
         <div className="bloc">
           <div className="encart-h pers"><Icon name="personne" /> Personnes</div>
           <div className="sig-wrap">
+            {moiNom && (
+              <span className="sig-d pers moi" title="Vous participez à ce rendez-vous — inclus automatiquement.">
+                <span className="sig-lbl">{moiNom}</span>
+                <span className="sig-sub">moi</span>
+              </span>
+            )}
             {personnes.map((p, i) => {
               const nomComplet = [p.prenom, p.nom].filter(Boolean).join(" ") || "(à nommer)";
               const enBase = persEnBase(p);

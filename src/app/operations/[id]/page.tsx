@@ -60,7 +60,7 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
       : Promise.resolve({ data: null }),
     supabase.from("entite_operation").select("role_entree, entites(id, nom, type, ville)").eq("operation_id", id),
     supabase.from("relances").select("id, objet, date_echeance, auto, statut").eq("operation_id", id),
-    supabase.from("cr_operations").select("crs(id, date_rdv, type_rdv, transcription, synthese)").eq("operation_id", id),
+    supabase.from("cr_operations").select("crs(id, date_rdv, type_rdv, transcription, synthese, auteur:utilisateurs(nom))").eq("operation_id", id),
   ]);
 
   const st = operation.statut;

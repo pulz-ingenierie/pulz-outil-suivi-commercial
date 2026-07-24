@@ -453,6 +453,8 @@ a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); tran
 .sig-d.struct { --cat: var(--c-struct); } .sig-d.op { --cat: var(--c-op); }
 .sig-d.pers { --cat: var(--c-pers); } .sig-d.rel { --cat: var(--c-rel); }
 .sig-d.date { --cat: var(--faint); } .sig-d.type { --cat: var(--c-type); }
+/* Signet « moi » (l'auteur du CR, présent au rendez-vous) : légèrement rempli. */
+.sig-d.moi { background: color-mix(in srgb, var(--c-pers) 12%, var(--surface)); font-style: normal; }
 /* Signet « phase » (étape du pipeline). --cat porté en inline selon l'étape. */
 .sig-d.phase { --cat: var(--muted); }
 /* Un signet peut être un lien (carte associée) : garder l'aspect signet. */
