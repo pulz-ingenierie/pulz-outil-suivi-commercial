@@ -43,7 +43,7 @@ Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, de la forme :
   "points_cles": ["point important", "..."],
   "entites": ["libellé exact d'une STRUCTURE connue évoquée"],
   "operations": ["libellé exact d'une opération connue évoquée"],
-  "nouvelles_entites": [{ "nom": "structure évoquée mais absente des connues", "type": "MOA|archi|promoteur|confrere|autre" }],
+  "nouvelles_entites": [{ "nom": "structure évoquée mais absente des connues", "type": "MOA|archi|promoteur|bet|confrere|autre (bet = bureau d'études techniques)" }],
   "nouvelles_operations": [{ "nom": "affaire/projet évoqué mais absent des connues" }],
   "contacts": [{ "nom": "nom de famille", "prenom": "prénom ou null", "fonction": "fonction ou null", "entite": "libellé de sa structure (connue ou nouvelle) ou null" }],
   "relances": [{ "objet": "action de suivi à faire", "dans_jours": 14 }]
@@ -86,7 +86,7 @@ Réponds UNIQUEMENT par l'objet JSON complet et corrigé, sans texte autour, de 
   "points_cles": ["…"],
   "entites": ["libellé exact d'une STRUCTURE connue"],
   "operations": ["libellé exact d'une opération connue"],
-  "nouvelles_entites": [{ "nom": "structure nouvelle", "type": "MOA|archi|promoteur|confrere|autre" }],
+  "nouvelles_entites": [{ "nom": "structure nouvelle", "type": "MOA|archi|promoteur|bet|confrere|autre (bet = bureau d'études techniques)" }],
   "nouvelles_operations": [{ "nom": "affaire nouvelle" }],
   "contacts": [{ "nom": "…", "prenom": "… ou null", "fonction": "… ou null", "entite": "structure ou null" }],
   "relances": [{ "objet": "…", "dans_jours": 14 }]

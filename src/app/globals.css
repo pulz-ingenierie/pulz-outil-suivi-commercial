@@ -370,6 +370,68 @@ h1, h2, h3 { margin: 0; letter-spacing: -.01em; }
 .mini-sig { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600;
        padding: 2px 8px; border-radius: 7px; white-space: nowrap;
        background: color-mix(in srgb, #3E9E7A 16%, transparent); color: #2c7a5e; }
+
+/* ===== Signets Format D + encarts + carte au clic ===== */
+:root { --c-struct: #2C7A5E; --c-op: #6A4BB0; --c-pers: #2D7DD2; --c-rel: #B4791A; --c-type: #A9791F; }
+@media (prefers-color-scheme: dark) {
+  :root { --c-struct: #46A883; --c-op: #9B7BE0; --c-pers: #56A0E8; --c-rel: #D79433; --c-type: #D3A94A; }
+}
+
+.ic { width: 15px; height: 15px; flex: none; }
+
+/* En-tête d'encart : icône colorée + titre. */
+.encart-h { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; margin-bottom: 12px; }
+.encart-h .ic { width: 17px; height: 17px; }
+.encart-h.struct .ic { color: var(--c-struct); }
+.encart-h.op .ic { color: var(--c-op); }
+.encart-h.pers .ic { color: var(--c-pers); }
+.encart-h.rel .ic { color: var(--c-rel); }
+
+/* Signet Format D (contour coloré). --cat porté par la catégorie. */
+.sig-d { --cat: var(--c-struct); display: inline-flex; align-items: center; gap: 7px; font: inherit; font-size: 13px;
+       font-weight: 650; padding: 7px 12px; border-radius: 10px; cursor: pointer;
+       border: 1.5px solid color-mix(in srgb, var(--cat) 55%, var(--line));
+       background: var(--surface); color: color-mix(in srgb, var(--cat) 62%, var(--ink)); }
+.sig-d:hover { background: color-mix(in srgb, var(--cat) 11%, var(--surface)); }
+.sig-d.struct { --cat: var(--c-struct); } .sig-d.op { --cat: var(--c-op); }
+.sig-d.pers { --cat: var(--c-pers); } .sig-d.rel { --cat: var(--c-rel); }
+.sig-d.date { --cat: var(--faint); } .sig-d.type { --cat: var(--c-type); }
+.sig-d .sig-sub { color: var(--muted); font-weight: 500; font-size: 11px; font-style: normal; }
+.sig-d .sig-badge { font-size: 9.5px; font-weight: 800; padding: 1px 6px; border-radius: 999px; font-style: normal; }
+.sig-d .sig-badge.new { background: color-mix(in srgb, var(--warn) 22%, transparent); color: var(--warn); }
+.sig-d .sig-badge.base { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent-ink); }
+.sig-d .mini-sig { background: color-mix(in srgb, var(--c-struct) 16%, transparent); color: var(--c-struct); }
+
+/* Carte au clic (overlay, sans saut d'écran). */
+.cardovl { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: flex-end;
+       justify-content: center; z-index: 50; }
+@media (min-width: 620px) { .cardovl { align-items: center; padding: 20px; } }
+.carte { position: relative; background: var(--surface); width: 100%; max-width: 520px; border: 1px solid var(--line);
+       border-radius: 18px 18px 0 0; max-height: 88vh; overflow-y: auto; box-shadow: 0 -8px 30px rgba(0,0,0,.4); }
+@media (min-width: 620px) { .carte { border-radius: 18px; } }
+.carte-close { position: absolute; top: 12px; right: 14px; width: 32px; height: 32px; border-radius: 9px;
+       border: 1px solid var(--line); background: var(--surface); color: var(--muted); font-size: 17px; cursor: pointer; z-index: 2; }
+.carte-top { padding: 18px 18px 16px; border-bottom: 1px solid var(--line); }
+.carte-cat { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; letter-spacing: .04em;
+       text-transform: uppercase; padding: 3px 9px; border-radius: 7px; }
+.carte-cat .ic { width: 14px; height: 14px; }
+.carte-cat.struct { color: var(--c-struct); background: color-mix(in srgb, var(--c-struct) 15%, transparent); }
+.carte-cat.op { color: var(--c-op); background: color-mix(in srgb, var(--c-op) 15%, transparent); }
+.carte-cat.pers { color: var(--c-pers); background: color-mix(in srgb, var(--c-pers) 15%, transparent); }
+.carte-cat.rel { color: var(--c-rel); background: color-mix(in srgb, var(--c-rel) 15%, transparent); }
+.carte h2 { font-size: 19px; margin: 10px 0 0; }
+.carte-nom { width: 100%; margin-top: 10px; font: inherit; font-size: 18px; font-weight: 650; padding: 9px 11px;
+       border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); }
+.carte-fields { display: flex; gap: 8px; margin-top: 10px; }
+.carte-fields .pf { flex: 1; min-width: 0; }
+.carte-body { padding: 16px 18px 22px; display: flex; flex-direction: column; gap: 13px; }
+.carte-body .field { display: flex; flex-direction: column; gap: 6px; }
+.carte-body .lab { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.carte-body input, .carte-body select, .carte-fields input {
+       font: inherit; font-size: 15px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px;
+       background: var(--surface); color: var(--ink); width: 100%; }
+.carte-body input:focus, .carte-body select:focus, .carte-fields input:focus, .carte-nom:focus { outline: none; border-color: var(--accent); }
+.carte-foot { display: flex; justify-content: space-between; gap: 10px; margin-top: 4px; }
 .sig-badge { font-style: normal; font-weight: 700; font-size: 9.5px; padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
 .sig-badge.base { background: var(--accent-soft); color: var(--accent-ink); }
 .sig-badge.new { background: color-mix(in srgb, var(--warn) 20%, transparent); color: var(--warn); }

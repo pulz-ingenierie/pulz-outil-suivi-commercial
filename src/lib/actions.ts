@@ -12,7 +12,7 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { getIdentite } from "@/lib/auth";
 import { STATUT_ORDRE, type OperationStatut } from "@/lib/types";
 
-const ENTITE_TYPES = ["MOA", "archi", "promoteur", "confrere", "autre"] as const;
+const ENTITE_TYPES = ["MOA", "archi", "promoteur", "bet", "confrere", "autre"] as const;
 const STATUT_VIE = ["actif", "dormant"] as const;
 const TYPES_RDV = ["dejeuner", "appel", "visite", "salon", "autre"] as const;
 const CR_STATUTS = ["brouillon", "valide"] as const;

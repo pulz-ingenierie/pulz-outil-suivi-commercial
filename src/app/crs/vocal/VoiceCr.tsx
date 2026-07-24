@@ -18,10 +18,23 @@ const TYPE_STRUCTURE = [
   { v: "MOA", l: "MOA" },
   { v: "archi", l: "Architecte" },
   { v: "promoteur", l: "Promoteur" },
+  { v: "bet", l: "BET" },
   { v: "confrere", l: "Confrère" },
   { v: "autre", l: "Autre" },
 ];
 const LABEL_TYPE: Record<string, string> = Object.fromEntries(TYPE_STRUCTURE.map((t) => [t.v, t.l]));
+
+// Icônes monochromes épurées (trait fin, couleur = celle de la catégorie).
+function Icon({ name }: { name: "structure" | "operation" | "personne" | "relance" }) {
+  const p = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7, className: "ic" } as const;
+  if (name === "structure")
+    return <svg {...p}><path d="M4 21V4h10v17M14 9h6v12M7 8h1M7 12h1M7 16h1M11 8h1M11 12h1M11 16h1M17 13h1M17 17h1" /></svg>;
+  if (name === "operation")
+    return <svg {...p}><rect x="3" y="7" width="18" height="13" rx="2" /><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>;
+  if (name === "personne")
+    return <svg {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></svg>;
+  return <svg {...p}><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6" /><path d="M10 20a2 2 0 0 0 4 0" /></svg>;
+}
 type PersonneEdit = { prenom: string; nom: string; fonction: string; entite: string };
 type RelanceEdit = { objet: string; date: string };
 
@@ -142,12 +155,9 @@ export default function VoiceCr({
   const [rattachements, setRattachements] = useState<Rattach[]>(initRattach);
   const [personnes, setPersonnes] = useState<PersonneEdit[]>([]);
   const [relances, setRelances] = useState<RelanceEdit[]>([]);
-  // Quel signet est ouvert en édition (sinon affichage compact).
-  const [editRat, setEditRat] = useState<number | null>(null);
-  const [editPers, setEditPers] = useState<number | null>(null);
-  const [editRel, setEditRel] = useState<number | null>(null);
-  const [editDate, setEditDate] = useState(false);
-  const [editType, setEditType] = useState(false);
+  // Carte ouverte au clic sur un signet (overlay, pas d'édition inline).
+  const [openCard, setOpenCard] = useState<{ cat: "rat" | "pers" | "rel" | "reperes"; i: number } | null>(null);
+  const fermerCarte = () => setOpenCard(null);
 
   // Chat de correction.
   const [instr, setInstr] = useState("");
@@ -427,6 +437,115 @@ export default function VoiceCr({
   const majRel = (i: number, patch: Partial<RelanceEdit>) =>
     setRelances((prev) => prev.map((x, j) => (j === i ? { ...x, ...patch } : x)));
 
+  // Contenu de la carte ouverte au clic sur un signet.
+  function carteContenu() {
+    if (!openCard) return null;
+    const { cat, i } = openCard;
+
+    if (cat === "reperes") {
+      return (
+        <>
+          <div className="carte-top"><h2>Repères</h2></div>
+          <div className="carte-body">
+            <label className="field">
+              <span className="lab">Date du rendez-vous</span>
+              <input type="date" value={dateRdv} max={today} onChange={(e) => setDateRdv(e.target.value)} />
+            </label>
+            <label className="field">
+              <span className="lab">Type de rendez-vous</span>
+              <select value={typeRdv} onChange={(e) => setTypeRdv(e.target.value)}>
+                {TYPES_RDV.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
+              </select>
+            </label>
+            <div className="carte-foot"><button type="button" className="btn" onClick={fermerCarte}>OK</button></div>
+          </div>
+        </>
+      );
+    }
+
+    if (cat === "rat") {
+      const r = rattachements[i];
+      if (!r) return null;
+      const enBase = ratEnBase(r);
+      const structure = r.kind === "structure";
+      return (
+        <>
+          <div className="carte-top">
+            <span className={`carte-cat ${structure ? "struct" : "op"}`}>
+              <Icon name={structure ? "structure" : "operation"} /> {structure ? "Structure" : "Opération"} · {enBase ? "en base" : "à créer"}
+            </span>
+            <input className="carte-nom" list={structure ? "dl-structures" : "dl-operations"} value={r.name}
+              placeholder="Nom…" onChange={(e) => majRat(i, { name: e.target.value })} />
+          </div>
+          <div className="carte-body">
+            <button type="button" className="btn ghost mini" onClick={() => majRat(i, { kind: structure ? "operation" : "structure" })}>
+              Basculer en {structure ? "opération" : "structure"}
+            </button>
+            {structure && !enBase && (
+              <label className="field">
+                <span className="lab">Type de structure</span>
+                <select value={r.type ?? "autre"} onChange={(e) => majRat(i, { type: e.target.value })}>
+                  {TYPE_STRUCTURE.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
+                </select>
+              </label>
+            )}
+            <div className="carte-foot">
+              <button type="button" className="btn ghost mini danger" onClick={() => { setRattachements((p) => p.filter((_, j) => j !== i)); fermerCarte(); }}>Supprimer</button>
+              <button type="button" className="btn" onClick={fermerCarte}>OK</button>
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    if (cat === "pers") {
+      const p = personnes[i];
+      if (!p) return null;
+      return (
+        <>
+          <div className="carte-top">
+            <span className="carte-cat pers"><Icon name="personne" /> Personne · {persEnBase(p) ? "en base" : "à créer"}</span>
+            <div className="carte-fields">
+              <input className="pf" placeholder="Prénom" value={p.prenom} onChange={(e) => majPers(i, { prenom: e.target.value })} />
+              <input className="pf" placeholder="Nom" value={p.nom} onChange={(e) => majPers(i, { nom: e.target.value })} />
+            </div>
+          </div>
+          <div className="carte-body">
+            <label className="field"><span className="lab">Fonction</span>
+              <input value={p.fonction} placeholder="Fonction…" onChange={(e) => majPers(i, { fonction: e.target.value })} /></label>
+            <label className="field"><span className="lab">Structure</span>
+              <input list="dl-structures" value={p.entite} placeholder="Sa structure…" onChange={(e) => majPers(i, { entite: e.target.value })} /></label>
+            <div className="carte-foot">
+              <button type="button" className="btn ghost mini danger" onClick={() => { setPersonnes((pp) => pp.filter((_, j) => j !== i)); fermerCarte(); }}>Supprimer</button>
+              <button type="button" className="btn" onClick={fermerCarte}>OK</button>
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    if (cat === "rel") {
+      const r = relances[i];
+      if (!r) return null;
+      return (
+        <>
+          <div className="carte-top"><span className="carte-cat rel"><Icon name="relance" /> Relance</span></div>
+          <div className="carte-body">
+            <label className="field"><span className="lab">Action de suivi</span>
+              <input value={r.objet} placeholder="Ex. Rappeler…" onChange={(e) => majRel(i, { objet: e.target.value })} /></label>
+            <label className="field"><span className="lab">Échéance</span>
+              <input type="date" value={r.date} onChange={(e) => majRel(i, { date: e.target.value })} /></label>
+            <div className="carte-foot">
+              <button type="button" className="btn ghost mini danger" onClick={() => { setRelances((rr) => rr.filter((_, j) => j !== i)); fermerCarte(); }}>Supprimer</button>
+              <button type="button" className="btn" onClick={fermerCarte}>OK</button>
+            </div>
+          </div>
+        </>
+      );
+    }
+    return null;
+  }
+
   return (
     <>
       {/* Listes de suggestions (choix OU saisie libre). */}
@@ -508,132 +627,83 @@ export default function VoiceCr({
           )}
         </div>
 
-        {/* Bloc — repères (date + type en signets). */}
+        {/* Encart — repères (date + type). */}
         <div className="bloc">
-          <h3>📌 Repères</h3>
+          <div className="encart-h reperes">📌 Repères</div>
           <div className="sig-wrap">
-            {editDate ? (
-              <input type="date" className="sig-edit-date" value={dateRdv} max={today} autoFocus
-                onChange={(e) => setDateRdv(e.target.value)} onBlur={() => setEditDate(false)} />
-            ) : (
-              <button type="button" className="sig sig-date" onClick={() => { setEditDate(true); setEditType(false); }}>
-                📅 {dateCourt(dateRdv)}
-              </button>
-            )}
-            {editType ? (
-              <select className="sig-edit-type" value={typeRdv} autoFocus
-                onChange={(e) => { setTypeRdv(e.target.value); setEditType(false); }} onBlur={() => setEditType(false)}>
-                {TYPES_RDV.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
-              </select>
-            ) : (
-              <button type="button" className="sig sig-type" onClick={() => { setEditType(true); setEditDate(false); }}>
-                🏷️ {TYPES_RDV.find((t) => t.v === typeRdv)?.l ?? "Type"}
-              </button>
-            )}
+            <button type="button" className="sig-d date" onClick={() => setOpenCard({ cat: "reperes", i: 0 })}>{dateCourt(dateRdv)}</button>
+            <button type="button" className="sig-d type" onClick={() => setOpenCard({ cat: "reperes", i: 0 })}>{TYPES_RDV.find((t) => t.v === typeRdv)?.l ?? "Type"}</button>
           </div>
         </div>
 
-        {/* Bloc — structures & opérations (signets). */}
+        {/* Encart — structures. */}
         <div className="bloc">
-          <h3>🏢 Structures &amp; opérations</h3>
+          <div className="encart-h struct"><Icon name="structure" /> Structures</div>
           <div className="sig-wrap">
             {rattachements.map((r, i) => {
+              if (r.kind !== "structure") return null;
               const enBase = ratEnBase(r);
-              const typeLbl = r.kind === "structure"
-                ? LABEL_TYPE[(enBase ? entTypeByNom.get(r.name.trim().toLowerCase()) : r.type) ?? "autre"]
-                : null;
-              if (editRat === i) {
-                return (
-                  <div className={`sig-editor sig-${r.kind}`} key={i}>
-                    <button type="button" className="mini-toggle"
-                      onClick={() => majRat(i, { kind: r.kind === "structure" ? "operation" : "structure" })}>
-                      {r.kind === "structure" ? "🏢 Structure" : "📂 Opération"} ⇄
-                    </button>
-                    <input className="rat-name" autoFocus list={r.kind === "structure" ? "dl-structures" : "dl-operations"}
-                      value={r.name} onChange={(e) => majRat(i, { name: e.target.value })}
-                      placeholder={r.kind === "structure" ? "Nom de la structure…" : "Nom de l'opération…"} />
-                    {r.kind === "structure" && !enBase && (
-                      <select className="type-sel" value={r.type ?? "autre"} onChange={(e) => majRat(i, { type: e.target.value })}>
-                        {TYPE_STRUCTURE.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
-                      </select>
-                    )}
-                    <button type="button" className="btn ghost mini" onClick={() => setEditRat(null)}>OK</button>
-                  </div>
-                );
-              }
+              const typeLbl = LABEL_TYPE[(enBase ? entTypeByNom.get(r.name.trim().toLowerCase()) : r.type) ?? "autre"];
               return (
-                <span className={`sig sig-${r.kind}`} key={i}>
-                  <button type="button" className="sig-body" onClick={() => setEditRat(i)}>
-                    {r.kind === "structure" ? "🏢" : "📂"} {r.name.trim() || "(à nommer)"}
-                    {typeLbl && <em className="sig-sub">{typeLbl}</em>}
-                    <em className={`sig-badge ${enBase ? "base" : "new"}`}>{enBase ? "en base" : "à créer"}</em>
-                  </button>
-                  <button type="button" className="sig-x" aria-label="Retirer" onClick={() => setRattachements((p) => p.filter((_, j) => j !== i))}>×</button>
-                </span>
+                <button type="button" className="sig-d struct" key={i} onClick={() => setOpenCard({ cat: "rat", i })}>
+                  {r.name.trim() || "(à nommer)"}
+                  {typeLbl && <span className="sig-sub">{typeLbl}</span>}
+                  <span className={`sig-badge ${enBase ? "base" : "new"}`}>{enBase ? "en base" : "à créer"}</span>
+                </button>
               );
             })}
-            <button type="button" className="sig-add" onClick={() => { setRattachements((p) => [...p, { kind: "structure", name: "" }]); setEditRat(rattachements.length); }}>＋ Ajouter</button>
+            <button type="button" className="sig-add" onClick={() => { setRattachements((p) => [...p, { kind: "structure", name: "" }]); setOpenCard({ cat: "rat", i: rattachements.length }); }}>＋ Ajouter</button>
           </div>
         </div>
 
-        {/* Bloc — personnes (signets). */}
+        {/* Encart — opérations. */}
         <div className="bloc">
-          <h3>👤 Personnes</h3>
+          <div className="encart-h op"><Icon name="operation" /> Opérations</div>
+          <div className="sig-wrap">
+            {rattachements.map((r, i) => {
+              if (r.kind !== "operation") return null;
+              const enBase = ratEnBase(r);
+              return (
+                <button type="button" className="sig-d op" key={i} onClick={() => setOpenCard({ cat: "rat", i })}>
+                  {r.name.trim() || "(à nommer)"}
+                  <span className={`sig-badge ${enBase ? "base" : "new"}`}>{enBase ? "en base" : "à créer"}</span>
+                </button>
+              );
+            })}
+            <button type="button" className="sig-add" onClick={() => { setRattachements((p) => [...p, { kind: "operation", name: "" }]); setOpenCard({ cat: "rat", i: rattachements.length }); }}>＋ Ajouter</button>
+          </div>
+        </div>
+
+        {/* Encart — personnes. */}
+        <div className="bloc">
+          <div className="encart-h pers"><Icon name="personne" /> Personnes</div>
           <div className="sig-wrap">
             {personnes.map((p, i) => {
               const nomComplet = [p.prenom, p.nom].filter(Boolean).join(" ") || "(à nommer)";
               const enBase = persEnBase(p);
-              if (editPers === i) {
-                return (
-                  <div className="sig-editor sig-personne" key={i}>
-                    <input className="pf" autoFocus placeholder="Prénom" value={p.prenom} onChange={(e) => majPers(i, { prenom: e.target.value })} />
-                    <input className="pf" placeholder="Nom" value={p.nom} onChange={(e) => majPers(i, { nom: e.target.value })} />
-                    <input className="pf" placeholder="Fonction" value={p.fonction} onChange={(e) => majPers(i, { fonction: e.target.value })} />
-                    <input className="pf" list="dl-structures" placeholder="Structure" value={p.entite} onChange={(e) => majPers(i, { entite: e.target.value })} />
-                    <button type="button" className="btn ghost mini" onClick={() => setEditPers(null)}>OK</button>
-                  </div>
-                );
-              }
               return (
-                <span className="sig sig-personne" key={i}>
-                  <button type="button" className="sig-body" onClick={() => setEditPers(i)}>
-                    👤 {nomComplet}
-                    {p.entite.trim() && <span className="mini-sig">🏢 {p.entite}</span>}
-                    <em className={`sig-badge ${enBase ? "base" : "new"}`}>{enBase ? "en base" : "à créer"}</em>
-                  </button>
-                  <button type="button" className="sig-x" aria-label="Retirer" onClick={() => setPersonnes((pp) => pp.filter((_, j) => j !== i))}>×</button>
-                </span>
+                <button type="button" className="sig-d pers" key={i} onClick={() => setOpenCard({ cat: "pers", i })}>
+                  {nomComplet}
+                  {p.entite.trim() && <span className="mini-sig">{p.entite}</span>}
+                  <span className={`sig-badge ${enBase ? "base" : "new"}`}>{enBase ? "en base" : "à créer"}</span>
+                </button>
               );
             })}
-            <button type="button" className="sig-add" onClick={() => { setPersonnes((pp) => [...pp, { prenom: "", nom: "", fonction: "", entite: "" }]); setEditPers(personnes.length); }}>＋ Ajouter</button>
+            <button type="button" className="sig-add" onClick={() => { setPersonnes((pp) => [...pp, { prenom: "", nom: "", fonction: "", entite: "" }]); setOpenCard({ cat: "pers", i: personnes.length }); }}>＋ Ajouter</button>
           </div>
         </div>
 
-        {/* Bloc — relances (signets). */}
+        {/* Encart — relances. */}
         <div className="bloc">
-          <h3>🔔 Relances</h3>
+          <div className="encart-h rel"><Icon name="relance" /> Relances</div>
           <div className="sig-wrap">
-            {relances.map((r, i) => {
-              if (editRel === i) {
-                return (
-                  <div className="sig-editor sig-relance" key={i}>
-                    <input className="rel-objet" autoFocus placeholder="Action de suivi…" value={r.objet} onChange={(e) => majRel(i, { objet: e.target.value })} />
-                    <input type="date" className="rel-ech" value={r.date} onChange={(e) => majRel(i, { date: e.target.value })} />
-                    <button type="button" className="btn ghost mini" onClick={() => setEditRel(null)}>OK</button>
-                  </div>
-                );
-              }
-              return (
-                <span className="sig sig-relance" key={i}>
-                  <button type="button" className="sig-body" onClick={() => setEditRel(i)}>
-                    🔔 {r.objet.trim() || "(à préciser)"}
-                    <em className="sig-sub">{dateCourt(r.date)}</em>
-                  </button>
-                  <button type="button" className="sig-x" aria-label="Retirer" onClick={() => setRelances((rr) => rr.filter((_, j) => j !== i))}>×</button>
-                </span>
-              );
-            })}
-            <button type="button" className="sig-add" onClick={() => { setRelances((rr) => [...rr, { objet: "", date: addDays(today, 30) }]); setEditRel(relances.length); }}>＋ Ajouter</button>
+            {relances.map((r, i) => (
+              <button type="button" className="sig-d rel" key={i} onClick={() => setOpenCard({ cat: "rel", i })}>
+                {r.objet.trim() || "(à préciser)"}
+                <span className="sig-sub">{dateCourt(r.date)}</span>
+              </button>
+            ))}
+            <button type="button" className="sig-add" onClick={() => { setRelances((rr) => [...rr, { objet: "", date: addDays(today, 30) }]); setOpenCard({ cat: "rel", i: relances.length }); }}>＋ Ajouter</button>
           </div>
         </div>
 
@@ -686,6 +756,16 @@ export default function VoiceCr({
           </div>
         )}
       </form>
+
+      {/* Carte ouverte au clic sur un signet (overlay, sans saut d'écran). */}
+      {openCard && (
+        <div className="cardovl" onClick={fermerCarte}>
+          <div className="carte" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="carte-close" aria-label="Fermer" onClick={fermerCarte}>×</button>
+            {carteContenu()}
+          </div>
+        </div>
+      )}
     </>
   );
 }

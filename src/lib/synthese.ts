@@ -30,7 +30,7 @@ export interface Synthese {
   relances: { objet: string; dans_jours: number }[];
 }
 
-const ENTITE_TYPES = ["MOA", "archi", "promoteur", "confrere", "autre"];
+const ENTITE_TYPES = ["MOA", "archi", "promoteur", "bet", "confrere", "autre"];
 
 // Date au format AAAA-MM-JJ ? (contrôle simple, anti-invention.)
 export function isIsoDate(v: unknown): v is string {
