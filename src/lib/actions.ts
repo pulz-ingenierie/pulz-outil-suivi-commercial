@@ -233,6 +233,18 @@ async function materialiserCr(
     await sb.from("cr_operations").insert(operationIds.map((operation_id) => ({ cr_id: crId, operation_id })));
   }
 
+  // Lien structure ⇄ opération : toute structure évoquée dans ce compte rendu est
+  // rattachée à toute opération du même compte rendu (porte d'entrée). C'est ce
+  // lien qui fait apparaître les opérations sur la fiche structure, et les
+  // structures sur la fiche opération. On ignore les doublons (clé primaire).
+  if (entiteIds.length && operationIds.length) {
+    const paires: { entite_id: string; operation_id: string }[] = [];
+    for (const entite_id of new Set(entiteIds)) {
+      for (const operation_id of new Set(operationIds)) paires.push({ entite_id, operation_id });
+    }
+    await sb.from("entite_operation").upsert(paires, { onConflict: "entite_id,operation_id", ignoreDuplicates: true });
+  }
+
   // Contacts : TOUTE personne évoquée devient une fiche (carte). La structure
   // est résolue par NOM si elle est connue ; sinon la personne est créée sans
   // structure (entite_id null) — voir migration 0004.
