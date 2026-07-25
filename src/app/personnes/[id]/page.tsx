@@ -76,9 +76,19 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
 
   const nomComplet = [contact.prenom, contact.nom].filter(Boolean).join(" ") || contact.nom;
 
-  // Prochaine relance qui concerne cette personne (par son nom).
+  // Prochaine relance qui concerne cette personne : d'abord une relance qui la
+  // nomme explicitement, sinon la prochaine relance de sa structure / de ses
+  // affaires (fonctionne même sans la colonne « personne »). Les relances sont
+  // déjà triées par échéance croissante.
   const nomNorm = normNom(nomComplet);
-  const prochaine = ((relances ?? []) as any[]).find((r) => r.personne && normNom(r.personne) === nomNorm) ?? null;
+  const opIds = new Set(operations.map((o: any) => o.id));
+  const rlist = (relances ?? []) as any[];
+  const prochaine =
+    rlist.find((r) => r.personne && normNom(r.personne) === nomNorm) ??
+    rlist.find(
+      (r) => (contact.entite_id && r.entite_id === contact.entite_id) || (r.operation_id && opIds.has(r.operation_id)),
+    ) ??
+    null;
   const prochaineHref = prochaine
     ? (prochaine.operation_id ? `/operations/${prochaine.operation_id}` : "/relances")
     : null;
