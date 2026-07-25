@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
+import MoeiaLogo from "@/components/MoeiaLogo";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -42,7 +43,7 @@ export default function Login() {
     <main className="auth-wrap">
       <div className="auth-card">
         <div className="brand" style={{ marginBottom: 18 }}>
-          <span className="mark">◈</span>Suivi commercial <small>· moeïa</small>
+          <MoeiaLogo size={24} /> <span className="brand-word">moeïa</span> <small>Suivi commercial</small>
         </div>
 
         {!configured ? (

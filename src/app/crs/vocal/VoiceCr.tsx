@@ -752,8 +752,8 @@ export default function VoiceCr({
             placeholder="Le texte dicté apparaîtra ici — corrigez-le librement, ou écrivez directement."
           />
           <div className="synth-row">
-            <button type="button" className="btn ghost" onClick={synthesizeManuel} disabled={busy !== null || !transcription.trim()}>
-              {busy === "synth" ? "L'IA structure…" : synthese ? "✨ Relancer l'analyse" : "✨ Analyser avec l'IA"}
+            <button type="button" className="btn ia" onClick={synthesizeManuel} disabled={busy !== null || !transcription.trim()}>
+              {busy === "synth" ? "L'IA structure…" : synthese ? "✦ Relancer l'analyse" : "✦ Analyser avec l'IA"}
             </button>
           </div>
           {synthese?.resume && (
@@ -871,7 +871,7 @@ export default function VoiceCr({
               ) : (
                 <button type="button" className="btn ghost mic" onClick={startInstrRec} disabled={correcting} aria-label="Dicter la correction">🎤</button>
               )}
-              <button type="button" className="btn" onClick={() => applyCorrection(instr)} disabled={correcting || instrRec === "recording" || !instr.trim()}>Corriger</button>
+              <button type="button" className="btn ia" onClick={() => applyCorrection(instr)} disabled={correcting || instrRec === "recording" || !instr.trim()}>Corriger</button>
             </div>
             {instrRec === "recording" && <p className="proc">🎤 J'écoute… tapez « Stop » quand c'est dit.</p>}
             {correcting && <p className="proc">✨ Je corrige la fiche…</p>}

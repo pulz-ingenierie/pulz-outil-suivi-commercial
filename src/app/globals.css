@@ -1,23 +1,32 @@
-/* Jetons de couleur — palette « pierre chaude » (warm stone), épurée et fine.
-   Clair + sombre. HEX uniquement. */
+/* Jetons de couleur — Direction artistique moeïa (« Cyan unique »).
+   Encre chaude sur pierre ; un seul signal cyan, gouverné (IA / focus).
+   Réf. : Direction artistique MOIEA/livrables moeia/moeia-direction-artistique.md */
 :root {
-  --ground: #F2EEE7; --surface: #FBF9F4; --surface-2: #EBE4D9;
-  --ink: #2E2822; --muted: #766C60; --faint: #A99F90; --line: #E5DDD1;
-  --accent: #A96F4A; --accent-ink: #8A5636; --accent-soft: #EEE4D8;
-  --good: #5E8A5B; --warn: #B4842F; --crit: #B44C3E;
-  --shadow: 0 1px 2px rgba(60,45,32,.04), 0 6px 20px rgba(60,45,32,.05);
-  --s-contact: #8B8174; --s-qualifie: #5A83AE; --s-ao: #B4842F;
-  --s-offre: #7C70A4; --s-nego: #4F8A86; --s-gagne: #5E8A5B; --s-perdu: #AF574A;
+  --ground: #F6F5F2; --surface: #FFFFFF; --surface-2: #EFEDE8;
+  --ink: #221F1A; --muted: #57534E; --faint: #8F8A82; --line: #E5E2DC; --line-2: #EEECE7;
+  /* Accent fonctionnel = cyan-action (liens, focus) ; signal = cyan pur ; primaire métier = encre */
+  --accent: #0273C4; --accent-ink: #01599A; --accent-soft: #E9F6FD; --accent-border: #C4E9FA;
+  --signal: #04B7F9; --primary: #221F1A; --on-primary: #FFFFFF; --ia-btn: #0273C4;
+  --good: #3E7A4E; --good-soft: #EAF2EC;
+  --warn: #855900; --warn-soft: #F8F0DC;
+  --crit: #B3352B; --crit-soft: #F9EAE8;
+  --shadow: 0 1px 2px rgba(34,31,26,.05);
+  /* Phases : progression en encre (clair → foncé) + statuts sourds pour gagné/perdu/AO */
+  --s-contact: #8F8A82; --s-qualifie: #6E6961; --s-ao: #855900;
+  --s-offre: #57534E; --s-nego: #221F1A; --s-gagne: #3E7A4E; --s-perdu: #B3352B;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --ground: #191512; --surface: #221D18; --surface-2: #2B251E;
-    --ink: #ECE3D6; --muted: #ADA294; --faint: #7C7263; --line: #352E26;
-    --accent: #C68C66; --accent-ink: #E0B693; --accent-soft: #2E2318;
-    --good: #79AD76; --warn: #D5A24E; --crit: #D26A5F;
-    --shadow: 0 1px 2px rgba(0,0,0,.28), 0 10px 30px rgba(0,0,0,.38);
-    --s-contact: #9A9082; --s-qualifie: #7BA0CC; --s-ao: #D5A24E;
-    --s-offre: #9C90C6; --s-nego: #6FAFAB; --s-gagne: #79AD76; --s-perdu: #D2867A;
+    --ground: #12100D; --surface: #1C1917; --surface-2: #24211C;
+    --ink: #E9E7E3; --muted: #B8B2A8; --faint: #8F8A82; --line: #332F29; --line-2: #26221D;
+    --accent: #57B6EE; --accent-ink: #8CD0F6; --accent-soft: #14303C; --accent-border: #1E4557;
+    --signal: #04B7F9; --primary: #E9E7E3; --on-primary: #14120F; --ia-btn: #0B84D6;
+    --good: #74B07C; --good-soft: #1B2A20;
+    --warn: #D3A24E; --warn-soft: #2E2716;
+    --crit: #E07A6F; --crit-soft: #331B18;
+    --shadow: 0 1px 2px rgba(0,0,0,.4);
+    --s-contact: #8F8A82; --s-qualifie: #A7A199; --s-ao: #D3A24E;
+    --s-offre: #C6C0B6; --s-nego: #E9E7E3; --s-gagne: #74B07C; --s-perdu: #E07A6F;
   }
 }
 
@@ -25,13 +34,17 @@
 html, body { margin: 0; padding: 0; }
 body {
   background: var(--ground); color: var(--ink);
-  font: 400 14.5px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: 400 14px/1.55 var(--font-ui, 'Inter', system-ui, -apple-system, sans-serif);
   -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
 }
 a { color: var(--accent); }
-h1, h2, h3 { margin: 0; letter-spacing: -.015em; font-weight: 600; }
-h1 { font-weight: 550; }
-.tnum { font-variant-numeric: tabular-nums; }
+/* Titres en Space Grotesk (signature moeïa) ; corps en Inter. */
+h1, h2, h3 { margin: 0; letter-spacing: -.01em; font-weight: 600;
+  font-family: var(--font-display, 'Space Grotesk', var(--font-ui, sans-serif)); }
+h1 { font-weight: 700; }
+/* Chiffres, montants, dates : mono tabulaire. */
+.tnum { font-variant-numeric: tabular-nums; font-family: var(--font-mono, ui-monospace, monospace); }
+::selection { background: var(--accent-soft); }
 
 .topbar {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
@@ -52,13 +65,9 @@ h1 { font-weight: 550; }
 .auth-wrap { min-height: 100dvh; display: grid; place-items: center; padding: 24px; background: var(--ground); }
 .auth-card { width: 100%; max-width: 420px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 26px 24px; box-shadow: var(--shadow); }
 .auth-h { font-size: 21px; margin: 4px 0 8px; }
-.brand { display: flex; align-items: center; gap: 9px; font-weight: 600; }
-.brand .mark {
-  width: 26px; height: 26px; border-radius: 7px; color: #fff; font-size: 14px;
-  display: grid; place-items: center;
-  background: linear-gradient(150deg, var(--accent), var(--accent-ink));
-}
-.brand small { font-weight: 500; color: var(--faint); }
+.brand { display: flex; align-items: center; gap: 8px; color: var(--ink); }
+.brand-word { font-family: var(--font-display, 'Space Grotesk', sans-serif); font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+.brand small { font-weight: 500; color: var(--faint); font-size: 12px; }
 
 .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 22px 60px; }
 .eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
@@ -296,10 +305,14 @@ a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); tran
 .netcard .last { color: var(--muted); font-size: 12px; margin-right: auto; }
 
 /* Boutons */
-.btn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 550; padding: 8px 14px; border-radius: 9px; border: 1px solid transparent; background: var(--accent); color: #fff; text-decoration: none; cursor: pointer; transition: filter .1s, transform .1s; }
-.btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
+/* Boutons — primaire métier = encre ; IA = cyan (le SEUL bouton coloré) ; ghost secondaire. */
+.btn { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; padding: 8px 14px; border-radius: 6px; border: 1px solid transparent; background: var(--primary); color: var(--on-primary); text-decoration: none; cursor: pointer; transition: background .12s, border-color .12s; }
+.btn:hover { filter: brightness(.92); }
+.btn.ia { background: var(--ia-btn); color: #fff; }
+.btn.ia:hover { filter: brightness(1.08); }
 .btn.ghost { background: var(--surface); color: var(--ink); border-color: var(--line); }
-.btn.ghost:hover { border-color: var(--accent); filter: none; }
+.btn.ghost:hover { background: var(--line-2); border-color: var(--line); filter: none; }
+.btn:focus-visible, .sig-d:focus-visible, .back:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--signal); }
 .page-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
 .head-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
 .head-actions .btns { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -449,9 +462,9 @@ a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); tran
        background: color-mix(in srgb, #3E9E7A 16%, transparent); color: #2c7a5e; }
 
 /* ===== Signets Format D + encarts + carte au clic ===== */
-:root { --c-struct: #5A8268; --c-op: #7C70A4; --c-pers: #5A83AE; --c-rel: #B4842F; --c-type: #A6763F; }
+:root { --c-struct: #3E7A4E; --c-op: #6B5CA5; --c-pers: #476C8C; --c-rel: #855900; --c-type: #6E6961; }
 @media (prefers-color-scheme: dark) {
-  :root { --c-struct: #7EAE8C; --c-op: #9C90C6; --c-pers: #7BA0CC; --c-rel: #D5A24E; --c-type: #CFA35A; }
+  :root { --c-struct: #74B07C; --c-op: #A99AD6; --c-pers: #83A6C6; --c-rel: #D3A24E; --c-type: #A7A199; }
 }
 
 .ic { width: 15px; height: 15px; flex: none; }
@@ -465,11 +478,11 @@ a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); tran
 .encart-h.rel .ic { color: var(--c-rel); }
 
 /* Signet Format D (contour coloré). --cat porté par la catégorie. */
-.sig-d { --cat: var(--c-struct); display: inline-flex; align-items: center; gap: 7px; font: inherit; font-size: 12.5px;
-       font-weight: 550; padding: 6px 11px; border-radius: 9px; cursor: pointer; max-width: 100%;
-       border: 1px solid color-mix(in srgb, var(--cat) 42%, var(--line));
-       background: var(--surface); color: color-mix(in srgb, var(--cat) 60%, var(--ink));
-       text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; }
+.sig-d { --cat: var(--c-struct); display: inline-flex; align-items: center; gap: 7px; font: inherit; font-size: 11.5px;
+       font-weight: 600; padding: 5px 10px; border-radius: 6px; cursor: pointer; max-width: 100%;
+       border: 1px solid color-mix(in srgb, var(--cat) 40%, var(--line));
+       background: var(--surface); color: color-mix(in srgb, var(--cat) 55%, var(--ink));
+       text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
 /* Un signet ne dépasse JAMAIS une ligne : le libellé se tronque à l'ellipse. */
 .sig-d .sig-lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 /* Sous-mentions internes d'un signet : pas de majuscule forcée, jamais coupées. */
@@ -487,8 +500,8 @@ a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); tran
 a.sig-d { text-decoration: none; }
 .sig-d .sig-sub { color: var(--muted); font-weight: 500; font-size: 11px; font-style: normal; }
 .sig-d .sig-badge { font-size: 9.5px; font-weight: 650; padding: 1px 6px; border-radius: 999px; font-style: normal; }
-.sig-d .sig-badge.new { background: color-mix(in srgb, var(--warn) 22%, transparent); color: var(--warn); }
-.sig-d .sig-badge.base { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent-ink); }
+.sig-d .sig-badge.new { background: var(--warn-soft); color: var(--warn); }
+.sig-d .sig-badge.base { background: var(--line-2); color: var(--muted); }
 .sig-d .mini-sig { background: color-mix(in srgb, var(--c-struct) 16%, transparent); color: var(--c-struct); }
 
 /* Carte au clic (overlay, sans saut d'écran). */

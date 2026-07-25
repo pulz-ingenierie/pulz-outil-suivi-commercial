@@ -1,18 +1,26 @@
 import type { Metadata, Viewport } from "next";
+import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import { getIdentite } from "@/lib/auth";
 import { signOut } from "@/lib/auth-actions";
+import MoeiaLogo from "@/components/MoeiaLogo";
+
+// Fontes moeïa : Inter (UI), Space Grotesk (titres), JetBrains Mono (chiffres).
+const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-ui", display: "swap" });
+const grotesk = Space_Grotesk({ subsets: ["latin"], weight: ["600", "700"], variable: "--font-display", display: "swap" });
+const mono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-mono", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Suivi commercial",
-  description: "Suivi commercial de l'organisation — module moeïa.",
+  title: "moeïa · Suivi commercial",
+  description: "Suivi commercial — module moeïa.",
   manifest: "/manifest.webmanifest",
+  icons: { icon: "/moeia-favicon.svg" },
   appleWebApp: { capable: true, title: "Suivi commercial", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0F7B8A",
+  themeColor: "#221F1A",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -24,12 +32,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Connecté mais e-mail inconnu de l'organisation : accès refusé (autorisation).
   if (email && !profil) {
     return (
-      <html lang="fr">
+      <html lang="fr" className={`${inter.variable} ${grotesk.variable} ${mono.variable}`}>
         <body>
           <main className="auth-wrap">
             <div className="auth-card">
               <div className="brand" style={{ marginBottom: 16 }}>
-                <span className="mark">◈</span>Suivi commercial <small>· moeïa</small>
+                <MoeiaLogo /> <span className="brand-word">moeïa</span> <small>Suivi commercial</small>
               </div>
               <h1 className="auth-h">Accès non autorisé</h1>
               <p className="muted">
@@ -47,12 +55,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   }
 
   return (
-    <html lang="fr">
+    <html lang="fr" className={`${inter.variable} ${grotesk.variable} ${mono.variable}`}>
       <body>
         {profil && (
           <header className="topbar">
             <Link className="brand" href="/tableau" style={{ textDecoration: "none", color: "inherit" }}>
-              <span className="mark">◈</span>Suivi commercial <small>· moeïa</small>
+              <MoeiaLogo /> <span className="brand-word">moeïa</span> <small>Suivi commercial</small>
             </Link>
             <div className="top-user">
               {profil.role === "pilote" && (
