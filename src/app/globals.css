@@ -402,6 +402,9 @@ a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); tran
 .precise-row select, .precise-row input { font: inherit; font-size: 14px; padding: 8px 11px; border: 1px solid var(--line);
        border-radius: 6px; background: var(--surface); color: var(--ink); min-width: 200px; }
 .precise-row select:focus, .precise-row input:focus { outline: none; border-color: var(--accent); }
+/* Réponse à une question du débrief : propositions cliquables + saisie libre. */
+.precise-answer { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; }
+.precise-answer input { min-width: 150px; }
 
 /* Ligne de relance en lecture (fiche opération) : action + signets. */
 .rel-line { display: flex; flex-direction: column; gap: 8px; padding: 11px 13px;

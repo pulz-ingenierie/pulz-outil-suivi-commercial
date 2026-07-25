@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createCr, finaliserBrouillon, supprimerBrouillon } from "@/lib/actions";
 import type { Synthese } from "@/lib/synthese";
+import SubmitButton from "@/components/SubmitButton";
 
 type Opt = { id: string; nom: string };
 type Ent = { id: string; nom: string; type?: string };
@@ -462,7 +463,18 @@ export default function VoiceCr({
   const opsSansStruct =
     rattachements.some((r) => r.kind === "operation" && r.name.trim()) &&
     !rattachements.some((r) => r.kind === "structure" && r.name.trim());
-  const aCompleter = structAPreciser.length > 0 || persAPreciser.length > 0 || opsSansStruct;
+  // Une relance doit toujours être assortie d'une personne responsable.
+  const relSansPersonne = relances.map((r, i) => ({ r, i })).filter(({ r }) => r.objet.trim() && !r.personne.trim());
+  // Personnes à proposer : celles du compte rendu + l'équipe (Administration).
+  const candidatsPersonne = Array.from(
+    new Set(
+      [
+        ...personnes.map((p) => [p.prenom, p.nom].filter(Boolean).join(" ").trim()),
+        ...membres,
+      ].filter(Boolean),
+    ),
+  );
+  const aCompleter = structAPreciser.length > 0 || persAPreciser.length > 0 || opsSansStruct || relSansPersonne.length > 0;
 
   // Mises à jour des blocs.
   const majRat = (i: number, patch: Partial<Rattach>) =>
@@ -699,10 +711,11 @@ export default function VoiceCr({
       <datalist id="dl-structures">{entites.map((e) => <option key={e.id} value={e.nom} />)}</datalist>
       <datalist id="dl-operations">{operations.map((o) => <option key={o.id} value={o.nom} />)}</datalist>
       <datalist id="dl-personnes">
-        {personnes.map((p, i) => {
-          const n = [p.prenom, p.nom].filter(Boolean).join(" ").trim();
-          return n ? <option key={i} value={n} /> : null;
-        })}
+        {Array.from(new Set([
+          ...personnes.map((p) => [p.prenom, p.nom].filter(Boolean).join(" ").trim()),
+          ...membres,
+          ...contactsBase.map((c) => [c.prenom, c.nom].filter(Boolean).join(" ").trim()),
+        ].filter(Boolean))).map((n, i) => <option key={i} value={n} />)}
       </datalist>
 
       {/* Capture vocale — masquée en mode brouillon. */}
@@ -885,6 +898,19 @@ export default function VoiceCr({
                 <button type="button" className="btn ghost mini" onClick={() => { setRattachements((p) => [...p, { kind: "structure", name: "" }]); ouvrirCarte("rat", rattachements.length, "edit"); }}>Ajouter une structure</button>
               </div>
             )}
+            {relSansPersonne.map(({ r, i }) => (
+              <div className="precise-row" key={`r${i}`}>
+                <span className="precise-q">Qui doit s'occuper de <strong>{r.objet || "cette relance"}</strong> ?</span>
+                <div className="precise-answer">
+                  {candidatsPersonne.slice(0, 4).map((n) => (
+                    <button type="button" className="sig-d pers" key={n} onClick={() => majRel(i, { personne: n })}>
+                      <span className="sig-lbl">{n}</span>
+                    </button>
+                  ))}
+                  <input list="dl-personnes" value={r.personne} placeholder="ou saisir un nom…" onChange={(e) => majRel(i, { personne: e.target.value })} />
+                </div>
+              </div>
+            ))}
             {persAPreciser.map(({ p, i }) => (
               <label className="precise-row" key={`p${i}`}>
                 <span className="precise-q">Fonction de <strong>{[p.prenom, p.nom].filter(Boolean).join(" ")}</strong> ?</span>
@@ -932,14 +958,14 @@ export default function VoiceCr({
 
         {draftId ? (
           <div className="form-foot">
-            <button className="btn ghost" type="submit" formAction={supprimerBrouillon} formNoValidate>Supprimer</button>
+            <SubmitButton className="btn ghost" formAction={supprimerBrouillon} formNoValidate pendingLabel="…">Supprimer</SubmitButton>
             <Link className="btn ghost" href="/crs/vocal">Passer (plus tard)</Link>
-            <button className="btn" type="submit" disabled={!canSave}>Valider et consolider</button>
+            <SubmitButton className="btn" disabled={!canSave} pendingLabel="Consolidation…">Valider et consolider</SubmitButton>
           </div>
         ) : (
           <div className="form-foot">
             <Link className="btn ghost" href={prefillOperation ? `/operations/${prefillOperation}` : "/tableau"}>Annuler</Link>
-            <button className="btn" type="submit" disabled={!canSave}>Enregistrer le compte rendu</button>
+            <SubmitButton className="btn" disabled={!canSave}>Enregistrer le compte rendu</SubmitButton>
           </div>
         )}
       </form>

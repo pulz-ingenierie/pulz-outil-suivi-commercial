@@ -430,6 +430,22 @@ export async function createCr(fd: FormData) {
     throw new Error("Rattachez le compte rendu à au moins une entité ou une opération (existante ou à créer).");
   }
 
+  // Anti-doublon : si un compte rendu au texte identique vient d'être créé
+  // (< 60 s), on ne le recrée pas (double-clic / double soumission).
+  const seuilDoublon = new Date(Date.now() - 60000).toISOString();
+  const { data: dejaCree } = await supabase
+    .from("crs")
+    .select("id")
+    .eq("org_id", org_id)
+    .eq("transcription", transcription)
+    .gte("created_at", seuilDoublon)
+    .limit(1)
+    .maybeSingle();
+  if (dejaCree?.id) {
+    revalidatePath("/tableau");
+    redirect("/tableau");
+  }
+
   // Structure produite par l'IA (facultative) : on la conserve telle quelle.
   let synthese: unknown = null;
   const synthRaw = str(fd, "synthese_json");
