@@ -110,6 +110,7 @@ export default function VoiceCr({
   operations,
   today,
   contactsBase = [],
+  membres = [],
   prefillEntite,
   prefillOperation,
   relanceId,
@@ -121,6 +122,7 @@ export default function VoiceCr({
   operations: Opt[];
   today: string;
   contactsBase?: ContactBase[];
+  membres?: string[];
   prefillEntite?: string;
   prefillOperation?: string;
   relanceId?: string;
@@ -405,10 +407,16 @@ export default function VoiceCr({
     contactsBase.map((c) => `${(c.nom ?? "").toLowerCase()}|${(c.prenom ?? "").toLowerCase()}`),
   );
   // Personnes déjà connues (« Prénom Nom ») transmises à l'IA pour qu'elle
-  // reconnaisse quelqu'un cité par son seul prénom et reprenne son identité exacte.
-  const contactsConnus = contactsBase
-    .map((c) => [c.prenom, c.nom].filter(Boolean).join(" ").trim())
-    .filter(Boolean);
+  // reconnaisse quelqu'un cité par son seul prénom et reprenne son identité
+  // exacte. On mélange les contacts rencontrés ET l'équipe (Administration).
+  const contactsConnus = Array.from(
+    new Set(
+      [
+        ...contactsBase.map((c) => [c.prenom, c.nom].filter(Boolean).join(" ").trim()),
+        ...membres,
+      ].filter(Boolean),
+    ),
+  );
 
   const ratEnBase = (r: Rattach) =>
     r.kind === "structure" ? entNameSet.has(r.name.trim().toLowerCase()) : opNameSet.has(r.name.trim().toLowerCase());

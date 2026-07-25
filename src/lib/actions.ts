@@ -253,12 +253,23 @@ async function materialiserCr(
       .filter((p) => p.nom) as {
       nom: string; prenom: string | null; fonction: string | null; entite_id: string | null;
     }[];
-    if (nets.length) {
+    // Ne PAS dupliquer un membre de l'équipe (Administration) en contact : il est
+    // reconnu par son nom mais reste géré côté utilisateurs.
+    const { data: membresRows } = await sb.from("utilisateurs").select("nom");
+    const membreSet = new Set(
+      (membresRows ?? [])
+        .map((m: any) => String(m.nom ?? "").trim().toLowerCase().replace(/\s+/g, " "))
+        .filter(Boolean),
+    );
+    const netsHorsMembres = nets.filter(
+      (p) => !membreSet.has([p.prenom, p.nom].filter(Boolean).join(" ").trim().toLowerCase().replace(/\s+/g, " ")),
+    );
+    if (netsHorsMembres.length) {
       const key = (eid: string | null, nom: string, prenom: string | null) =>
         `${eid ?? "∅"}|${nom.toLowerCase()}|${(prenom ?? "").toLowerCase()}`;
       const seen = new Set<string>();
       // Doublons éventuels : contacts existants (avec structure concernée + sans structure).
-      const entIds = [...new Set(nets.map((p) => p.entite_id).filter(Boolean))] as string[];
+      const entIds = [...new Set(netsHorsMembres.map((p) => p.entite_id).filter(Boolean))] as string[];
       if (entIds.length) {
         const { data: ex1 } = await sb.from("contacts").select("nom, prenom, entite_id").in("entite_id", entIds);
         for (const c of (ex1 ?? []) as any[]) seen.add(key(c.entite_id, c.nom ?? "", c.prenom ?? null));
@@ -266,7 +277,7 @@ async function materialiserCr(
       const { data: ex2 } = await sb.from("contacts").select("nom, prenom").is("entite_id", null);
       for (const c of (ex2 ?? []) as any[]) seen.add(key(null, c.nom ?? "", c.prenom ?? null));
 
-      const toInsert = nets.filter((p) => {
+      const toInsert = netsHorsMembres.filter((p) => {
         const k = key(p.entite_id, p.nom, p.prenom);
         if (seen.has(k)) return false;
         seen.add(k);

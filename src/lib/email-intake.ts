@@ -47,9 +47,14 @@ export async function releverEmails(): Promise<IntakeResult> {
   );
   const knownEntites = (entites ?? []).map((e: any) => e.nom as string);
   const knownOps = (operations ?? []).map((o: any) => o.nom as string);
-  const knownPersonnes = (contacts ?? [])
-    .map((c: any) => [c.prenom, c.nom].filter(Boolean).join(" ").trim())
-    .filter(Boolean) as string[];
+  const knownPersonnes = Array.from(
+    new Set(
+      [
+        ...(contacts ?? []).map((c: any) => [c.prenom, c.nom].filter(Boolean).join(" ").trim()),
+        ...(users ?? []).map((u: any) => String(u.nom ?? "").trim()),
+      ].filter(Boolean),
+    ),
+  ) as string[];
   const today = new Date().toISOString().slice(0, 10);
 
   const client = new ImapFlow({

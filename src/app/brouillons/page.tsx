@@ -30,7 +30,7 @@ export default async function Brouillons({
   if (!profil) redirect("/crs/vocal");
 
   const supabase = getServerSupabase()!;
-  const [{ data: drafts }, { data: entites }, { data: operations }, { data: contactsBase }] = await Promise.all([
+  const [{ data: drafts }, { data: entites }, { data: operations }, { data: contactsBase }, { data: membresRows }] = await Promise.all([
     supabase
       .from("crs")
       .select("id, transcription, synthese, created_at")
@@ -40,7 +40,9 @@ export default async function Brouillons({
     supabase.from("entites").select("id, nom, type").order("nom"),
     supabase.from("operations").select("id, nom").order("created_at", { ascending: false }),
     supabase.from("contacts").select("nom, prenom"),
+    supabase.from("utilisateurs").select("nom").eq("actif", true),
   ]);
+  const membres = (membresRows ?? []).map((m: any) => String(m.nom ?? "").trim()).filter(Boolean);
 
   const list = (drafts ?? []) as { id: string; transcription: string | null; synthese: any }[];
   const today = new Date().toISOString().slice(0, 10);
@@ -103,6 +105,7 @@ export default async function Brouillons({
         entites={entites ?? []}
         operations={operations ?? []}
         contactsBase={contactsBase ?? []}
+        membres={membres}
         today={today}
         draftId={current.id}
         initialTranscription={current.transcription ?? ""}
