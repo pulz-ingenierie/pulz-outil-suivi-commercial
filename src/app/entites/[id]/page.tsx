@@ -94,6 +94,7 @@ export default async function FicheStructure({ params }: { params: Promise<{ id:
 
       <div className="page-actions">
         <Link className="btn ghost" href={`/crs/vocal?entite=${entite.id}`}>🎙 Dicter un CR</Link>
+        <Link className="btn ghost" href={`/entites/${entite.id}/modifier`}>Modifier</Link>
       </div>
 
       <div className="fiche-head">

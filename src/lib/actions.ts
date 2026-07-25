@@ -174,6 +174,66 @@ export async function createEntite(fd: FormData) {
   redirect("/entites");
 }
 
+// Renomme / corrige une structure. Comme tout est référencé par identifiant,
+// la correction se répercute partout où la structure est citée.
+export async function updateEntite(fd: FormData) {
+  const supabase = requireSupabase();
+  const id = str(fd, "id");
+  if (!id) throw new Error("Structure introuvable.");
+  const nom = str(fd, "nom");
+  if (!nom) throw new Error("Le nom de la structure est obligatoire.");
+  const type = str(fd, "type");
+  if (!(ENTITE_TYPES as readonly string[]).includes(type)) throw new Error("Type de structure invalide.");
+
+  const { error } = await supabase
+    .from("entites")
+    .update({ nom, type, ville: strOrNull(fd, "ville") })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/tableau");
+  revalidatePath("/entites");
+  revalidatePath(`/entites/${id}`);
+  redirect(`/entites/${id}`);
+}
+
+// Renomme / corrige une personne (contact). Même principe : référencée par
+// identifiant, la correction se répercute partout.
+export async function updateContact(fd: FormData) {
+  const supabase = requireSupabase();
+  const org_id = await currentOrgId(supabase);
+  const id = str(fd, "id");
+  if (!id) throw new Error("Personne introuvable.");
+  const nom = str(fd, "nom");
+  if (!nom) throw new Error("Le nom est obligatoire.");
+
+  const update: Record<string, unknown> = {
+    nom,
+    prenom: strOrNull(fd, "prenom"),
+    fonction: strOrNull(fd, "fonction"),
+  };
+  // Structure : on ne la change que si un nom de structure connu est fourni
+  // (on ne détache pas ici, pour éviter tout souci avant la migration 0004).
+  const entiteNom = str(fd, "entite");
+  if (entiteNom) {
+    const { data } = await supabase
+      .from("entites")
+      .select("id")
+      .eq("org_id", org_id)
+      .ilike("nom", entiteNom)
+      .maybeSingle();
+    if (data?.id) update.entite_id = data.id;
+  }
+
+  const { error } = await supabase.from("contacts").update(update).eq("id", id);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/tableau");
+  revalidatePath("/entites");
+  revalidatePath(`/personnes/${id}`);
+  redirect(`/personnes/${id}`);
+}
+
 // -----------------------------------------------------------------------------
 // Comptes rendus — helpers de matérialisation (partagés saisie / brouillons)
 // -----------------------------------------------------------------------------
