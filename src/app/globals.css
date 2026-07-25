@@ -84,6 +84,9 @@ h1 { font-weight: 550; }
 .relcard.late { border-left: 2px solid var(--crit); }
 .rel-main { min-width: 220px; flex: 1; }
 .rel-obj { font-weight: 560; font-size: 14.5px; }
+/* Échéance d'un rappel : ligne claire et libellée (ce n'est pas un signet). */
+.rel-echeance { margin-top: 5px; font-size: 12.5px; color: var(--muted); }
+.rel-echeance.crit { color: var(--crit); font-weight: 560; }
 .rel-meta { margin-top: 8px; }
 .rel-acts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .rel-acts form { display: inline-flex; }
@@ -208,7 +211,8 @@ h1 { font-weight: 550; }
 .backlink:hover { color: var(--accent); }
 
 /* Fiche opération */
-.back { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); text-decoration: none; font-size: 13.5px; margin-bottom: 14px; }
+.back { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); text-decoration: none; font-size: 13.5px; margin-bottom: 14px;
+        font: inherit; font-size: 13.5px; background: none; border: none; padding: 0; cursor: pointer; }
 .back:hover { color: var(--accent); }
 .fiche-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
 .fiche-head h1 { font-size: 24px; }

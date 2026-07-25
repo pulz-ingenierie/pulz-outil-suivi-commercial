@@ -65,6 +65,9 @@ function RelanceCard({
     <div className={`relcard${enRetard ? " late" : ""}`}>
       <div className="rel-main">
         <div className="rel-obj">{r.objet}</div>
+        <div className={`rel-echeance${enRetard ? " crit" : ""}`}>
+          Échéance : {dateFr(r.date_echeance)}{enRetard ? " · en retard" : ""}
+        </div>
         <div className="rel-meta sig-wrap">
           {r.personne && (persHref
             ? <Link className="sig-d pers" href={persHref}><span className="sig-lbl">{r.personne}</span></Link>
@@ -73,22 +76,21 @@ function RelanceCard({
             <Link className="sig-d struct" href={`/entites/${s.id}`} key={s.id}><span className="sig-lbl">{s.nom}</span></Link>
           ))}
           {op && <Link className="sig-d op" href={op.href}><span className="sig-lbl">{op.nom}</span></Link>}
-          <span className={`sig-d date${enRetard ? " late" : ""}`}><span className="sig-lbl">{dateFr(r.date_echeance)}</span></span>
           {r.auto && <span className="sig-d ia"><span className="sig-lbl">IA</span></span>}
         </div>
       </div>
       <div className="rel-acts">
         <Link className="btn mini" href={crHref}>🎙 Nouveau compte rendu</Link>
+        <form action={updateRelance}>
+          <input type="hidden" name="id" value={r.id} />
+          <input type="hidden" name="action" value="faite" />
+          <button className="btn ghost mini" type="submit" title="Marquer comme fait">Fait</button>
+        </form>
         <form action={updateRelance} className="rel-report">
           <input type="hidden" name="id" value={r.id} />
           <input type="hidden" name="action" value="reporter" />
           <input type="date" name="date_echeance" defaultValue={plusJours(7)} aria-label="Reporter au" />
           <button className="btn ghost mini" type="submit">Reporter</button>
-        </form>
-        <form action={updateRelance}>
-          <input type="hidden" name="id" value={r.id} />
-          <input type="hidden" name="action" value="faite" />
-          <button className="btn ghost mini" type="submit" title="Clore sans compte rendu">Faite sans CR</button>
         </form>
         <form action={updateRelance}>
           <input type="hidden" name="id" value={r.id} />

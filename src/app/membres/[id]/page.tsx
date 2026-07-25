@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
 import { STATUT_LABELS, type OperationStatut } from "@/lib/types";
 import { normNom } from "@/lib/personnes";
+import BackButton from "@/components/BackButton";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,7 @@ export default async function FicheMembre({ params }: { params: Promise<{ id: st
   if (!isSupabaseConfigured()) {
     return (
       <main className="wrap">
-        <Link className="back" href="/tableau">← Retour au tableau de bord</Link>
+        <BackButton />
         <div className="card notice"><h2>Base de données à connecter</h2></div>
       </main>
     );
@@ -68,7 +69,7 @@ export default async function FicheMembre({ params }: { params: Promise<{ id: st
 
   return (
     <main className="wrap">
-      <Link className="back" href="/tableau">← Retour au tableau de bord</Link>
+      <BackButton />
 
       <div className="fiche-head">
         <div>

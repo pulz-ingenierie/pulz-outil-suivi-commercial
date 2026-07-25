@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
 import { STATUT_LABELS, type OperationStatut } from "@/lib/types";
 import FilCr from "@/components/FilCr";
+import BackButton from "@/components/BackButton";
 import { indexerLiens } from "@/lib/personnes";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +48,7 @@ export default async function FicheStructure({ params }: { params: Promise<{ id:
   if (!isSupabaseConfigured()) {
     return (
       <main className="wrap">
-        <Link className="back" href="/tableau">← Retour au tableau de bord</Link>
+        <BackButton />
         <div className="card notice"><h2>Base de données à connecter</h2></div>
       </main>
     );
@@ -89,7 +90,7 @@ export default async function FicheStructure({ params }: { params: Promise<{ id:
 
   return (
     <main className="wrap">
-      <Link className="back" href="/tableau">← Retour au tableau de bord</Link>
+      <BackButton />
 
       <div className="page-actions">
         <Link className="btn ghost" href={`/crs/vocal?entite=${entite.id}`}>🎙 Dicter un CR</Link>
@@ -150,7 +151,6 @@ export default async function FicheStructure({ params }: { params: Promise<{ id:
                 return (
                   <Link className="sig-d pers" href={`/personnes/${c.id}`} key={c.id}>
                     <span className="sig-lbl">{nomComplet}</span>
-                    {c.fonction && <span className="sig-sub">{c.fonction}</span>}
                   </Link>
                 );
               })}
