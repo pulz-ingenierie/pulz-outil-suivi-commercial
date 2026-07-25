@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
+import VoletCard from "@/components/VoletCard";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,7 @@ export default async function Entites() {
       {list.length ? (
         <div className="minigrid">
           {list.map((e: any) => (
-            <Link className="minicard" href={`/entites/${e.id}`} key={e.id}>
+            <VoletCard className="minicard" type="entite" id={e.id} key={e.id}>
               <div className="mc-top">
                 <span className="mc-nom">{e.nom}</span>
                 <span className="sig-d type"><span className="sig-lbl">{TYPE_ENTITE[e.type] ?? e.type}</span></span>
@@ -53,7 +54,7 @@ export default async function Entites() {
                 {e.ville && <span>{e.ville}</span>}
                 {e.statut_vie === "dormant" && <span className="pill dormant">en sommeil</span>}
               </div>
-            </Link>
+            </VoletCard>
           ))}
         </div>
       ) : (

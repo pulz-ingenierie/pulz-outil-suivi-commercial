@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { STATUT_LABELS, STATUT_ORDRE, type OperationStatut } from "@/lib/types";
 import Signet from "@/components/Signet";
+import VoletCard from "@/components/VoletCard";
 
 // Couleur associée à chaque étape (variables CSS définies dans globals.css).
 const STATUT_VAR: Record<string, string> = {
@@ -64,6 +65,7 @@ type PersonneListe = {
   nom: string;
   prenom: string | null;
   fonction: string | null;
+  entiteId: string | null;
   entiteNom: string | null;
 };
 
@@ -251,7 +253,7 @@ function VueStructures({ reseau }: { reseau: Structure[] }) {
       {list.length ? (
         <div className="minigrid">
           {list.map((s) => (
-            <Link className="minicard" href={`/entites/${s.id}`} key={s.id}>
+            <VoletCard className="minicard" type="entite" id={s.id} key={s.id}>
               <div className="mc-top">
                 <span className="mc-nom">{s.nom}</span>
                 <span className="sig-d type"><span className="sig-lbl">{s.type}</span></span>
@@ -267,7 +269,7 @@ function VueStructures({ reseau }: { reseau: Structure[] }) {
                   {s.ops.length > 0 && (
                     <div className="sig-row">
                       {s.ops.slice(0, 4).map((o) => (
-                        <span className="sig-d op" key={o.id}><span className="sig-lbl">{o.nom}</span></span>
+                        <Signet key={o.id} type="operation" id={o.id} cat="op" label={o.nom} />
                       ))}
                       {s.ops.length > 4 && <span className="mc-more">+{s.ops.length - 4}</span>}
                     </div>
@@ -276,7 +278,7 @@ function VueStructures({ reseau }: { reseau: Structure[] }) {
                     <div className="sig-row">
                       {s.contacts.slice(0, 4).map((c) => {
                         const n = [c.prenom, c.nom].filter(Boolean).join(" ") || c.nom;
-                        return <span className="sig-d pers" key={c.id}><span className="sig-lbl">{n}</span></span>;
+                        return <Signet key={c.id} type="personne" id={c.id} cat="pers" label={n} />;
                       })}
                       {s.contacts.length > 4 && <span className="mc-more">+{s.contacts.length - 4}</span>}
                     </div>
@@ -290,7 +292,7 @@ function VueStructures({ reseau }: { reseau: Structure[] }) {
                   {s.silencieux && s.ops.length === 0 && <span className="pill silence">à réchauffer</span>}
                 </div>
               )}
-            </Link>
+            </VoletCard>
           ))}
         </div>
       ) : (
@@ -327,13 +329,13 @@ function VuePersonnes({ personnes }: { personnes: PersonneListe[] }) {
           {list.map((p) => {
             const nomComplet = [p.prenom, p.nom].filter(Boolean).join(" ") || p.nom;
             return (
-              <Link className="minicard" href={`/personnes/${p.id}`} key={p.id}>
+              <VoletCard className="minicard" type="personne" id={p.id} key={p.id}>
                 <div className="mc-top">
                   <span className="mc-nom">{nomComplet}</span>
-                  {p.entiteNom && <span className="sig-d struct"><span className="sig-lbl">{p.entiteNom}</span></span>}
+                  {p.entiteId && p.entiteNom && <Signet type="entite" id={p.entiteId} cat="struct" label={p.entiteNom} />}
                 </div>
                 {p.fonction && <div className="mc-meta"><span>{p.fonction}</span></div>}
-              </Link>
+              </VoletCard>
             );
           })}
         </div>

@@ -19,7 +19,10 @@ export default function Signet({
     <button
       type="button"
       className={`sig-d ${cat}`}
-      onClick={() => window.dispatchEvent(new CustomEvent("moeia:apercu", { detail: { type, id } }))}
+      onClick={(e) => {
+        e.stopPropagation();
+        window.dispatchEvent(new CustomEvent("moeia:apercu", { detail: { type, id } }));
+      }}
     >
       <span className="sig-lbl">{label}</span>
       {sub ? <span className="sig-sub">{sub}</span> : null}

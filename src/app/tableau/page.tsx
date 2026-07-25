@@ -178,6 +178,7 @@ export default async function Dashboard() {
       nom: c.nom,
       prenom: c.prenom ?? null,
       fonction: c.fonction ?? null,
+      entiteId: c.entite_id ?? null,
       entiteNom: c.entite_id ? nomStructById.get(c.entite_id) ?? null : null,
     }))
     .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
