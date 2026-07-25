@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>moeïa — plateforme</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ===== tokens moeïa (réf. moeia-direction-artistique.md §2) ===== */
+:root{
+  --ink-900:#221F1A;--ink-700:#57534E;--ink-600:#6E6961;--ink-500:#8F8A82;
+  --bg:#F6F5F2;--card:#FBFAF8;--paper:#FFFFFF;--line:#E5E2DC;--line2:#EEECE7;
+  --cyan:#04B7F9;--cyan-fn:#0273C4;--cyan-hover:#01599A;--cyan-soft:#E9F6FD;--cyan-border:#C4E9FA;
+  --ok:#3E7A4E;--ok-soft:#EAF2EC;--warn:#855900;--warn-soft:#F8F0DC;--err:#B3352B;--err-soft:#F9EAE8;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-font-smoothing:antialiased}
+::selection{background:#D3EEFB}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:1px}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--ink-900);font-size:14px}
+h1,h2,h3{font-family:'Space Grotesk','Inter',sans-serif;letter-spacing:-.01em}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-size:.95em}
+.k{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;color:var(--ink-500)}
+
+/* ===== appbar ===== */
+.appbar{background:var(--paper);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.appbar .in{max-width:1240px;margin:0 auto;padding:0 24px;height:58px;display:flex;align-items:center;gap:20px}
+.appbar .logo svg{height:26px;display:block;color:var(--ink-900)}
+.appbar nav{display:flex;gap:2px;margin-left:6px}
+.appbar nav a{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;color:var(--ink-700);padding:7px 12px;border-radius:6px}
+.appbar nav a:hover{color:var(--ink-900);background:var(--line2)}
+.appbar nav a.soon{color:var(--ink-500);cursor:default}
+.appbar nav a.soon:hover{background:none;color:var(--ink-500)}
+.appbar .right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.sync{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-600)}
+.sync .dot{width:7px;height:7px;border-radius:99px;background:var(--ok)}
+.badge-ia{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;padding:2.5px 8px;border-radius:4px;background:var(--paper);color:var(--cyan-fn);border:1px solid var(--cyan)}
+.cfg-link{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-700);text-decoration:none;padding:7px 12px;border-radius:6px}
+.cfg-link.on,.cfg-link:hover{color:var(--ink-900);background:var(--line2)}
+
+.wrap{max-width:1240px;margin:0 auto;padding:26px 24px 64px}
+.pagehead{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px}
+.pagehead h1{font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;font-family:'Inter',sans-serif}
+.pagehead p{font-size:14px;color:var(--ink-700);margin-top:6px}
+.btn{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:9px 15px;border-radius:6px;border:1px solid transparent;cursor:pointer;font-family:inherit;text-decoration:none}
+.btn.primary{background:var(--ink-900);color:#fff}.btn.primary:hover{background:#000}
+.btn.ghost{background:var(--paper);border-color:var(--line);color:var(--ink-900)}.btn.ghost:hover{background:var(--line2)}
+.btn.ia{background:var(--cyan-fn);color:#fff}.btn.ia:hover{background:var(--cyan-hover)}
+
+/* ===== alerte ===== */
+.alert{background:var(--paper);border:1px solid var(--line);border-top:2px solid #C9A44E;border-radius:8px;padding:13px 16px;margin-bottom:20px;display:flex;gap:12px;align-items:flex-start}
+.alert b{font-size:13px}
+.alert .src{font-size:11px;color:var(--ink-500);margin-top:2px}
+.chip{display:inline-block;font-size:10.75px;font-weight:600;padding:2.5px 8px;border-radius:4px;margin:2px 3px 0 0}
+.chip.err{background:var(--err-soft);color:var(--err)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+
+/* ===== modules ===== */
+.modules{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:26px}
+.mod{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:10px;text-decoration:none;color:inherit;transition:border-color .15s}
+.mod:hover{border-color:var(--ink-500)}
+.mod .top{display:flex;align-items:center;justify-content:space-between}
+.mod h3{font-size:17px}
+.mod .desc{font-size:12.5px;color:var(--ink-700);line-height:1.5;min-height:38px}
+.mod .stats{display:flex;gap:18px;border-top:1px solid var(--line2);padding-top:10px}
+.mod .stats .v{font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700}
+.mod .stats .l{font-size:10.5px;color:var(--ink-500);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.mod .last{font-size:11px;color:var(--ink-500)}
+.tag{font-size:10.5px;font-weight:600;padding:2.5px 8px;border-radius:4px}
+.tag.on{background:var(--ok-soft);color:var(--ok)}
+.tag.soon{background:var(--line2);color:var(--ink-600)}
+.mod.soon{opacity:.62}.mod.soon:hover{border-color:var(--line)}
+
+/* ===== panneaux & tables ===== */
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:20px}
+.panel .ph{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--line);background:var(--card)}
+.panel .ph .t{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:var(--ink-500)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;text-align:left;padding:8px 14px;font-weight:600;color:var(--ink-500);border-bottom:1px solid var(--ink-900);background:var(--paper)}
+th.r,td.r{text-align:right}
+td{padding:7px 14px;border-top:1px solid var(--line2);line-height:1.35;font-variant-numeric:tabular-nums}
+tbody tr:hover{background:var(--card)}
+tbody tr.click{cursor:pointer}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;padding:2.5px 8px;border-radius:4px}
+.badge.ok{background:var(--ok-soft);color:var(--ok)}
+.badge.warn{background:var(--warn-soft);color:var(--warn)}
+.badge.err{background:var(--err-soft);color:var(--err)}
+.badge.neutral{background:var(--line2);color:var(--ink-700)}
+.badge.ia{background:var(--paper);color:var(--cyan-fn);border:1px solid var(--cyan)}
+.monogram{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:5px;background:var(--line2);color:var(--ink-700);font-size:10px;font-weight:700;letter-spacing:.02em;margin-right:8px}
+
+/* ===== configuration ===== */
+.cfg-tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.cfg-tabs a{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:9px 14px;text-decoration:none;color:var(--ink-700);border-bottom:2px solid transparent;cursor:pointer}
+.cfg-tabs a.on{color:var(--ink-900);border-bottom-color:var(--cyan)}
+.cfg-tabs a:hover{color:var(--ink-900)}
+.cfg-grid{display:grid;grid-template-columns:1fr 380px;gap:16px;align-items:start}
+.fiche{background:var(--paper);border:1px solid var(--line);border-radius:8px;overflow:hidden;position:sticky;top:78px}
+.fiche .fh{padding:14px 16px;border-bottom:1px solid var(--line);background:var(--card);display:flex;align-items:center;gap:10px}
+.fiche .fh h3{font-size:15px}
+.fiche dl{padding:12px 16px;display:grid;grid-template-columns:120px 1fr;row-gap:7px;column-gap:10px;font-size:12.5px}
+.fiche dt{color:var(--ink-500);font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;padding-top:1px}
+.fiche dd{color:var(--ink-900)}
+.fiche .ff{padding:12px 16px;border-top:1px solid var(--line2);display:flex;gap:8px;justify-content:flex-end}
+.note{font-size:12px;color:var(--ink-600);background:var(--cyan-soft);border:1px solid var(--cyan-border);border-radius:8px;padding:11px 14px;margin-bottom:18px;line-height:1.55}
+.swatch{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:6px;border:1px solid rgba(0,0,0,.15)}
+.view{display:none}.view.on{display:block}
+@media(max-width:980px){.modules{grid-template-columns:1fr}.cfg-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header class="appbar"><div class="in">
+  <span class="logo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="1768 220 4836 1039">
+  <g transform="translate(0,1344) scale(0.1,-0.1)"><path fill="currentColor" d="M29255 10622 c-41 -23 -120 -77 -375 -257 -275 -195 -330 -228 -568
+-339 -409 -192 -630 -368 -748 -598 -75 -148 -91 -352 -75 -958 6 -234 16
+-733 21 -1110 5 -377 14 -950 20 -1275 6 -324 17 -1130 25 -1790 16 -1275 30
+-2215 41 -2612 l7 -243 46 0 c25 0 75 7 111 16 69 16 407 120 580 179 58 20
+138 43 179 51 41 9 140 42 220 73 80 32 244 91 364 130 l217 73 0 4339 c0
+4126 -1 4339 -17 4339 -10 -1 -32 -9 -48 -18z M18280 6419 l0 -4180 233 -114
+c127 -62 315 -148 417 -190 171 -71 270 -119 610 -298 69 -36 164 -79 212 -96
+80 -28 237 -66 244 -59 5 6 23 1374 34 2508 10 1118 22 2180 41 3795 17 1383
+13 1494 -69 1649 -65 125 -109 158 -502 386 -210 122 -278 166 -585 381 -271
+189 -400 267 -507 304 -46 16 -48 18 -48 56 0 39 0 39 -40 39 l-40 0 0 -4181z
+M47925 8845 c-268 -30 -476 -86 -705 -187 -324 -143 -590 -321 -834 -558 -264
+-256 -482 -572 -591 -855 -200 -518 -239 -1079 -104 -1500 36 -115 157 -401
+227 -542 182 -361 522 -728 893 -961 162 -102 454 -240 594 -280 314 -91 370
+-104 527 -121 145 -16 474 -14 613 4 549 71 1033 271 1435 592 390 311 694
+806 820 1338 84 353 102 802 44 1080 -98 460 -336 880 -706 1241 -129 126
+-202 185 -343 277 -367 240 -767 394 -1185 458 -176 27 -515 34 -685 14z m520
+-646 c388 -48 752 -196 1052 -427 122 -95 194 -163 262 -246 263 -324 381
+-679 381 -1147 0 -476 -149 -901 -439 -1251 -71 -87 -91 -103 -91 -73 0 44
+-79 -30 -149 -140 -71 -113 -431 -296 -735 -376 -196 -50 -293 -62 -516 -63
+-219 -1 -272 6 -465 61 -353 101 -705 313 -906 545 -90 105 -232 324 -300 463
+-140 290 -196 555 -187 889 5 155 9 184 41 307 121 463 329 792 654 1035 240
+179 411 275 616 343 273 90 507 114 782 80z M54165 8849 c-495 -43 -964 -231
+-1315 -527 -101 -85 -359 -357 -458 -482 -145 -183 -242 -350 -316 -542 -268
+-697 -236 -1483 88 -2126 135 -267 362 -538 633 -754 495 -394 1034 -581 1678
+-581 226 0 364 14 578 59 226 47 545 164 702 256 463 272 773 574 948 923 44
+88 101 234 94 241 -5 5 -285 22 -498 30 -175 6 -189 6 -252 -15 -82 -28 -110
+-54 -195 -185 -125 -192 -231 -276 -547 -434 -279 -140 -447 -176 -810 -176
+-235 0 -322 10 -520 61 -224 58 -504 188 -668 312 -118 88 -275 252 -349 362
+-114 169 -188 353 -239 588 -16 75 -31 146 -34 159 l-5 22 2159 0 2160 0 19
+25 c30 38 37 149 24 375 -15 243 -33 373 -83 569 -95 374 -257 670 -527 960
+-141 151 -356 345 -465 419 -510 347 -1171 515 -1802 461z m729 -704 c128 -24
+244 -68 401 -152 383 -206 622 -416 795 -698 93 -150 108 -196 130 -389 11
+-97 20 -178 20 -181 0 -3 -801 -5 -1780 -5 -1136 0 -1780 3 -1780 10 0 5 9 55
+20 110 67 346 214 620 461 854 227 216 601 401 919 454 144 23 683 22 814 -3z
+M62420 8836 c-248 -29 -551 -133 -812 -277 -359 -199 -681 -486 -956 -852
+-194 -258 -330 -589 -403 -977 -26 -137 -37 -491 -20 -640 51 -448 264 -937
+575 -1324 339 -421 768 -693 1346 -852 223 -62 388 -86 631 -91 379 -9 560 24
+954 178 469 183 776 417 915 698 30 59 32 61 70 61 l40 0 0 -380 0 -380 339 0
+338 0 8 1313 c8 1562 10 1523 -90 1817 -85 250 -235 519 -411 740 -87 108
+-284 305 -394 393 -349 280 -831 480 -1355 563 -138 22 -617 28 -775 10z m760
+-672 c393 -57 710 -214 985 -489 140 -140 222 -239 317 -385 84 -128 126 -214
+168 -345 70 -220 95 -407 87 -650 -10 -303 -75 -572 -192 -792 -186 -351 -494
+-657 -805 -801 -268 -124 -317 -145 -398 -171 -159 -52 -264 -64 -520 -58
+-251 6 -334 18 -535 83 -203 66 -464 195 -592 293 -98 74 -272 250 -345 346
+-171 228 -272 444 -351 753 -32 125 -40 178 -45 285 -15 314 50 616 195 912
+106 215 211 367 349 505 181 180 328 282 549 380 311 136 753 189 1133 134z
+M39240 8834 c-95 -9 -268 -36 -345 -54 -83 -19 -299 -110 -421 -178 -39 -21
+-93 -44 -120 -51 -75 -19 -100 -39 -247 -196 -192 -205 -279 -322 -372 -503
+-25 -48 -49 -92 -54 -98 -17 -20 -43 -77 -62 -133 -26 -74 -84 -387 -100 -536
+-14 -129 -15 -1106 -3 -2447 l7 -678 378 0 379 0 0 51 c0 231 30 2873 34 3009
+10 308 58 480 186 670 20 30 35 60 33 66 -10 29 219 207 353 276 186 95 295
+118 602 125 232 6 232 5 232 -16 0 -18 -6 -21 -37 -22 -28 0 -9 -8 72 -28 184
+-47 334 -119 488 -234 94 -72 143 -126 201 -225 79 -135 137 -307 166 -493 16
+-99 28 -1024 29 -2226 l1 -953 378 0 379 0 6 1478 c4 893 11 1517 17 1577 29
+277 100 493 232 701 116 184 376 339 668 399 115 24 389 16 535 -15 278 -59
+491 -179 633 -356 163 -202 251 -435 282 -744 9 -89 28 -1906 30 -2787 l0
+-253 359 0 358 0 8 1584 c4 871 4 1637 0 1702 -5 93 -13 140 -37 213 -144 443
+-423 802 -840 1082 -279 188 -662 291 -1083 292 -380 1 -626 -59 -896 -219
+-50 -30 -93 -54 -96 -54 -3 0 -49 -35 -102 -77 -114 -93 -323 -299 -319 -317
+3 -12 -138 -196 -151 -196 -4 0 -29 46 -57 102 -43 89 -62 116 -149 207 -140
+145 -345 295 -533 390 -218 110 -452 160 -777 166 -110 1 -220 1 -245 -1z
+M58280 6320 l0 -2360 380 0 380 0 0 2360 0 2360 -380 0 -380 0 0 -2360z
+M21520 5140 l0 -2780 31 0 c53 0 110 18 744 235 341 117 659 225 707 240 48
+15 94 32 102 39 18 13 28 295 46 1231 11 583 24 1190 41 1825 15 551 0 717
+-76 875 -60 125 -124 175 -460 360 -230 126 -267 150 -500 330 -276 214 -409
+299 -517 334 -35 12 -38 15 -38 52 0 39 0 39 -40 39 l-40 0 0 -2780z"/></g>
+  <g transform="translate(0,1344) scale(0.1,-0.1)"><path fill="#04B7F9" d="M59165 10571 c-170 -70 -378 -172 -460 -225 -185 -121 -270 -241
+-344 -486 -70 -235 -81 -297 -81 -447 l0 -136 63 6 c71 6 494 149 590 200 148
+78 242 253 301 562 33 172 46 299 46 440 0 113 0 115 -22 115 -13 0 -54 -13
+-93 -29z M25923 7962 c-59 -43 -227 -167 -372 -276 -145 -109 -280 -205 -300
+-214 -254 -111 -390 -193 -508 -306 -72 -67 -87 -90 -189 -286 -41 -78 -47
+-172 -35 -505 12 -309 24 -770 41 -1570 16 -774 30 -1276 36 -1362 l6 -83 62
+0 c48 0 82 8 152 36 49 20 361 128 694 239 l605 202 3 2101 2 2102 -44 0 c-39
+0 -56 -9 -153 -78z"/></g>
+</svg></span>
+  <nav>
+    <a href="#" onclick="return false;">AO</a>
+    <a href="#" onclick="return false;">CCTP</a>
+    <a href="#" class="soon" title="Bientôt">Budget</a>
+    <a href="#" onclick="return false;">ACT</a>
+    <a href="#" class="soon" title="Bientôt">Visas</a>
+  </nav>
+  <div class="right">
+    <span class="badge-ia">✦ IA</span>
+    <span class="sync"><span class="dot"></span>Synchronisé</span>
+    <a class="cfg-link" id="lnk-accueil" href="#" onclick="show('accueil');return false;">Accueil</a>
+    <a class="cfg-link" id="lnk-config" href="#" onclick="show('config');return false;">Configuration</a>
+  </div>
+</div></header>
+
+<!-- ============================== ACCUEIL ============================== -->
+<div class="wrap view on" id="view-accueil">
+  <div class="pagehead">
+    <div>
+      <h1>moeïa — Plateforme MOE</h1>
+      <p>Maîtrise d'œuvre augmentée par l'IA. Groupement BUSCOT · ARTEIX · THERAC · GRADIENT.</p>
+    </div>
+    <div style="display:flex;gap:8px">
+      <a class="btn ghost" href="#" onclick="show('config');return false;">Configuration</a>
+    </div>
+  </div>
+
+  <div class="alert">
+    <div style="flex:1">
+      <b>12 pièces périmées, 3 à renouveler</b> sur l'ensemble du groupement.
+      <div style="margin-top:6px">
+        <span class="chip err">BUSCOT · KBIS — périmé −105 j</span>
+        <span class="chip err">ARTEIX · Attestation fiscale — périmé −6 j</span>
+        <span class="chip warn">THERAC · URSSAF — 21 j restants</span>
+        <span class="chip warn">+ 12 autres</span>
+      </div>
+      <div class="src">Source : référentiel commun — consommé par AO (dossiers de candidature) et ACT (rapports).</div>
+    </div>
+    <a class="btn ghost" href="#" onclick="show('config');cfgTab('pieces');return false;">Ouvrir le référentiel</a>
+  </div>
+
+  <div class="modules">
+    <a class="mod" href="#">
+      <div class="top"><h3>AO</h3><span class="tag on">Actif</span></div>
+      <div class="desc">Réponse aux appels d'offre : dossiers de candidature, mémoires techniques, référentiel de pièces du groupement.</div>
+      <div class="stats">
+        <div><div class="v">3</div><div class="l">En cours</div></div>
+        <div><div class="v">14</div><div class="l">Déposés</div></div>
+        <div><div class="v mono" style="font-size:15px;padding-top:4px">0,42 €</div><div class="l">Coût IA</div></div>
+      </div>
+      <div class="last">Dernière activité : mémoire technique HUTIN — hier 17:42</div>
+    </a>
+    <a class="mod" href="#">
+      <div class="top"><h3>CCTP</h3><span class="tag on">Actif</span></div>
+      <div class="desc">Génération et structuration des CCTP par lot, à partir des trames et des pièces marché.</div>
+      <div class="stats">
+        <div><div class="v">7</div><div class="l">Projets</div></div>
+        <div><div class="v">2</div><div class="l">En rédaction</div></div>
+      </div>
+      <div class="last">Dernière activité : CCTP Lot CVC Verlaine — 15/07</div>
+    </a>
+    <a class="mod" href="#">
+      <div class="top"><h3>ACT</h3><span class="tag on">Actif</span></div>
+      <div class="desc">Analyses comparatives des travaux : offres entreprises, analyse DPGF, notation, rapports d'analyse.</div>
+      <div class="stats">
+        <div><div class="v">1</div><div class="l">En cours</div></div>
+        <div><div class="v">8</div><div class="l">Entreprises</div></div>
+      </div>
+      <div class="last">Dernière activité : FFT Lot CVC — tour d'offre 2 — aujourd'hui 09:15</div>
+    </a>
+    <a class="mod soon" href="#" onclick="return false;">
+      <div class="top"><h3>Budget</h3><span class="tag soon">Bientôt</span></div>
+      <div class="desc">Estimations et suivi budgétaire par phase (DIAG → DCE), alimenté par les DPGF d'ACT.</div>
+      <div class="stats"><div><div class="v">—</div><div class="l">&nbsp;</div></div></div>
+      <div class="last">Naîtra directement sur le socle commun</div>
+    </a>
+    <a class="mod soon" href="#" onclick="return false;">
+      <div class="top"><h3>Visas</h3><span class="tag soon">Bientôt</span></div>
+      <div class="desc">Suivi des visas d'exécution : circuit de validation, observations, relances.</div>
+      <div class="stats"><div><div class="v">—</div><div class="l">&nbsp;</div></div></div>
+      <div class="last">Naîtra directement sur le socle commun</div>
+    </a>
+    <a class="mod" href="#" onclick="show('config');return false;" style="border-style:dashed">
+      <div class="top"><h3>Configuration</h3><span class="tag soon">Commun</span></div>
+      <div class="desc">Sociétés du groupement, identité, pièces administratives, intervenants externes — la source unique de tous les modules.</div>
+      <div class="stats">
+        <div><div class="v">5</div><div class="l">Sociétés</div></div>
+        <div><div class="v">52</div><div class="l">Pièces</div></div>
+        <div><div class="v">9</div><div class="l">Externes</div></div>
+      </div>
+      <div class="last">Modifié : identité ARTEIX — 12/07</div>
+    </a>
+  </div>
+
+  <div class="panel">
+    <div class="ph"><span class="t">Activité récente — tous modules</span><span class="badge neutral">7 jours</span></div>
+    <table>
+      <thead><tr><th>Quand</th><th>Module</th><th>Objet</th><th>Action</th><th></th></tr></thead>
+      <tbody>
+        <tr class="click"><td class="mono">Auj. 09:15</td><td><span class="badge neutral">ACT</span></td><td><b>FFT — Lot CVC Inv. 2026</b></td><td>Analyse DPGF tour d'offre 2 <span class="badge ia">✦ IA</span></td><td class="r">→</td></tr>
+        <tr class="click"><td class="mono">Hier 17:42</td><td><span class="badge neutral">AO</span></td><td><b>Résidence HUTIN — LMH</b></td><td>Mémoire technique généré <span class="badge ia">✦ IA</span></td><td class="r">→</td></tr>
+        <tr class="click"><td class="mono">Hier 11:20</td><td><span class="badge neutral">Config</span></td><td><b>THERAC</b></td><td>Attestation URSSAF renouvelée</td><td class="r">→</td></tr>
+        <tr class="click"><td class="mono">15/07 16:05</td><td><span class="badge neutral">CCTP</span></td><td><b>Verlaine — Lot CVC</b></td><td>CCTP exporté (Word)</td><td class="r">→</td></tr>
+        <tr class="click"><td class="mono">15/07 10:31</td><td><span class="badge neutral">AO</span></td><td><b>Groupement</b></td><td>Dossier candidature déposé — AO Roubaix</td><td class="r">→</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============================== CONFIGURATION ============================== -->
+<div class="wrap view" id="view-config">
+  <div class="pagehead">
+    <div>
+      <h1>Configuration commune</h1>
+      <p>Source unique des modules AO, CCTP, ACT, Budget et Visas. Une modification ici est visible partout.</p>
+    </div>
+    <button class="btn primary">Enregistrer les modifications</button>
+  </div>
+
+  <div class="cfg-tabs">
+    <a class="on" data-t="societes" onclick="cfgTab('societes')">Sociétés du groupement</a>
+    <a data-t="identite" onclick="cfgTab('identite')">Identité &amp; marque</a>
+    <a data-t="pieces" onclick="cfgTab('pieces')">Pièces du référentiel</a>
+    <a data-t="externes" onclick="cfgTab('externes')">Intervenants externes</a>
+    <a data-t="prefs" onclick="cfgTab('prefs')">Préférences modules</a>
+  </div>
+
+  <!-- --- Sociétés --- -->
+  <div class="cfg-view" id="cfg-societes">
+    <div class="note">Ces fiches remplacent les trois saisies actuelles : le référentiel groupement d'AO, l'« identité société » d'ACT et la marque de CCTP. Chaque module lit ces données via le client commun — plus aucune information société n'est saisie dans un module.</div>
+    <div class="cfg-grid">
+      <div class="panel" style="margin:0">
+        <div class="ph"><span class="t">Groupement — 5 sociétés</span><button class="btn ghost" style="padding:5px 10px">+ Ajouter</button></div>
+        <table>
+          <thead><tr><th>Société</th><th>Métiers</th><th class="mono">SIRET</th><th class="r">Pièces</th><th class="r">Statut pièces</th></tr></thead>
+          <tbody>
+            <tr class="click" style="background:var(--cyan-soft)"><td><span class="monogram">BU</span><b>BUSCOT ENERGIES</b></td><td>Fluides, CFO/CFA, CVC, SSI</td><td class="mono">921 557 716 000 39</td><td class="r mono">13</td><td class="r"><span class="badge err">3 périmées</span></td></tr>
+            <tr class="click"><td><span class="monogram">AR</span><b>ARTEIX</b></td><td>Structure, VRD</td><td class="mono">—</td><td class="r mono">13</td><td class="r"><span class="badge err">3 périmées</span></td></tr>
+            <tr class="click"><td><span class="monogram">TH</span><b>THERAC</b></td><td>Thermique, acoustique</td><td class="mono">—</td><td class="r mono">13</td><td class="r"><span class="badge warn">1 à renouveler</span></td></tr>
+            <tr class="click"><td><span class="monogram">GR</span><b>GRADIENT</b></td><td>Économie de la construction</td><td class="mono">—</td><td class="r mono">13</td><td class="r"><span class="badge ok">OK</span></td></tr>
+            <tr class="click"><td><span class="monogram">PU</span><b>PULZ</b> <span class="badge neutral">mandataire</span></td><td>Pilotage, OPC</td><td class="mono">—</td><td class="r mono">—</td><td class="r"><span class="badge ok">OK</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="fiche">
+        <div class="fh"><span class="monogram" style="width:30px;height:30px;font-size:12px">BU</span><div><h3>BUSCOT ENERGIES</h3><div style="font-size:11px;color:var(--ink-500)">Fiche société — protégée</div></div></div>
+        <dl>
+          <dt>Forme</dt><dd>SAS</dd>
+          <dt>SIRET</dt><dd class="mono">921 557 716 000 39</dd>
+          <dt>RCS</dt><dd>Douai (2023B00617)</dd>
+          <dt>Siège</dt><dd>22 rue Paul Delattre, 59310 Nomain</dd>
+          <dt>Bureaux</dt><dd>99 rue de l'Union, 59118 Wambrechies</dd>
+          <dt>Contact</dt><dd>Sylvain BUSCOT · 06 61 61 07 70</dd>
+          <dt>Email</dt><dd>contact@buscot-energies.fr</dd>
+          <dt>Signataire</dt><dd>Sylvain BUSCOT, Dirigeant</dd>
+          <dt>Slogan</dt><dd>Bureau d'études techniques, maître d'œuvre en énergies</dd>
+          <dt>Couleur doc.</dt><dd><span class="swatch" style="background:#221F1A"></span><span class="mono">#221F1A</span></dd>
+          <dt>Logo</dt><dd><span class="badge neutral">buscot.svg</span></dd>
+          <dt>Consommée par</dt><dd><span class="badge neutral">AO</span> <span class="badge neutral">ACT</span> <span class="badge neutral">CCTP</span></dd>
+        </dl>
+        <div class="ff"><button class="btn ghost">Pièces (13)</button><button class="btn ghost">Équipe / CV (4)</button><button class="btn primary">Modifier</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- --- Identité & marque --- -->
+  <div class="cfg-view" id="cfg-identite" style="display:none">
+    <div class="note">Identité de la plateforme et valeurs par défaut des documents générés (rapports ACT, mémoires AO, CCTP). Remplace <span class="mono">IDENTITE_BUSCOT</span> (ACT), <span class="mono">pulzIdentite</span> (AO) et <span class="mono">THEME</span> (CCTP).</div>
+    <div class="panel"><div class="ph"><span class="t">Marque moeïa</span></div>
+      <dl style="padding:14px 16px;display:grid;grid-template-columns:160px 1fr;row-gap:8px;font-size:12.5px">
+        <dt class="k">Dénomination</dt><dd>moeïa — BUSCOT ENERGIES</dd>
+        <dt class="k">Baseline</dt><dd>Maîtrise d'œuvre augmentée par l'IA</dd>
+        <dt class="k">Logo</dt><dd><span class="badge neutral">moeia-logo.svg</span> <span class="badge neutral">moeia-picto.svg</span></dd>
+        <dt class="k">Encre documents</dt><dd><span class="swatch" style="background:#221F1A"></span><span class="mono">#221F1A</span></dd>
+        <dt class="k">Accent documents</dt><dd><span class="swatch" style="background:#0273C4"></span><span class="mono">#0273C4</span></dd>
+      </dl>
+    </div>
+  </div>
+
+  <!-- --- Pièces --- -->
+  <div class="cfg-view" id="cfg-pieces" style="display:none">
+    <div class="note">Le référentiel de pièces d'AO devient commun : dates de validité, alertes de péremption visibles depuis la page d'accueil et chaque module.</div>
+    <div class="panel" style="margin:0">
+      <div class="ph"><span class="t">Référentiel — BUSCOT ENERGIES (13 pièces)</span><button class="btn ghost" style="padding:5px 10px">+ Ajouter une pièce</button></div>
+      <table>
+        <thead><tr><th>Pièce</th><th>Catégorie</th><th>Date document</th><th class="r">Validité</th><th class="r">Statut</th><th class="r">Jours restants</th></tr></thead>
+        <tbody>
+          <tr><td><b>KBIS BUSCOT ENERGIES</b></td><td>Administratif</td><td class="mono">01/05/2026</td><td class="r mono">3 mois</td><td class="r"><span class="badge err">Périmé</span></td><td class="r mono" style="color:var(--err)">−105 j</td></tr>
+          <tr><td><b>Attestation de régularité fiscale</b></td><td>Fiscal / Social</td><td class="mono">13/01/2026</td><td class="r mono">6 mois</td><td class="r"><span class="badge err">Périmé</span></td><td class="r mono" style="color:var(--err)">−6 j</td></tr>
+          <tr><td><b>Attestation de vigilance URSSAF</b></td><td>Fiscal / Social</td><td class="mono">04/01/2026</td><td class="r mono">6 mois</td><td class="r"><span class="badge ok">OK</span></td><td class="r mono">74 j</td></tr>
+          <tr><td><b>Attestation d'assurance SMABTP</b></td><td>Assurance</td><td class="mono">22/12/2025</td><td class="r mono">jusqu'au 31/12/2026</td><td class="r"><span class="badge ok">OK</span></td><td class="r mono">165 j</td></tr>
+          <tr><td><b>Certification RGPD WAYBOX</b></td><td>Conformité</td><td class="mono">01/01/2026</td><td class="r mono">12 mois</td><td class="r"><span class="badge ok">OK</span></td><td class="r mono">166 j</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- --- Externes --- -->
+  <div class="cfg-view" id="cfg-externes" style="display:none">
+    <div class="note">Architectes mandataires et BET partenaires, aujourd'hui saisis uniquement dans AO — demain disponibles pour les organigrammes ACT et les pages de garde CCTP.</div>
+    <div class="panel" style="margin:0">
+      <div class="ph"><span class="t">Intervenants externes — 9</span><button class="btn ghost" style="padding:5px 10px">+ Ajouter</button></div>
+      <table>
+        <thead><tr><th>Intervenant</th><th>Type</th><th>Spécialité</th><th>Contact</th><th class="r">Utilisé dans</th></tr></thead>
+        <tbody>
+          <tr><td><span class="monogram">KA</span><b>KARDHAM ARCHITECTURE</b></td><td><span class="badge neutral">Architecte</span></td><td>Architecte (Ordre)</td><td>—</td><td class="r"><span class="badge neutral">AO</span></td></tr>
+          <tr><td><span class="monogram">EN</span><b>EXPERT NORD</b></td><td><span class="badge neutral">BET</span></td><td>BE amiante SS3</td><td>—</td><td class="r"><span class="badge neutral">AO</span></td></tr>
+          <tr><td><span class="monogram">PA</span><b>Paysagiste / Urbaniste</b></td><td><span class="badge neutral">Autre</span></td><td>Paysage, VRD</td><td>—</td><td class="r"><span class="badge neutral">AO</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- --- Préférences --- -->
+  <div class="cfg-view" id="cfg-prefs" style="display:none">
+    <div class="note">Réglages propres à chaque module (modèles de rapports ACT, trames CCTP, critères de notation…), stockés au même endroit mais à la main de chaque module.</div>
+    <div class="panel" style="margin:0">
+      <div class="ph"><span class="t">Préférences par module</span></div>
+      <table>
+        <thead><tr><th>Module</th><th>Clé</th><th>Valeur</th><th class="r">Modifié</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge neutral">ACT</span></td><td class="mono">criteres_notation</td><td>4 critères BUSCOT par défaut</td><td class="r mono">12/07</td></tr>
+          <tr><td><span class="badge neutral">AO</span></td><td class="mono">metiers_maitre</td><td>Liste des métiers du groupement</td><td class="r mono">03/07</td></tr>
+          <tr><td><span class="badge neutral">CCTP</span></td><td class="mono">trames</td><td>Trame CCTP lot CVC v3</td><td class="r mono">28/06</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+function show(v){
+  document.querySelectorAll('.view').forEach(e=>e.classList.remove('on'));
+  document.getElementById('view-'+v).classList.add('on');
+  document.getElementById('lnk-accueil').classList.toggle('on', v==='accueil');
+  document.getElementById('lnk-config').classList.toggle('on', v==='config');
+  window.scrollTo(0,0);
+}
+function cfgTab(t){
+  document.querySelectorAll('.cfg-view').forEach(e=>e.style.display='none');
+  document.getElementById('cfg-'+t).style.display='block';
+  document.querySelectorAll('.cfg-tabs a').forEach(a=>a.classList.toggle('on', a.dataset.t===t));
+}
+show('accueil');
+</script>
+</body>
+</html>

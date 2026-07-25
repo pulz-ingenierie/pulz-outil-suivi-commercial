@@ -1,0 +1,54 @@
+/* ============================================================================
+   moeïa — tokens CSS (source de vérité unique)
+   Réf. : moeia-direction-artistique.md §2
+   Pour le code hors Tailwind (styles inline, exports HTML, emails).
+   ============================================================================ */
+:root {
+  /* Neutres — encre & pierre */
+  --moeia-ink-900: #221F1A;
+  --moeia-ink-700: #57534E;
+  --moeia-ink-600: #6E6961;
+  --moeia-ink-500: #8F8A82;
+  --moeia-bg:      #F6F5F2;
+  --moeia-card:    #FBFAF8;
+  --moeia-paper:   #FFFFFF;
+  --moeia-line:    #E5E2DC;
+  --moeia-line-2:  #EEECE7;
+
+  /* Accent — cyan moeïa (unique) */
+  --moeia-cyan:        #04B7F9;  /* signal — jamais du texte */
+  --moeia-cyan-action: #0273C4;
+  --moeia-cyan-hover:  #01599A;
+  --moeia-cyan-soft:   #E9F6FD;
+  --moeia-cyan-border: #C4E9FA;
+  --moeia-cyan-track:  #D3EEFB;
+
+  /* Statuts */
+  --moeia-ok:        #3E7A4E;  --moeia-ok-soft:   #EAF2EC;
+  --moeia-warn:      #855900;  --moeia-warn-soft: #F8F0DC;
+  --moeia-err:       #B3352B;  --moeia-err-soft:  #F9EAE8;
+
+  /* Typographie */
+  --moeia-font-ui:      'Inter', system-ui, sans-serif;
+  --moeia-font-display: 'Space Grotesk', var(--moeia-font-ui);
+  --moeia-font-mono:    'JetBrains Mono', ui-monospace, monospace;
+  --moeia-text-xs: 11px;   --moeia-text-sm: 12.5px; --moeia-text-base: 14px;
+  --moeia-text-md: 16px;   --moeia-text-lg: 19px;   --moeia-text-xl: 24px;  --moeia-text-2xl: 30px;
+  --moeia-leading-tight: 1.3; --moeia-leading: 1.55;
+
+  /* Espacements (base 4px) */
+  --moeia-sp-0_5: 2px; --moeia-sp-1: 4px;  --moeia-sp-1_5: 6px; --moeia-sp-2: 8px;
+  --moeia-sp-3: 12px;  --moeia-sp-4: 16px; --moeia-sp-5: 20px;  --moeia-sp-6: 24px;
+  --moeia-sp-8: 32px;  --moeia-sp-12: 48px;
+
+  /* Rayons */
+  --moeia-r-sm: 4px; --moeia-r-md: 6px; --moeia-r-lg: 8px; --moeia-r-xl: 10px; --moeia-r-full: 999px;
+
+  /* Ombres */
+  --moeia-shadow-sm:    0 1px 2px rgba(34,31,26,.06);
+  --moeia-shadow-pop:   0 4px 16px rgba(34,31,26,.10);
+  --moeia-shadow-modal: 0 12px 36px rgba(34,31,26,.14);
+
+  /* Focus */
+  --moeia-focus: 0 0 0 2px var(--moeia-paper), 0 0 0 4px var(--moeia-cyan);
+}

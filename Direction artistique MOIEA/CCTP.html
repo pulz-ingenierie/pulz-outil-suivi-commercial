@@ -1,0 +1,2346 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Outil CCTP — PULZ</title>
+
+<!-- Tailwind CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  // ==========================================================================
+  // CONFIGURATION DE MARQUE (WHITE-LABEL) — cf. CADRAGE §11
+  // --------------------------------------------------------------------------
+  // Point UNIQUE de centralisation de l'esthétique : nom de l'outil, logo,
+  // palette de couleurs. À terme, en multi-tenant, cet objet sera CHARGÉ DEPUIS
+  // LA BASE par client (configuration de marque) — d'où la centralisation ici.
+  // RÈGLE : aucune couleur de marque ni logo codés « en dur » ailleurs dans
+  // l'application ; tout passe par window.THEME et la palette Tailwind `brand`.
+  // L'esthétique PULZ fine sera cadrée plus tard ; on reste sobre pour l'instant.
+  // ==========================================================================
+  window.THEME = {
+    nomOutil: 'Outil CCTP',
+    marque: 'PULZ',
+    logoUrl: null, // null → monogramme généré à partir de la marque
+    // Échelle de couleur « brand » (vert sobre par défaut). Exposée à Tailwind
+    // ci-dessous → utilisable via les classes bg-brand-600, text-brand-700, etc.
+    palette: {
+      50: '#ecfdf5', 100: '#d1fae5', 200: '#a7f3d0', 300: '#6ee7b7',
+      400: '#34d399', 500: '#10b981', 600: '#059669', 700: '#047857',
+      800: '#065f46', 900: '#064e3b'
+    }
+  };
+  tailwind.config = { theme: { extend: { colors: { brand: window.THEME.palette } } } };
+</script>
+
+<!-- React 18 + Babel (JSX compilé dans le navigateur), pattern pulz-outil-ao -->
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<!-- Babel ÉPINGLÉ en 7.x : le preset React y compile le JSX en runtime « classic »
+     (React.createElement, via le React UMD global ci-dessus). Sans épinglage, le
+     CDN sert la dernière version (8.x) dont le runtime par défaut « automatic »
+     injecte `import { jsx } from "react/jsx-runtime"` -> écran blanc + erreur
+     « Cannot use import statement outside a module ». NE PAS dépingler. -->
+<script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+
+<!-- Client Supabase (UMD) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- mammoth.js : extraction du texte des .docx côté navigateur (cf. ingestion) -->
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800">
+<div id="root" class="min-h-screen"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useCallback, useRef, useMemo } = React;
+
+// Configuration de marque centralisée (cf. <head>). JAMAIS de couleur/logo en
+// dur dans les composants : on lit THEME et on utilise les classes `brand-*`.
+const THEME = window.THEME;
+
+// --- Référentiels métier (alignés sur les CHECK du schéma Supabase) ----------
+// Un seul lot développé en v1 (cf. CADRAGE §2.5).
+const LOTS = [{ v: 'CVCP', l: 'CVCP — Chauffage Ventilation Climatisation Plomberie' }];
+const TYPOLOGIES = [
+  { v: 'tertiaire', l: 'Tertiaire' },
+  { v: 'logement', l: 'Logement' },
+  { v: 'industrie', l: 'Industrie' }
+];
+const MODES = [
+  { v: 'par_systeme', l: 'Par système' },
+  { v: 'par_espace', l: 'Par espace' }
+];
+const PHASES = [
+  { v: 'APS', l: 'APS' },
+  { v: 'APD', l: 'APD' },
+  { v: 'DCE', l: 'DCE' }
+];
+const libelle = (liste, v) => (liste.find(o => o.v === v) || {}).l || v || '—';
+
+// --- Connexion Supabase (config publique récupérée depuis /api/config) -------
+function useSupabase() {
+  const [client, setClient] = useState(null);
+  const [erreur, setErreur] = useState(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch('/api/config');
+        const cfg = await r.json();
+        if (!cfg.supabaseUrl || !cfg.supabaseAnonKey) {
+          setErreur('Config Supabase absente (variables d\'env Vercel non renseignées).');
+          return;
+        }
+        setClient(window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey));
+      } catch (e) {
+        setErreur('Impossible de charger /api/config : ' + (e.message || e));
+      }
+    })();
+  }, []);
+  return { client, erreur };
+}
+
+// ============================================================================
+// BRIQUES D'INTERFACE RÉUTILISABLES (stylées via la marque `brand`)
+// ============================================================================
+
+// Logo de marque : image si THEME.logoUrl, sinon monogramme généré.
+function Logo({ taille = 'md' }) {
+  const dim = taille === 'lg' ? 'h-10 w-10 text-base' : 'h-8 w-8 text-sm';
+  const initiales = (THEME.marque || THEME.nomOutil || '?').slice(0, 2).toUpperCase();
+  if (THEME.logoUrl) {
+    return <img src={THEME.logoUrl} alt={THEME.marque} className={dim + ' rounded-lg object-contain'} />;
+  }
+  return (
+    <div className={dim + ' rounded-lg bg-brand-600 text-white font-bold flex items-center justify-center'}>
+      {initiales}
+    </div>
+  );
+}
+
+function Badge({ children, ton = 'neutre' }) {
+  const tons = {
+    neutre: 'bg-slate-100 text-slate-600',
+    marque: 'bg-brand-50 text-brand-700',
+    attente: 'bg-slate-100 text-slate-600',
+    cours: 'bg-amber-100 text-amber-700',
+    ok: 'bg-brand-100 text-brand-800',
+    erreur: 'bg-red-100 text-red-700'
+  };
+  return <span className={'px-2 py-0.5 rounded text-xs font-medium ' + (tons[ton] || tons.neutre)}>{children}</span>;
+}
+
+function Bouton({ children, onClick, variant = 'primary', type = 'button', disabled, className = '' }) {
+  const styles = {
+    primary: 'bg-brand-600 hover:bg-brand-700 text-white',
+    secondaire: 'border border-slate-300 text-slate-700 hover:bg-slate-50',
+    ghost: 'text-slate-500 hover:text-slate-700 hover:underline'
+  };
+  const base = variant === 'ghost'
+    ? 'text-sm '
+    : 'text-sm rounded px-3.5 py-2 font-medium disabled:opacity-50 transition-colors ';
+  return (
+    <button type={type} onClick={onClick} disabled={disabled}
+      className={base + (styles[variant] || styles.primary) + ' ' + className}>
+      {children}
+    </button>
+  );
+}
+
+function Carte({ children, className = '', ...rest }) {
+  return <div className={'bg-white rounded-xl shadow-sm border border-slate-200 ' + className} {...rest}>{children}</div>;
+}
+
+function CentreMessage({ titre, texte }) {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <p className="text-lg font-semibold text-slate-700">{titre}</p>
+        {texte && <p className="text-sm text-slate-500 mt-2 max-w-md">{texte}</p>}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// AUTHENTIFICATION (logique inchangée — restylée marque)
+// ============================================================================
+function Auth({ client }) {
+  const [email, setEmail] = useState('');
+  const [mdp, setMdp] = useState('');
+  const [mode, setMode] = useState('connexion');
+  const [msg, setMsg] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const soumettre = async () => {
+    setBusy(true); setMsg(null);
+    try {
+      if (mode === 'connexion') {
+        const { error } = await client.auth.signInWithPassword({ email, password: mdp });
+        if (error) throw error;
+      } else {
+        const { error } = await client.auth.signUp({ email, password: mdp });
+        if (error) throw error;
+        setMsg('Compte créé. Vérifie tes mails si la confirmation est activée, puis connecte-toi.');
+        setMode('connexion');
+      }
+    } catch (e) {
+      setMsg('Erreur : ' + (e.message || e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="max-w-sm mx-auto mt-24">
+      <div className="flex items-center gap-3 mb-6 justify-center">
+        <Logo taille="lg" />
+        <div>
+          <h1 className="text-xl font-bold text-brand-700 leading-tight">{THEME.nomOutil}</h1>
+          <p className="text-xs text-slate-500">{THEME.marque}</p>
+        </div>
+      </div>
+      <Carte className="p-6">
+        <input className="w-full border rounded px-3 py-2 mb-3 text-sm" placeholder="email"
+          value={email} onChange={e => setEmail(e.target.value)} />
+        <input className="w-full border rounded px-3 py-2 mb-4 text-sm" type="password" placeholder="mot de passe"
+          value={mdp} onChange={e => setMdp(e.target.value)} />
+        <Bouton onClick={soumettre} disabled={busy} className="w-full justify-center">
+          {busy ? '…' : (mode === 'connexion' ? 'Se connecter' : 'Créer le compte')}
+        </Bouton>
+        <button onClick={() => setMode(mode === 'connexion' ? 'inscription' : 'connexion')}
+          className="w-full text-xs text-slate-500 mt-3 hover:underline">
+          {mode === 'connexion' ? 'Pas de compte ? Créer un compte' : 'Déjà un compte ? Se connecter'}
+        </button>
+        {msg && <p className="text-xs mt-4 text-slate-600">{msg}</p>}
+      </Carte>
+    </div>
+  );
+}
+
+// ============================================================================
+// EN-TÊTE APPLICATIF
+// ============================================================================
+function EnTete({ session, profil, onAccueil, onAdmin, client }) {
+  const estAdmin = profil && profil.role === 'admin';
+  return (
+    <header className="bg-white border-b border-slate-200">
+      <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
+        <button onClick={onAccueil} className="flex items-center gap-2.5">
+          <Logo />
+          <span className="font-semibold text-slate-800">{THEME.nomOutil}</span>
+          <span className="text-xs text-slate-400">· {THEME.marque}</span>
+        </button>
+        <div className="flex items-center gap-3">
+          {/* Entrée Administration : réservée au rôle admin (mine d'or, gabarits…). */}
+          {estAdmin && (
+            <Bouton variant="secondaire" onClick={onAdmin} className="hidden sm:inline-flex">Administration</Bouton>
+          )}
+          <span className="text-sm text-slate-500 hidden sm:inline">{session.user.email}</span>
+          {profil && <Badge ton="marque">{profil.role}</Badge>}
+          <Bouton variant="ghost" onClick={() => client.auth.signOut()}>Déconnexion</Bouton>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// ============================================================================
+// ÉCRAN — ACCUEIL / LISTE DES PROJETS
+// ============================================================================
+function EcranAccueil({ client, onNouveau, onOuvrir }) {
+  const [projets, setProjets] = useState(null); // null = chargement
+  const [suppr, setSuppr] = useState(null);     // id du projet en cours de suppression
+  const [err, setErr] = useState('');
+
+  const charger = useCallback(async () => {
+    const { data } = await client
+      .from('projets')
+      .select('*')
+      .order('created_at', { ascending: false });
+    setProjets(data || []);
+  }, [client]);
+  useEffect(() => { charger(); }, [charger]);
+
+  // Suppression complète d'un projet, sans orphelin :
+  //  1) fichiers du bucket 'pieces' (le cascade SQL ne touche PAS le storage) ;
+  //  2) ligne projets -> la DB cascade les 10 tables + les fiches projet (FK cascade).
+  const supprimerProjet = async (p) => {
+    if (!window.confirm('Supprimer définitivement « ' + p.nom + ' » et TOUTES ses données (pièces, fichiers, entonnoir, contexte) ? Action irréversible.')) return;
+    setSuppr(p.id); setErr('');
+    try {
+      const { data: objets } = await client.storage.from('pieces').list(p.id, { limit: 1000 });
+      const chemins = (objets || []).map((o) => p.id + '/' + o.name);
+      if (chemins.length) await client.storage.from('pieces').remove(chemins);
+      const { error } = await client.from('projets').delete().eq('id', p.id);
+      if (error) throw error;
+      await charger();
+    } catch (e) { setErr('Suppression : ' + (e.message || e)); }
+    setSuppr(null);
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Projets</h1>
+          <p className="text-sm text-slate-500">Vos opérations en cours de rédaction CCTP.</p>
+        </div>
+        <Bouton onClick={onNouveau}>+ Nouveau projet</Bouton>
+      </div>
+
+      {projets === null && <p className="text-sm text-slate-400">Chargement…</p>}
+      {err && <p className="text-sm text-red-600 mb-3">{err}</p>}
+
+      {projets !== null && projets.length === 0 && (
+        <Carte className="p-10 text-center">
+          <p className="text-slate-600 font-medium">Aucun projet pour l'instant.</p>
+          <p className="text-sm text-slate-400 mt-1 mb-5">Créez votre première opération pour démarrer.</p>
+          <Bouton onClick={onNouveau}>+ Nouveau projet</Bouton>
+        </Carte>
+      )}
+
+      {projets !== null && projets.length > 0 && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {projets.map(p => (
+            <div key={p.id} className="relative">
+              <div onClick={() => onOuvrir(p)} className="text-left cursor-pointer">
+                <Carte className="p-4 hover:border-brand-300 hover:shadow transition-all h-full">
+                  <h3 className="font-semibold text-slate-800 pr-8">{p.nom}</h3>
+                  <div className="flex flex-wrap gap-1.5 mt-3">
+                    <Badge ton="marque">{p.lot}</Badge>
+                    <Badge>{libelle(TYPOLOGIES, p.typologie)}</Badge>
+                    <Badge>{libelle(MODES, p.mode_organisation)}</Badge>
+                    <Badge>{libelle(PHASES, p.phase)}</Badge>
+                  </div>
+                </Carte>
+              </div>
+              <button title="Supprimer le projet" disabled={suppr === p.id}
+                onClick={(e) => { e.stopPropagation(); supprimerProjet(p); }}
+                className="absolute top-2 right-2 p-1.5 rounded text-slate-300 hover:text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors">
+                {suppr === p.id
+                  ? <span className="text-xs">…</span>
+                  : <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// ÉCRAN — CRÉATION DE PROJET (les 4 axes, cf. CADRAGE §2)
+// ============================================================================
+function ChoixAxe({ titre, options, valeur, onChange }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-slate-700 mb-1.5">{titre}</label>
+      <div className="flex flex-wrap gap-2">
+        {options.map(o => {
+          const actif = valeur === o.v;
+          return (
+            <button key={o.v} type="button" onClick={() => onChange(o.v)}
+              className={'text-sm rounded-lg px-3 py-1.5 border transition-colors ' +
+                (actif
+                  ? 'border-brand-600 bg-brand-50 text-brand-700 font-medium'
+                  : 'border-slate-300 text-slate-600 hover:bg-slate-50')}>
+              {o.l}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function EcranNouveauProjet({ client, user, onCree, onAnnuler }) {
+  const [nom, setNom] = useState('');
+  const [lot] = useState('CVCP'); // un seul lot en v1
+  const [typologie, setTypologie] = useState('tertiaire');
+  const [mode, setMode] = useState('par_systeme');
+  const [phase, setPhase] = useState('APS');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+
+  const creer = async () => {
+    if (!nom.trim()) { setErr('Donnez un nom au projet.'); return; }
+    setBusy(true); setErr(null);
+    const { data, error } = await client.from('projets').insert({
+      nom: nom.trim(), lot, typologie, mode_organisation: mode, phase,
+      cree_par: user.id
+    }).select().single();
+    setBusy(false);
+    if (error) { setErr('Erreur : ' + error.message); return; }
+    onCree(data);
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-8">
+      <button onClick={onAnnuler} className="text-sm text-slate-500 hover:underline mb-4">← Retour aux projets</button>
+      <h1 className="text-2xl font-bold text-slate-800 mb-1">Nouveau projet</h1>
+      <p className="text-sm text-slate-500 mb-6">Quatre axes structurent la génération du CCTP (cf. cadrage).</p>
+
+      <Carte className="p-6 space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Nom de l'opération</label>
+          <input className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="ex. Réhabilitation siège tertiaire — Lyon"
+            value={nom} onChange={e => setNom(e.target.value)} />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Lot / corps d'état</label>
+          <Badge ton="marque">{libelle(LOTS, lot)}</Badge>
+          <p className="text-xs text-slate-400 mt-1.5">Seul le lot CVCP est développé en v1 (cf. cadrage §2.5).</p>
+        </div>
+
+        <ChoixAxe titre="Typologie de projet" options={TYPOLOGIES} valeur={typologie} onChange={setTypologie} />
+        <ChoixAxe titre="Mode d'organisation" options={MODES} valeur={mode} onChange={setMode} />
+        <ChoixAxe titre="Phase / niveau de détail" options={PHASES} valeur={phase} onChange={setPhase} />
+
+        {err && <p className="text-sm text-red-600">{err}</p>}
+
+        <div className="flex gap-2 pt-2">
+          <Bouton onClick={creer} disabled={busy}>{busy ? 'Création…' : 'Créer le projet'}</Bouton>
+          <Bouton variant="secondaire" onClick={onAnnuler}>Annuler</Bouton>
+        </div>
+      </Carte>
+    </div>
+  );
+}
+
+// ============================================================================
+// ÉCRAN — ESPACE PROJET (onglets)
+// ============================================================================
+const ONGLETS = [
+  { k: 'pieces', l: 'Pièces' },
+  { k: 'cadrage', l: 'Cadrage' },
+  { k: 'contexte', l: 'Contexte' },
+  { k: 'architecture', l: 'Architecture' },
+  { k: 'generation', l: 'Génération' },
+  { k: 'livrables', l: 'Livrables' }
+];
+
+function EcranProjet({ client, projet, onRetour }) {
+  const [onglet, setOnglet] = useState('pieces');
+  // Signal « périmé » : du matériel (pièce/réponse) plus récent que la dernière
+  // synthèse / le dernier tour. Calculé ici (pour les pastilles d'onglet), passé
+  // aux onglets pour leurs bandeaux. L'humain déclenche la relance, jamais l'outil.
+  const [perime, setPerime] = useState({ contexte: false, entonnoir: false, pieces: [], pointsRepondus: [] });
+
+  const calcPerime = useCallback(async () => {
+    const phase = projet.phase;
+    const [rPc, rCtx, rTour, rRep, rPts] = await Promise.all([
+      client.from('pieces_projet').select('nom_fichier,updated_at,statut_extraction').eq('projet_id', projet.id).in('statut_extraction', ['fait', 'differe']),
+      client.from('contexte_projet').select('synthetise_a').eq('projet_id', projet.id).eq('phase', phase).maybeSingle(),
+      client.from('entonnoir_tours').select('created_at').eq('projet_id', projet.id).eq('phase', phase).order('created_at', { ascending: false }).limit(1),
+      client.from('reponses_entonnoir').select('created_at').eq('projet_id', projet.id).eq('phase', phase).eq('valide_humain', true),
+      client.from('points_contexte').select('texte,updated_at').eq('projet_id', projet.id).eq('phase', phase).eq('statut', 'repondu')  // 3e source
+    ]);
+    const ms = (d) => (d ? new Date(d).getTime() : null);
+    const synthA = rCtx.data && rCtx.data.synthetise_a ? ms(rCtx.data.synthetise_a) : null;
+    const dernierTour = rTour.data && rTour.data[0] ? ms(rTour.data[0].created_at) : null;
+    const piecesApresSynth = synthA ? (rPc.data || []).filter((p) => ms(p.updated_at) > synthA) : [];
+    const repsApresSynth = synthA ? (rRep.data || []).filter((r) => ms(r.created_at) > synthA) : [];
+    const ptsApresSynth = synthA ? (rPts.data || []).filter((p) => ms(p.updated_at) > synthA) : [];   // réponses à un point non intégrées
+    const piecesApresTour = dernierTour ? (rPc.data || []).filter((p) => ms(p.updated_at) > dernierTour) : [];
+    setPerime({
+      // contexte : pièces + réponses entonnoir + réponses à un point (3 sources, 1 détecteur)
+      contexte: synthA != null && (piecesApresSynth.length > 0 || repsApresSynth.length > 0 || ptsApresSynth.length > 0),
+      entonnoir: dernierTour != null && piecesApresTour.length > 0,   // pièces seulement (choix : un point est du raffinement aval)
+      pieces: piecesApresSynth.map((p) => p.nom_fichier),
+      pointsRepondus: ptsApresSynth.map((p) => p.texte)
+    });
+  }, [client, projet.id, projet.phase]);
+  useEffect(() => { calcPerime(); const t = setInterval(calcPerime, 4000); return () => clearInterval(t); }, [calcPerime]);
+
+  // Chaînage entonnoir -> contexte (cf. §13.3) : déclenché par l'humain
+  // (« Assez »), jamais en auto. Pose le job de synthèse et bascule sur Contexte.
+  const lancerSynthese = useCallback(async () => {
+    await client.from('generation_jobs').insert({
+      projet_id: projet.id, type: 'contexte_synthese', statut: 'en_attente',
+      payload_json: { projet_id: projet.id, phase: projet.phase }
+    });
+    await pousserWorker(client);
+    setOnglet('contexte');
+  }, [client, projet.id, projet.phase]);
+
+  const pastille = {
+    cadrage: perime.entonnoir || (perime.pointsRepondus || []).length > 0,   // entonnoir OU réponses non intégrées
+    contexte: perime.contexte
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-8">
+      <button onClick={onRetour} className="text-sm text-slate-500 hover:underline mb-4">← Tous les projets</button>
+      <div className="flex flex-wrap items-center gap-2 mb-5">
+        <h1 className="text-2xl font-bold text-slate-800 mr-1">{projet.nom}</h1>
+        <Badge ton="marque">{projet.lot}</Badge>
+        <Badge>{libelle(TYPOLOGIES, projet.typologie)}</Badge>
+        <Badge>{libelle(MODES, projet.mode_organisation)}</Badge>
+        <Badge>{libelle(PHASES, projet.phase)}</Badge>
+      </div>
+
+      <div className="border-b border-slate-200 flex gap-1 mb-6 overflow-x-auto">
+        {ONGLETS.map(o => {
+          const actif = onglet === o.k;
+          return (
+            <button key={o.k} onClick={() => setOnglet(o.k)}
+              className={'px-4 py-2.5 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors ' +
+                (actif
+                  ? 'border-brand-600 text-brand-700'
+                  : 'border-transparent text-slate-500 hover:text-slate-700')}>
+              {o.l}
+              {pastille[o.k] && <span title="Du matériel récent n'est pas intégré" className="inline-block ml-1.5 h-2 w-2 rounded-full bg-amber-500 align-middle" />}
+            </button>
+          );
+        })}
+      </div>
+
+      {onglet === 'pieces' && <OngletPieces client={client} projet={projet} />}
+      {onglet === 'architecture' && (
+        <PlaceholderOnglet titre="Architecture du CCTP"
+          description="Arborescence des chapitres, proposée puis éditée librement."
+          points={[
+            'Proposition d\'arborescence par l\'IA (à partir du schéma directeur + intrants)',
+            'Édition libre (drag & drop) — c\'est l\'arborescence validée qui pilote la génération'
+          ]} />
+      )}
+      {onglet === 'cadrage' && <OngletCadrage client={client} projet={projet} onSynthese={lancerSynthese} perimeEntonnoir={perime.entonnoir} pointsRepondus={perime.pointsRepondus} onAllerContexte={() => setOnglet('contexte')} />}
+      {onglet === 'contexte' && <OngletContexte client={client} projet={projet} perime={perime.contexte} nouvellesPieces={perime.pieces} pointsRepondus={perime.pointsRepondus} />}
+      {onglet === 'generation' && <OngletGeneration client={client} projet={projet} />}
+      {onglet === 'livrables' && (
+        <PlaceholderOnglet titre="Livrables"
+          description="CCTP produits, validés par chapitre, exportés au format marché."
+          points={[
+            'Relecture / validation chapitre par chapitre',
+            'Export Word (.docx) via le gabarit administrable sélectionné',
+            'Multilots : liste des CCTP du projet + fusion en document unique',
+            'Capitalisation inter-phases (APS → APD → DCE)'
+          ]} />
+      )}
+    </div>
+  );
+}
+
+function PlaceholderOnglet({ titre, description, points }) {
+  return (
+    <Carte className="p-6">
+      <div className="flex items-center gap-2 mb-1">
+        <h2 className="font-semibold text-slate-800">{titre}</h2>
+        <Badge>À venir — bloc B</Badge>
+      </div>
+      <p className="text-sm text-slate-500 mb-4">{description}</p>
+      <ul className="space-y-1.5">
+        {points.map((p, i) => (
+          <li key={i} className="text-sm text-slate-600 flex gap-2">
+            <span className="text-brand-500 mt-0.5">•</span><span>{p}</span>
+          </li>
+        ))}
+      </ul>
+    </Carte>
+  );
+}
+
+// --- Onglet Génération : suivi asynchrone RÉEL (generation_jobs du projet) ----
+// Réutilise le pipeline async déjà en place (worker à la demande). Les sections
+// sont factices tant que l'IA n'est pas branchée (bloc B), mais le mécanisme
+// — file, claim, progression, auto-enchaînement — est le vrai.
+function OngletGeneration({ client, projet }) {
+  const [jobs, setJobs] = useState([]);
+  const [busy, setBusy] = useState(false);
+
+  const charger = useCallback(async () => {
+    const { data } = await client
+      .from('generation_jobs')
+      .select('*')
+      .eq('projet_id', projet.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    setJobs(data || []);
+  }, [client, projet.id]);
+
+  // Polling toutes les 4 s (cf. CADRAGE §8.2).
+  useEffect(() => {
+    charger();
+    const t = setInterval(charger, 4000);
+    return () => clearInterval(t);
+  }, [charger]);
+
+  const lancerGeneration = async () => {
+    setBusy(true);
+    await client.from('generation_jobs').insert({
+      projet_id: projet.id,
+      type: 'test',
+      statut: 'en_attente',
+      total_sections: 3,
+      payload_json: { note: 'génération de démonstration (sections factices)' }
+    });
+    // Déclenchement À LA DEMANDE : on « pousse » le worker avec le JWT user ;
+    // il draine la file et s'auto-enchaîne ensuite (cf. api/worker.js).
+    try {
+      const { data: { session } } = await client.auth.getSession();
+      if (session) {
+        await fetch('/api/worker', {
+          method: 'POST',
+          headers: { authorization: `Bearer ${session.access_token}` }
+        });
+      }
+    } catch (_) { /* le cron quotidien reprendra au pire */ }
+    await charger();
+    setBusy(false);
+  };
+
+  const tonStatut = { en_attente: 'attente', en_cours: 'cours', termine: 'ok', erreur: 'erreur' };
+
+  return (
+    <Carte className="p-6">
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <h2 className="font-semibold text-slate-800">Génération asynchrone</h2>
+          <Badge ton="marque">infra réelle</Badge>
+        </div>
+        <Bouton onClick={lancerGeneration} disabled={busy}>
+          {busy ? '…' : 'Lancer une génération (test)'}
+        </Bouton>
+      </div>
+      <p className="text-xs text-slate-500 mb-4">
+        Le worker traite les sections en chaîne, indépendamment de l'onglet. Le statut passe
+        <span className="font-mono"> en_attente → en_cours → termine</span> tout seul.
+        Sections factices pour l'instant ; l'IA arrive au bloc B.
+      </p>
+      <div className="space-y-2">
+        {jobs.length === 0 && <p className="text-sm text-slate-400">Aucune génération lancée sur ce projet.</p>}
+        {jobs.map(j => (
+          <div key={j.id} className="flex items-center justify-between border rounded-lg px-3 py-2 text-sm">
+            <span className="font-mono text-xs text-slate-400">{j.id.slice(0, 8)}</span>
+            <span className="text-slate-600">section {j.progression_section}/{j.total_sections}</span>
+            <Badge ton={tonStatut[j.statut] || 'neutre'}>{j.statut}</Badge>
+          </div>
+        ))}
+      </div>
+    </Carte>
+  );
+}
+
+// ============================================================================
+// OUTIL COMMUN — pousser le worker (déclenchement à la demande, cf. api/worker.js)
+// ============================================================================
+async function pousserWorker(client) {
+  try {
+    const { data: { session } } = await client.auth.getSession();
+    if (session) {
+      await fetch('/api/worker', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${session.access_token}` }
+      });
+    }
+  } catch (_) { /* le cron quotidien reprendra au pire */ }
+}
+
+// ============================================================================
+// ESPACE PROJET — FLUX ÉTAPE 1 : PIÈCES → ENTONNOIR → CONTEXTE (§13.3)
+// Mêmes patterns que les écrans existants : client passé en prop, polling 4 s,
+// jobs posés en file + pousserWorker, briques Bouton/Carte/Badge.
+// ============================================================================
+const CATEGORIES_PIECE = [
+  { v: 'contexte', l: 'Contexte' },
+  { v: 'fiches', l: 'Fiches techniques' },
+  { v: 'plans', l: 'Plans / schémas' },
+  { v: 'mails', l: 'Mails' }
+];
+const TON_EXTRACTION = { en_attente: 'attente', en_cours: 'cours', fait: 'ok', differe: 'marque', erreur: 'erreur' };
+
+// --- Onglet PIÈCES : brief libre + upload (bucket 'pieces') + suivi extraction -
+function OngletPieces({ client, projet }) {
+  const [brief, setBrief] = useState(null);          // null = en cours de chargement
+  const [briefMsg, setBriefMsg] = useState('');
+  const [briefBusy, setBriefBusy] = useState(false);
+  const [pieces, setPieces] = useState(null);
+  const [cat, setCat] = useState('contexte');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [ouverts, setOuverts] = useState({});        // aperçus dépliés (par id)
+  const [annots, setAnnots] = useState({});          // brouillons d'annotation (par id)
+  const fileRef = useRef(null);
+
+  // Brief chargé UNE fois (le polling ne doit pas écraser la saisie en cours).
+  useEffect(() => {
+    (async () => {
+      const { data } = await client.from('brief').select('contenu').eq('projet_id', projet.id).maybeSingle();
+      setBrief((data && data.contenu) || '');
+    })();
+  }, [client, projet.id]);
+
+  const charger = useCallback(async () => {
+    const { data } = await client.from('pieces_projet')
+      .select('id,categorie,nom_fichier,mime,statut_extraction,mode_traitement,texte_extrait,vision_json,annotation_humaine,storage_path')
+      .eq('projet_id', projet.id).order('created_at', { ascending: true });
+    setPieces(data || []);
+  }, [client, projet.id]);
+  useEffect(() => { charger(); const t = setInterval(charger, 4000); return () => clearInterval(t); }, [charger]);
+
+  const enregistrerBrief = async () => {
+    setBriefBusy(true); setBriefMsg(''); setErr('');
+    const { error } = await client.from('brief').upsert(
+      { projet_id: projet.id, contenu: brief, updated_at: new Date().toISOString() }, { onConflict: 'projet_id' });
+    setBriefBusy(false);
+    if (error) setErr('Brief : ' + error.message); else setBriefMsg('Brief enregistré.');
+  };
+
+  const choisir = async (files) => {
+    if (!files || !files.length) return;
+    setBusy(true); setErr('');
+    try {
+      for (const f of Array.from(files)) {
+        const ext = (f.name.split('.').pop() || 'bin').toLowerCase();
+        const uid = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+        const chemin = projet.id + '/' + uid + '.' + ext;
+        const up = await client.storage.from('pieces').upload(chemin, f, { contentType: f.type || undefined, upsert: false });
+        if (up.error) throw up.error;
+        const { data: piece, error: ie } = await client.from('pieces_projet').insert({
+          projet_id: projet.id, categorie: cat, nom_fichier: f.name,
+          storage_path: chemin, mime: f.type || null, statut_extraction: 'en_attente'
+        }).select().single();
+        if (ie) throw ie;
+        await client.from('generation_jobs').insert({
+          projet_id: projet.id, type: 'piece_extraction', statut: 'en_attente', payload_json: { piece_id: piece.id }
+        });
+      }
+      await pousserWorker(client);
+      await charger();
+    } catch (e) { setErr('Chargement : ' + (e.message || e)); }
+    setBusy(false);
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const relancer = async (p) => {
+    await client.from('pieces_projet').update({ statut_extraction: 'en_attente' }).eq('id', p.id);
+    await client.from('generation_jobs').insert({ projet_id: projet.id, type: 'piece_extraction', statut: 'en_attente', payload_json: { piece_id: p.id } });
+    await pousserWorker(client); await charger();
+  };
+
+  const enregistrerAnnotation = async (p) => {
+    await client.from('pieces_projet').update({ annotation_humaine: annots[p.id] != null ? annots[p.id] : (p.annotation_humaine || '') }).eq('id', p.id);
+    await charger();
+  };
+
+  const supprimer = async (p) => {
+    if (!window.confirm('Supprimer « ' + p.nom_fichier + ' » ?')) return;
+    if (p.storage_path) await client.storage.from('pieces').remove([p.storage_path]);
+    await client.from('pieces_projet').delete().eq('id', p.id);
+    await charger();
+  };
+
+  return (
+    <div className="space-y-6">
+      <Carte className="p-6">
+        <h2 className="font-semibold text-slate-800 mb-1">Brief libre</h2>
+        <p className="text-sm text-slate-500 mb-3">Topo écrit du projet — repris comme matériau de cadrage (entonnoir, contexte).</p>
+        <textarea className="w-full border rounded-lg px-3 py-2 text-sm text-slate-700 font-sans"
+          rows={5} value={brief || ''} placeholder="Décrivez le contexte du projet…"
+          onChange={(e) => { setBrief(e.target.value); setBriefMsg(''); }} />
+        <div className="flex items-center gap-3 mt-2">
+          <Bouton onClick={enregistrerBrief} disabled={briefBusy || brief === null}>{briefBusy ? '…' : 'Enregistrer le brief'}</Bouton>
+          {briefMsg && <span className="text-sm text-green-700">{briefMsg}</span>}
+        </div>
+      </Carte>
+
+      <Carte className="p-6">
+        <h2 className="font-semibold text-slate-800 mb-3">Charger des pièces</h2>
+        <div className="flex flex-wrap items-center gap-3 mb-3">
+          <label className="text-sm text-slate-600">Catégorie</label>
+          <select className="border rounded-lg px-3 py-2 text-sm" value={cat} onChange={(e) => setCat(e.target.value)}>
+            {CATEGORIES_PIECE.map((c) => <option key={c.v} value={c.v}>{c.l}</option>)}
+          </select>
+        </div>
+        <label className="block border-2 border-dashed border-slate-300 rounded-xl p-6 text-center cursor-pointer hover:border-brand-400 transition-colors"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => { e.preventDefault(); choisir(e.dataTransfer.files); }}>
+          <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => choisir(e.target.files)} />
+          <p className="text-slate-500 text-sm">{busy ? 'Chargement…' : 'Glissez un ou plusieurs fichiers ici, ou cliquez pour parcourir'}</p>
+          <p className="text-xs text-slate-400 mt-1">L'extraction démarre automatiquement : texte (contexte/mails), vision (fiches), différé (plans).</p>
+        </label>
+        {err && <p className="text-sm text-red-600 mt-3">{err}</p>}
+      </Carte>
+
+      <div className="space-y-3">
+        {pieces === null && <p className="text-sm text-slate-400">Chargement…</p>}
+        {pieces && pieces.length === 0 && <p className="text-sm text-slate-400">Aucune pièce chargée.</p>}
+        {pieces && pieces.map((p) => {
+          const ouvert = ouverts[p.id];
+          const valeurs = p.vision_json && p.vision_json.valeurs;
+          return (
+            <Carte key={p.id} className="p-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-medium text-slate-800">{p.nom_fichier}</span>
+                <Badge>{libelle(CATEGORIES_PIECE, p.categorie)}</Badge>
+                <Badge ton={TON_EXTRACTION[p.statut_extraction] || 'neutre'}>{p.statut_extraction}</Badge>
+                <span className="flex-1" />
+                {p.statut_extraction === 'fait' && (p.texte_extrait || valeurs) &&
+                  <Bouton variant="ghost" onClick={() => setOuverts((o) => ({ ...o, [p.id]: !o[p.id] }))}>{ouvert ? 'Masquer' : 'Aperçu'}</Bouton>}
+                {p.statut_extraction === 'erreur' &&
+                  <Bouton variant="secondaire" onClick={() => relancer(p)}>Relancer</Bouton>}
+                <Bouton variant="ghost" onClick={() => supprimer(p)}>Supprimer</Bouton>
+              </div>
+
+              {p.statut_extraction === 'erreur' &&
+                <p className="text-sm text-red-600 mt-2">Échec de l'extraction (détail dans l'onglet Génération). Vous pouvez relancer.</p>}
+
+              {p.statut_extraction === 'differe' && (
+                <div className="mt-3">
+                  <p className="text-xs text-slate-500 mb-1">Plan/schéma non interprété automatiquement — saisissez l'apport manuel :</p>
+                  <textarea className="w-full border rounded-lg px-3 py-2 text-sm text-slate-700 font-sans"
+                    rows={3} value={annots[p.id] != null ? annots[p.id] : (p.annotation_humaine || '')}
+                    onChange={(e) => setAnnots((a) => ({ ...a, [p.id]: e.target.value }))} />
+                  <div className="mt-2"><Bouton variant="secondaire" onClick={() => enregistrerAnnotation(p)}>Enregistrer l'annotation</Bouton></div>
+                </div>
+              )}
+
+              {ouvert && (
+                <div className="mt-3 space-y-3">
+                  {p.texte_extrait &&
+                    <pre className="whitespace-pre-wrap text-xs text-slate-600 bg-slate-50 rounded-lg p-3 max-h-60 overflow-auto font-sans">{p.texte_extrait}</pre>}
+                  {valeurs && (
+                    <div className="text-xs">
+                      <p className="font-semibold text-slate-600 mb-1">Valeurs extraites</p>
+                      <div className="border rounded-lg divide-y">
+                        {Object.keys(valeurs).map((k) => (
+                          <div key={k} className="flex gap-3 px-3 py-1.5">
+                            <span className="text-slate-500 w-1/2">{k}</span><span className="text-slate-700 w-1/2">{String(valeurs[k])}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </Carte>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// --- Onglet ENTONNOIR : questions par thème, réponse libre, Valider / Passer --
+// Encart « Avant synthèse » de l'onglet Cadrage : l'entonnoir adaptatif (inchangé).
+function EncartEntonnoir({ client, projet, onSynthese, perime }) {
+  const phase = projet.phase;
+  const [reps, setReps] = useState(null);
+  const [tours, setTours] = useState(null);          // bilans par tour
+  const [drafts, setDrafts] = useState({});
+  const [plies, setPlies] = useState({});
+  const [actif, setActif] = useState(false);         // job entonnoir en cours
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [focusOuvert, setFocusOuvert] = useState(false);
+  const [focusTexte, setFocusTexte] = useState('');
+
+  const charger = useCallback(async () => {
+    const { data } = await client.from('reponses_entonnoir')
+      .select('id,strate,theme,question,reponse,statut,valide_humain,importance')
+      .eq('projet_id', projet.id).eq('phase', phase)
+      .order('strate', { ascending: true }).order('created_at', { ascending: true });
+    setReps(data || []);
+    const { data: tr } = await client.from('entonnoir_tours')
+      .select('strate,statut_cadrage,justification,points_mineurs_json,focus')
+      .eq('projet_id', projet.id).eq('phase', phase).order('strate', { ascending: true });
+    setTours(tr || []);
+    const { data: jobs } = await client.from('generation_jobs')
+      .select('type').eq('projet_id', projet.id).in('statut', ['en_attente', 'en_cours']);
+    setActif((jobs || []).some((j) => j.type === 'entonnoir_questions'));
+  }, [client, projet.id, phase]);
+  useEffect(() => { charger(); const t = setInterval(charger, 4000); return () => clearInterval(t); }, [charger]);
+
+  const maxStrate = Math.max(
+    (reps || []).reduce((m, r) => Math.max(m, r.strate || 0), 0),
+    (tours || []).reduce((m, t) => Math.max(m, t.strate || 0), 0));
+  const dernierTour = (tours || []).length ? tours[tours.length - 1] : null;
+  const suffisant = dernierTour && dernierTour.statut_cadrage === 'suffisant';
+
+  const demarrer = async (strate, focus) => {
+    setBusy(true); setErr('');
+    try {
+      await client.from('generation_jobs').insert({
+        projet_id: projet.id, type: 'entonnoir_questions', statut: 'en_attente',
+        payload_json: focus ? { projet_id: projet.id, phase, strate, focus } : { projet_id: projet.id, phase, strate }
+      });
+      await pousserWorker(client);
+      setFocusOuvert(false); setFocusTexte('');
+      await charger();
+    } catch (e) { setErr(e.message || String(e)); }
+    setBusy(false);
+  };
+
+  const valider = async (r) => {
+    await client.from('reponses_entonnoir').update({
+      reponse: drafts[r.id] != null ? drafts[r.id] : (r.reponse || ''), statut: 'conforme', valide_humain: true
+    }).eq('id', r.id);
+    await charger();
+  };
+  const passer = async (r) => {
+    await client.from('reponses_entonnoir').update({ statut: 'passee', valide_humain: true, reponse: null }).eq('id', r.id);
+    setDrafts((d) => { const n = { ...d }; delete n[r.id]; return n; });
+    await charger();
+  };
+
+  const groupes = useMemo(() => {
+    const m = new Map();
+    for (const r of (reps || [])) {
+      const k = r.theme || 'autre';
+      if (!m.has(k)) m.set(k, []);
+      m.get(k).push(r);
+    }
+    return Array.from(m, (e) => ({ theme: e[0], items: e[1] }));
+  }, [reps]);
+
+  const nbSansReponse = (reps || []).filter((r) => !r.valide_humain).length;
+
+  if (reps === null || tours === null) return <Carte className="p-6"><p className="text-sm text-slate-400">Chargement…</p></Carte>;
+
+  // Champ d'approfondissement ciblé (réutilisé par la carte-signal et le pied).
+  const champFocus = (
+    <div className="w-full mt-2">
+      <p className="text-xs text-slate-500 mb-1">Quel point creuser ? (l'IA ciblera ce tour dessus)</p>
+      <div className="flex gap-2">
+        <input className="flex-1 border rounded-lg px-3 py-2 text-sm" placeholder="ex. la régulation / GTB, les limites avec le lot électricité…"
+          value={focusTexte} onChange={(e) => setFocusTexte(e.target.value)} />
+        <Bouton onClick={() => demarrer(maxStrate + 1, focusTexte.trim())} disabled={busy || actif || !focusTexte.trim()}>Creuser</Bouton>
+        <Bouton variant="ghost" onClick={() => { setFocusOuvert(false); setFocusTexte(''); }}>Annuler</Bouton>
+      </div>
+    </div>
+  );
+
+  if (tours.length === 0) {
+    return (
+      <Carte className="p-6">
+        <h2 className="font-semibold text-slate-800 mb-1">Entonnoir de cadrage — phase {libelle(PHASES, phase)}</h2>
+        <p className="text-sm text-slate-500 mb-4">Entonnoir adaptatif : l'IA pose des questions tant qu'il reste des lacunes majeures, et signale quand le cadrage est suffisant. Chargez les pièces d'abord (elles nourrissent les questions).</p>
+        {actif
+          ? <p className="text-sm text-amber-700">Évaluation du cadrage en cours…</p>
+          : <Bouton onClick={() => demarrer(1)} disabled={busy}>{busy ? '…' : "Démarrer l'entonnoir"}</Bouton>}
+        {err && <p className="text-sm text-red-600 mt-3">{err}</p>}
+      </Carte>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {perime && (
+        <Carte className="p-4 border-amber-200 bg-amber-50 flex items-center gap-3 flex-wrap">
+          <span className="text-sm text-amber-800">🔄 Nouvelle(s) pièce(s) depuis le dernier tour — l'entonnoir pourrait avoir de nouvelles lacunes à explorer.</span>
+          <span className="flex-1" />
+          <Bouton variant="secondaire" onClick={() => demarrer(maxStrate + 1)} disabled={busy || actif}>Relancer l'entonnoir</Bouton>
+        </Carte>
+      )}
+      <Carte className="p-4 flex items-center gap-3 flex-wrap">
+        <h2 className="font-semibold text-slate-800">Entonnoir — phase {libelle(PHASES, phase)}</h2>
+        <Badge>Tour {maxStrate}</Badge>
+        {nbSansReponse > 0 && <Badge ton="attente">{nbSansReponse} sans réponse</Badge>}
+        {actif && <span className="text-sm text-amber-700">Évaluation en cours…</span>}
+        <span className="flex-1" />
+        {!suffisant && <Bouton variant="secondaire" onClick={() => demarrer(maxStrate + 1)} disabled={busy || actif}>Continuer — évaluer le cadrage</Bouton>}
+        <Bouton onClick={onSynthese}>Assez — synthétiser le contexte</Bouton>
+      </Carte>
+
+      {suffisant && (
+        <Carte className="p-5 border-brand-200 bg-brand-50">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-brand-700">✅</span>
+            <h3 className="font-semibold text-brand-800">Cadrage suffisant pour la phase {libelle(PHASES, phase)}</h3>
+          </div>
+          {dernierTour.justification && <p className="text-sm text-slate-700 mb-2">{dernierTour.justification}</p>}
+          {(dernierTour.points_mineurs_json || []).length > 0 && (
+            <div className="mb-3">
+              <p className="text-xs text-slate-500 mb-1">Points que vous pourriez préciser (optionnel) :</p>
+              <ul className="text-sm text-slate-600 space-y-0.5">
+                {(dernierTour.points_mineurs_json || []).map((p, i) => <li key={i} className="flex gap-2"><span className="text-brand-500 mt-0.5">•</span><span>{p}</span></li>)}
+              </ul>
+            </div>
+          )}
+          <p className="text-sm text-slate-600 mb-2">Prêt pour la synthèse — ou souhaitez-vous approfondir un point précis ?</p>
+          <div className="flex gap-2 flex-wrap">
+            <Bouton onClick={onSynthese}>Assez, synthétiser le contexte</Bouton>
+            {!focusOuvert && <Bouton variant="secondaire" onClick={() => setFocusOuvert(true)} disabled={actif}>Approfondir un point…</Bouton>}
+          </div>
+          {focusOuvert && (
+            <div>
+              <p className="text-xs text-amber-700 mt-3">L'IA n'identifie plus de lacune majeure — vous demandez un approfondissement ciblé.</p>
+              {champFocus}
+            </div>
+          )}
+        </Carte>
+      )}
+
+      {groupes.map((g) => {
+        const plie = plies[g.theme];
+        return (
+          <div key={g.theme} className="rounded-xl border border-slate-200 overflow-hidden">
+            <button onClick={() => setPlies((p) => ({ ...p, [g.theme]: !p[g.theme] }))}
+              className="w-full flex items-center justify-between gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-left">
+              <span className="text-sm font-semibold text-slate-700">{plie ? '▸' : '▾'} {g.theme}</span>
+              <span className="text-xs text-slate-500">{g.items.length} question(s)</span>
+            </button>
+            {!plie && (
+              <div className="p-3 space-y-3 bg-white">
+                {g.items.map((r) => (
+                  <div key={r.id} className="border rounded-lg p-3">
+                    <div className="flex items-start gap-2 mb-2">
+                      <p className="text-sm text-slate-800 flex-1">{r.question}</p>
+                      {r.importance === 'mineure' && <Badge ton="neutre">mineure</Badge>}
+                      {r.valide_humain && <Badge ton={r.statut === 'passee' ? 'neutre' : 'ok'}>{r.statut === 'passee' ? '⏭️ passé' : '✅ validé'}</Badge>}
+                    </div>
+                    <textarea className="w-full border rounded-lg px-3 py-2 text-sm text-slate-700 font-sans"
+                      rows={2} placeholder="Réponse libre…" value={drafts[r.id] != null ? drafts[r.id] : (r.reponse || '')}
+                      onChange={(e) => setDrafts((d) => ({ ...d, [r.id]: e.target.value }))} />
+                    <div className="flex gap-2 mt-2">
+                      <Bouton variant="secondaire" onClick={() => valider(r)}>Valider</Bouton>
+                      <Bouton variant="ghost" onClick={() => passer(r)}>Passer</Bouton>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {err && <p className="text-sm text-red-600">{err}</p>}
+    </div>
+  );
+}
+
+// --- Onglet CADRAGE : deux encarts par MOMENT (avant / après synthèse) ---------
+function OngletCadrage({ client, projet, onSynthese, perimeEntonnoir, pointsRepondus, onAllerContexte }) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <h2 className="font-semibold text-slate-800">Avant synthèse</h2>
+          <Badge>questions de cadrage</Badge>
+        </div>
+        <EncartEntonnoir client={client} projet={projet} onSynthese={onSynthese} perime={perimeEntonnoir} />
+      </div>
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <h2 className="font-semibold text-slate-800">Après synthèse</h2>
+          <Badge ton="neutre">précisions d'exécution</Badge>
+        </div>
+        <PointsAPreciser client={client} projet={projet} pointsRepondus={pointsRepondus} onAllerContexte={onAllerContexte} />
+      </div>
+    </div>
+  );
+}
+
+// --- Encart « Après synthèse » : points de précision répondables (volet 2) -----
+// Précisions d'EXÉCUTION non bloquantes (le cadrage reste suffisant). Répondre =
+// matériel validé -> périme le contexte -> re-synthèse sur l'onglet Contexte.
+function PointsAPreciser({ client, projet, pointsRepondus, onAllerContexte }) {
+  const phase = projet.phase;
+  const [points, setPoints] = useState(null);
+  const [ptDrafts, setPtDrafts] = useState({});
+
+  const charger = useCallback(async () => {
+    const { data } = await client.from('points_contexte')
+      .select('id,texte,reponse,statut').eq('projet_id', projet.id).eq('phase', phase)
+      .neq('statut', 'obsolete').order('created_at', { ascending: true });
+    setPoints(data || []);
+  }, [client, projet.id, phase]);
+  useEffect(() => { charger(); const t = setInterval(charger, 4000); return () => clearInterval(t); }, [charger]);
+
+  const repondrePoint = async (p) => {
+    const rep = ptDrafts[p.id] != null ? ptDrafts[p.id] : (p.reponse || '');
+    await client.from('points_contexte').update({ reponse: rep, statut: 'repondu' }).eq('id', p.id);
+    await charger();
+  };
+  const pourMoaPoint = async (p) => {
+    await client.from('points_contexte').update({ statut: 'pour_moa' }).eq('id', p.id);
+    await charger();
+  };
+
+  if (points === null) return <Carte className="p-5"><p className="text-sm text-slate-400">Chargement…</p></Carte>;
+
+  return (
+    <Carte className="p-5">
+      <h3 className="font-semibold text-slate-800 mb-1">Précisions d'exécution (optionnel)</h3>
+      <p className="text-xs text-slate-500 mb-3">Le cadrage reste suffisant sans elles. Répondez pour enrichir le contexte (re-synthétisez ensuite pour intégrer) ou escaladez à la maîtrise d'ouvrage.</p>
+      {(pointsRepondus || []).length > 0 && (
+        <div className="mb-3 p-3 rounded-lg border border-brand-200 bg-brand-50 flex items-center gap-3 flex-wrap">
+          <span className="text-sm text-brand-800">🔄 Réponses non intégrées : {(pointsRepondus || []).join(' ; ')}</span>
+          <span className="flex-1" />
+          <Bouton variant="secondaire" onClick={onAllerContexte}>Aller au contexte</Bouton>
+        </div>
+      )}
+      {points.length === 0 && <p className="text-xs text-slate-500">Aucune précision en attente (générées à la synthèse du contexte).</p>}
+      <div className="space-y-3">
+        {points.map((p) => (
+          <div key={p.id} className="border border-slate-200 rounded-lg p-3 bg-white">
+            <div className="flex items-start gap-2 mb-2">
+              <p className="text-sm text-slate-800 flex-1">{p.texte}</p>
+              {p.statut === 'repondu' && <Badge ton="ok">✅ répondu</Badge>}
+              {p.statut === 'pour_moa' && <Badge ton="marque">📮 pour MOA</Badge>}
+            </div>
+            <textarea className="w-full border rounded-lg px-3 py-2 text-sm text-slate-700 font-sans"
+              rows={2} placeholder="Votre réponse (précision)…"
+              value={ptDrafts[p.id] != null ? ptDrafts[p.id] : (p.reponse || '')}
+              onChange={(e) => setPtDrafts((d) => ({ ...d, [p.id]: e.target.value }))} />
+            <div className="flex gap-2 mt-2">
+              <Bouton variant="secondaire" onClick={() => repondrePoint(p)}>Répondre</Bouton>
+              <Bouton variant="ghost" onClick={() => pourMoaPoint(p)}>Pour la MOA</Bouton>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Carte>
+  );
+}
+
+// --- Petite liste éditable (chips texte) réutilisée par le contexte -----------
+function ListeEditable({ titre, accent, items, onChange }) {
+  const arr = items || [];
+  return (
+    <div>
+      <p className={'text-sm font-semibold mb-1 ' + (accent || 'text-slate-700')}>{titre}</p>
+      <div className="space-y-1.5">
+        {arr.length === 0 && <p className="text-xs text-slate-400">—</p>}
+        {arr.map((it, i) => (
+          <div key={i} className="flex gap-2">
+            <input className="flex-1 border rounded-lg px-2 py-1 text-sm text-slate-700"
+              value={it} onChange={(e) => onChange(arr.map((x, j) => (j === i ? e.target.value : x)))} />
+            <button className="text-slate-400 hover:text-red-600 px-1" onClick={() => onChange(arr.filter((_, j) => j !== i))}>×</button>
+          </div>
+        ))}
+      </div>
+      <button className="text-xs text-brand-600 hover:underline mt-1.5" onClick={() => onChange(arr.concat(['']))}>+ ajouter</button>
+    </div>
+  );
+}
+
+const CHAMPS_SYNTHESE = [
+  { k: 'equipements_presents', l: 'Équipements présents' },
+  { k: 'equipements_absents', l: 'Équipements absents' },
+  { k: 'exclusions', l: 'Exclusions' },
+  { k: 'contraintes', l: 'Contraintes' }
+];
+
+// --- Onglet CONTEXTE : synthèse éditable + validation (protégée) --------------
+function OngletContexte({ client, projet, perime, nouvellesPieces, pointsRepondus }) {
+  const phase = projet.phase;
+  const [ctx, setCtx] = useState(undefined);         // undefined=chargement, null=absent
+  const [form, setForm] = useState(null);            // { contenu, synthese:{...} }
+  const [actif, setActif] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+  const dirty = useRef(false);                        // l'utilisateur a édité
+  const synced = useRef(null);                        // updated_at déjà chargé dans le form
+
+  const charger = useCallback(async () => {
+    const { data } = await client.from('contexte_projet').select('*')
+      .eq('projet_id', projet.id).eq('phase', phase).maybeSingle();
+    setCtx(data || null);
+    const { data: jobs } = await client.from('generation_jobs')
+      .select('type').eq('projet_id', projet.id).in('statut', ['en_attente', 'en_cours']);
+    setActif((jobs || []).some((j) => j.type === 'contexte_synthese'));
+  }, [client, projet.id, phase]);
+  useEffect(() => { charger(); const t = setInterval(charger, 4000); return () => clearInterval(t); }, [charger]);
+
+  // Initialise/rafraîchit le formulaire depuis la base tant que l'utilisateur
+  // n'a pas commencé à éditer (affiche une re-synthèse fraîche sans écraser une saisie).
+  useEffect(() => {
+    if (ctx && !dirty.current && ctx.updated_at !== synced.current) {
+      const sj = ctx.synthese_json || {};
+      setForm({
+        contenu: ctx.contenu || '',
+        synthese: {
+          equipements_presents: sj.equipements_presents || [],
+          equipements_absents: sj.equipements_absents || [],
+          exclusions: sj.exclusions || [],
+          contraintes: sj.contraintes || []
+          // points_a_preciser : géré à part dans points_contexte (volet 2)
+        }
+      });
+      synced.current = ctx.updated_at;
+    }
+  }, [ctx]);
+
+  const editForm = (maj) => { dirty.current = true; setMsg(''); setForm(maj); };
+  const majSynthese = (k, v) => editForm({ ...form, synthese: { ...form.synthese, [k]: v } });
+
+  const synthetiser = async (force) => {
+    if (force && !window.confirm('Re-synthétiser écrasera le contenu actuel (y compris vos retouches). Continuer ?')) return;
+    setBusy(true); setErr('');
+    try {
+      await client.from('generation_jobs').insert({
+        projet_id: projet.id, type: 'contexte_synthese', statut: 'en_attente',
+        payload_json: force ? { projet_id: projet.id, phase, force: true } : { projet_id: projet.id, phase }
+      });
+      await pousserWorker(client);
+      dirty.current = false;                           // on acceptera le résultat frais
+      await charger();
+    } catch (e) { setErr(e.message || String(e)); }
+    setBusy(false);
+  };
+
+  const enregistrer = async (valider) => {
+    setBusy(true); setErr(''); setMsg('');
+    try {
+      const { error } = await client.from('contexte_projet').update({
+        contenu: form.contenu, synthese_json: form.synthese,
+        statut: valider ? 'valide' : 'en_construction', updated_at: new Date().toISOString()
+      }).eq('id', ctx.id);
+      if (error) throw error;
+      dirty.current = false; synced.current = null;    // resync au prochain charger
+      setMsg(valider ? 'Contexte validé.' : 'Enregistré.');
+      await charger();
+    } catch (e) { setErr(e.message || String(e)); }
+    setBusy(false);
+  };
+
+  if (ctx === undefined) return <Carte className="p-6"><p className="text-sm text-slate-400">Chargement…</p></Carte>;
+
+  if (ctx === null) {
+    return (
+      <Carte className="p-6">
+        <h2 className="font-semibold text-slate-800 mb-1">Contexte du projet — phase {libelle(PHASES, phase)}</h2>
+        <p className="text-sm text-slate-500 mb-4">Synthèse factuelle qui oriente la suite. Puise dans le brief, les pièces extraites et les réponses validées de l'entonnoir.</p>
+        {actif
+          ? <p className="text-sm text-amber-700">Synthèse en cours…</p>
+          : <Bouton onClick={() => synthetiser(false)} disabled={busy}>{busy ? '…' : 'Synthétiser le contexte'}</Bouton>}
+        {err && <p className="text-sm text-red-600 mt-3">{err}</p>}
+      </Carte>
+    );
+  }
+
+  const valide = ctx.statut === 'valide';
+  return (
+    <div className="space-y-4">
+      {perime && (
+        <Carte className="p-4 border-amber-200 bg-amber-50">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-sm text-amber-800">🔄 Du matériel récent n'est pas intégré : le contexte n'est plus à jour depuis la dernière synthèse.</span>
+            <span className="flex-1" />
+            <Bouton variant="secondaire" onClick={() => synthetiser(valide)} disabled={busy || actif}>Re-synthétiser</Bouton>
+          </div>
+          {(nouvellesPieces || []).length > 0 &&
+            <p className="text-xs text-amber-700 mt-2">Nouvelles pièces : {(nouvellesPieces || []).join(', ')}</p>}
+          {(pointsRepondus || []).length > 0 &&
+            <p className="text-xs text-amber-700 mt-2">Réponses à intégrer : {(pointsRepondus || []).join(' ; ')}</p>}
+        </Carte>
+      )}
+      <Carte className="p-4 flex items-center gap-3 flex-wrap">
+        <h2 className="font-semibold text-slate-800">Contexte — phase {libelle(PHASES, phase)}</h2>
+        <Badge ton={valide ? 'ok' : 'cours'}>{valide ? 'validé' : 'en construction'}</Badge>
+        {actif && <span className="text-sm text-amber-700">Synthèse en cours…</span>}
+        <span className="flex-1" />
+        <Bouton variant="secondaire" onClick={() => synthetiser(valide)} disabled={busy || actif}>Re-synthétiser</Bouton>
+        <Bouton variant="secondaire" onClick={() => enregistrer(false)} disabled={busy || !form}>Enregistrer</Bouton>
+        <Bouton onClick={() => enregistrer(true)} disabled={busy || !form}>Valider le contexte</Bouton>
+      </Carte>
+      {msg && <p className="text-sm text-green-700">{msg}</p>}
+      {err && <p className="text-sm text-red-600">{err}</p>}
+
+      {form && (
+        <div className="space-y-4">
+          <Carte className="p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="font-semibold text-slate-800">Contenu</h3>
+              {ctx.contenu_complet === false && <Badge ton="cours">contenu tronqué — régénérer</Badge>}
+            </div>
+            {ctx.contenu_complet === false && (
+              <p className="text-xs text-amber-700 mb-2">La prose a été coupée (limite de longueur). Le pilote (listes ci-dessous) reste fiable. Vous pouvez « Re-synthétiser » pour régénérer la prose.</p>
+            )}
+            <textarea className="w-full border rounded-lg px-3 py-2 text-sm text-slate-700 font-sans"
+              rows={Math.min(30, Math.max(8, Math.ceil((form.contenu || '').length / 80)))}
+              value={form.contenu} onChange={(e) => editForm({ ...form, contenu: e.target.value })} />
+          </Carte>
+
+          <Carte className="p-5 grid md:grid-cols-2 gap-5">
+            {CHAMPS_SYNTHESE.map((c) => (
+              <ListeEditable key={c.k} titre={c.l} items={form.synthese[c.k]} onChange={(v) => majSynthese(c.k, v)} />
+            ))}
+          </Carte>
+
+        </div>
+      )}
+    </div>
+  );
+}
+
+const tonStatutIngestion = {
+  analyse: 'cours', a_valider: 'marque', capitalise: 'ok', erreur: 'erreur'
+};
+const libelleStatutIngestion = {
+  analyse: 'Analyse IA en cours…', a_valider: 'À valider', capitalise: 'Capitalisé', erreur: 'Erreur'
+};
+
+// ============================================================================
+// ADMIN — ÉCRAN DÉPÔT D'UN CCTP (étape 1 : dépôt → analyse IA)
+// ============================================================================
+function EcranDepotCCTP({ client, user, onAnnuler, onDepose }) {
+  const [fichier, setFichier] = useState(null);
+  const [source, setSource] = useState('');
+  const [typologie, setTypologie] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [etape, setEtape] = useState('');
+  const [err, setErr] = useState(null);
+
+  const choisir = (f) => {
+    if (!f) return;
+    setFichier(f);
+    if (!source) setSource(f.name.replace(/\.(docx|pdf)$/i, ''));
+    setErr(null);
+  };
+
+  const deposer = async () => {
+    if (!fichier) { setErr('Choisissez un fichier .docx ou .pdf.'); return; }
+    if (!source.trim()) { setErr('Indiquez le nom de la source (ex. « CCTP Chooz »).'); return; }
+    const estDocx = /\.docx$/i.test(fichier.name);
+    const estPdf = /\.pdf$/i.test(fichier.name);
+    if (!estDocx && !estPdf) { setErr('Format non supporté : seuls .docx et .pdf sont acceptés.'); return; }
+
+    setBusy(true); setErr(null);
+    try {
+      let texte_source = null, fichier_path = null;
+
+      if (estDocx) {
+        setEtape('Extraction du texte (.docx)…');
+        const buf = await fichier.arrayBuffer();
+        const res = await window.mammoth.extractRawText({ arrayBuffer: buf });
+        texte_source = (res && res.value || '').trim();
+        if (!texte_source) throw new Error('Aucun texte extrait du .docx.');
+      } else {
+        setEtape('Téléversement du PDF…');
+        fichier_path = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())) + '.pdf';
+        const { error: upErr } = await client.storage
+          .from('cctp_sources').upload(fichier_path, fichier, { contentType: 'application/pdf' });
+        if (upErr) throw upErr;
+      }
+
+      setEtape('Création de l\'ingestion…');
+      const { data: ing, error: insErr } = await client.from('ingestions').insert({
+        source_cctp: source.trim(),
+        lot: 'CVCP',
+        typologie: typologie || null,
+        fichier_path, texte_source,
+        statut: 'analyse',
+        cree_par: user.id
+      }).select().single();
+      if (insErr) throw insErr;
+
+      setEtape('Mise en file de l\'analyse IA…');
+      await client.from('generation_jobs').insert({
+        projet_id: null,
+        type: 'ingestion_analyse',
+        statut: 'en_attente',
+        total_sections: 1,
+        payload_json: { ingestion_id: ing.id }
+      });
+
+      await pousserWorker(client);
+      onDepose();
+    } catch (e) {
+      setErr('Erreur : ' + (e.message || e));
+      setBusy(false);
+      setEtape('');
+    }
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-8">
+      <button onClick={onAnnuler} className="text-sm text-slate-500 hover:underline mb-4">← Mine d'or</button>
+      <h1 className="text-2xl font-bold text-slate-800 mb-1">Déposer un CCTP</h1>
+      <p className="text-sm text-slate-500 mb-6">
+        L'IA découpe le document en fragments et propose le tagging. <strong>Vous validez ensuite</strong> avant
+        toute entrée dans la mine d'or.
+      </p>
+
+      <Carte className="p-6 space-y-5">
+        <label className="block border-2 border-dashed border-slate-300 rounded-xl p-8 text-center cursor-pointer hover:border-brand-400 transition-colors"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => { e.preventDefault(); choisir(e.dataTransfer.files[0]); }}>
+          <input type="file" accept=".docx,.pdf" className="hidden"
+            onChange={(e) => choisir(e.target.files[0])} />
+          {fichier
+            ? <p className="text-slate-700 font-medium">{fichier.name}</p>
+            : <p className="text-slate-500 text-sm">Glissez un fichier <strong>.docx</strong> ou <strong>.pdf</strong> ici, ou cliquez pour parcourir</p>}
+        </label>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Nom de la source</label>
+          <input className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="ex. CCTP Chooz"
+            value={source} onChange={(e) => setSource(e.target.value)} />
+          <p className="text-xs text-slate-400 mt-1">Tracera l'origine de chaque fragment (champ source_cctp).</p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Typologie (optionnelle)</label>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setTypologie('')}
+              className={'text-sm rounded-lg px-3 py-1.5 border ' + (typologie === '' ? 'border-brand-600 bg-brand-50 text-brand-700 font-medium' : 'border-slate-300 text-slate-600 hover:bg-slate-50')}>
+              Laisser l'IA déduire
+            </button>
+            {TYPOLOGIES.map(o => (
+              <button key={o.v} type="button" onClick={() => setTypologie(o.v)}
+                className={'text-sm rounded-lg px-3 py-1.5 border ' + (typologie === o.v ? 'border-brand-600 bg-brand-50 text-brand-700 font-medium' : 'border-slate-300 text-slate-600 hover:bg-slate-50')}>
+                {o.l}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {err && <p className="text-sm text-red-600">{err}</p>}
+
+        <div className="flex items-center gap-3 pt-1">
+          <Bouton onClick={deposer} disabled={busy}>{busy ? '…' : 'Déposer et analyser'}</Bouton>
+          <Bouton variant="secondaire" onClick={onAnnuler} disabled={busy}>Annuler</Bouton>
+          {busy && etape && <span className="text-xs text-slate-500">{etape}</span>}
+        </div>
+      </Carte>
+    </div>
+  );
+}
+
+// ============================================================================
+// ADMIN — ÉCRAN RELECTURE (VALIDATION #1, fluide : tout valider en 1 clic)
+// ============================================================================
+function EcranRelectureIngestion({ client, ingestionId, onRetour }) {
+  const [ing, setIng] = useState(null);   // null = chargement
+  const [frags, setFrags] = useState([]);
+  const [arbre, setArbre] = useState([]);   // nœuds chapitres_ref du lot (arbre canonique)
+  const [metiers, setMetiers] = useState([]);   // référentiel métiers du lot (signets)
+  const [creer, setCreer] = useState(null);     // { i, libelle, parentId } : création de nœud inline
+  const [plies, setPlies] = useState({});       // pliage : par clé de groupe ('g:'+nid / '__hors__') ET par nid de nœud interne
+  const [voisins, setVoisins] = useState({});   // affichage des voisins document, par nid (toggle manuel)
+  const [posAligner, setPosAligner] = useState(0);          // position dans la file « à aligner »
+  const [scroll, setScroll] = useState({ nid: null, t: 0 }); // cible de défilement (t = tick pour re-déclencher)
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  const [msg, setMsg] = useState(null);
+
+  const toArr = (v) => (Array.isArray(v) ? v : (v ? [v] : []));
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await client.from('ingestions').select('*').eq('id', ingestionId).single();
+      setIng(data || false);
+      if (!data) return;
+      let noeuds = [];
+      if (data.lot) {
+        const { data: ns } = await client.from('chapitres_ref')
+          .select('id,libelle,niveau,parent_id,ordre,chemin_mat').eq('actif', true).eq('lot', data.lot);
+        noeuds = ns || [];
+        setArbre(noeuds);
+        const { data: met } = await client.from('metiers').select('libelle').eq('actif', true).eq('lot', data.lot);
+        setMetiers((met || []).map((m) => m.libelle));
+      }
+      // Pré-remplissage de l'ALIGNEMENT : la proposition IA (libellé) est résolue en
+      // id si elle matche un nœud UNIQUE -> l'humain ne traite plus que les « à aligner ».
+      const parLib = new Map();
+      for (const n of noeuds) (parLib.get(n.libelle) || parLib.set(n.libelle, []).get(n.libelle)).push(n);
+      setFrags(((data.fragments_json) || []).map((f) => {
+        let refId = f.chapitre_ref_id || null;
+        if (!refId && f.chapitre_ref) {
+          const m = parLib.get(f.chapitre_ref);
+          if (m && m.length === 1) refId = m[0].id;
+        }
+        return { ...f, metier_sous_lot: toArr(f.metier_sous_lot), chapitre_ref_id: refId };
+      }));
+    })();
+  }, [client, ingestionId]);
+
+  // Nœuds dans l'ORDRE DE L'ARBRE (DFS, trié par ordre) -> options indentées du select.
+  const arbreOrdonne = useMemo(() => {
+    const enfants = new Map();
+    for (const n of arbre) {
+      const k = n.parent_id || '';
+      (enfants.get(k) || enfants.set(k, []).get(k)).push(n);
+    }
+    for (const lst of enfants.values()) lst.sort((a, b) => (a.ordre - b.ordre) || a.libelle.localeCompare(b.libelle));
+    const out = [];
+    const walk = (k) => { for (const n of (enfants.get(k) || [])) { out.push(n); walk(n.id); } };
+    walk('');
+    return out;
+  }, [arbre]);
+  const noeudParId = useMemo(() => new Map(arbre.map((n) => [n.id, n])), [arbre]);
+
+  // Arbre SOURCE réel (nid/parent_nid, §15) : groupes pliables par RACINE + pliage
+  // PAR NŒUD INTERNE (un nœud replié masque son sous-arbre). Profondeur = chaîne
+  // parent_nid (= ce qui sera capitalisé). On détecte aussi les nœuds EXCLUS ayant
+  // ≥1 descendant RETENU (avertissement de re-rattachement) et on calcule la taille
+  // de chaque sous-arbre (compteur de chapitre).
+  const { groupes, idxByNid, aEnfants, exclusionProb } = useMemo(() => {
+    const idxByNid = new Map(frags.map((f, i) => [f.nid, i]));
+    const enfants = new Map();                      // parent_nid -> [index], ordre document
+    frags.forEach((f, i) => {
+      const k = (f.parent_nid == null) ? '__root__' : f.parent_nid;
+      (enfants.get(k) || enfants.set(k, []).get(k)).push(i);
+    });
+    const aEnfants = new Set(frags.map((f) => f.parent_nid).filter((x) => x != null));
+    // pré-ordre + profondeur ; un nœud REPLIÉ (plies[nid]) masque son sous-arbre.
+    const sousArbre = (i, depth, out) => {
+      out.push({ f: frags[i], i, depth });
+      if (plies[frags[i].nid]) return;
+      for (const c of (enfants.get(frags[i].nid) || [])) sousArbre(c, depth + 1, out);
+    };
+    const taille = (i) => { let n = 1; for (const c of (enfants.get(frags[i].nid) || [])) n += taille(c); return n; };
+    const out = [], hors = { key: '__hors__', num: null, titre: '(hors arborescence)', items: [], total: 0 };
+    for (const ri of (enfants.get('__root__') || [])) {
+      const f = frags[ri];
+      if (f.ordre_chapitre || f.niveau) {           // racine = vrai chapitre -> groupe pliable
+        const items = []; sousArbre(ri, 0, items);
+        out.push({ key: 'g:' + f.nid, num: f.ordre_chapitre, titre: f.titre || ('#' + (ri + 1)), items, total: taille(ri) });
+      } else {                                      // racine sans ordre -> hors arborescence
+        sousArbre(ri, 0, hors.items); hors.total += taille(ri);
+      }
+    }
+    if (hors.items.length) out.push(hors);
+    // Exclus ayant ≥1 descendant retenu (le constructeur les re-rattache au plus
+    // proche ancêtre retenu) -> on l'AVERTIT à la relecture.
+    const aRetenu = (i) => {
+      let r = frags[i].garder !== false;
+      for (const c of (enfants.get(frags[i].nid) || [])) r = aRetenu(c) || r;
+      return r;
+    };
+    const exclusionProb = new Set();
+    frags.forEach((f) => {
+      if (f.garder !== false) return;
+      if ((enfants.get(f.nid) || []).some((c) => aRetenu(c))) exclusionProb.add(f.nid);
+    });
+    return { groupes: out, idxByNid, aEnfants, exclusionProb };
+  }, [frags, plies]);
+
+  // Plus proche ancêtre (chaîne parent_nid) DÉJÀ ALIGNÉ -> pour « aligner comme le parent ».
+  const ancetreAligne = (f) => {
+    let p = (f.parent_nid != null) ? idxByNid.get(f.parent_nid) : undefined, g = 0;
+    while (p !== undefined && g++ < 50) {
+      const pf = frags[p];
+      if (pf.chapitre_ref_id) return pf.chapitre_ref_id;
+      p = (pf.parent_nid != null) ? idxByNid.get(pf.parent_nid) : undefined;
+    }
+    return null;
+  };
+
+  // File « À TRAITER » = à aligner (retenu, sans chapitre_ref_id), en ordre document.
+  const aTraiter = useMemo(() => frags.filter((f) => f.garder !== false && !f.chapitre_ref_id).map((f) => f.nid), [frags]);
+
+  // Va à un nœud : déplie toute la chaîne d'ancêtres + le groupe, puis fait défiler.
+  const allerA = (nid) => {
+    const ci = idxByNid.get(nid);
+    if (ci === undefined) return;
+    setPlies((prev) => {
+      const np = { ...prev };
+      let p = ci, g = 0, root = frags[ci];
+      while (p !== undefined && g++ < 50) {
+        const pf = frags[p]; np[pf.nid] = false; root = pf;
+        p = (pf.parent_nid != null) ? idxByNid.get(pf.parent_nid) : undefined;
+      }
+      np[(root.ordre_chapitre || root.niveau) ? ('g:' + root.nid) : '__hors__'] = false;
+      return np;
+    });
+    setScroll((s) => ({ nid, t: s.t + 1 }));
+  };
+  const naviguer = (delta) => {
+    if (!aTraiter.length) return;
+    const n = aTraiter.length, cur = ((posAligner % n) + n) % n, np = (((cur + delta) % n) + n) % n;
+    setPosAligner(np); allerA(aTraiter[np]);
+  };
+  // Défile vers la cible APRÈS rendu (le groupe vient peut-être d'être déplié).
+  useEffect(() => {
+    if (scroll.nid == null) return;
+    const el = document.getElementById('frag-' + scroll.nid);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [scroll]);
+
+  const majFrag = (i, champ, val) => setFrags((fr) => fr.map((f, k) => (k === i ? { ...f, [champ]: val } : f)));
+  const toggle = (key) => setPlies((p) => ({ ...p, [key]: !p[key] }));
+
+  const nbGardes = frags.filter((f) => f.garder !== false).length;
+  // Garde-fou SOFT : compteur « à aligner » (jamais de blocage).
+  const nbAAligner = frags.filter((f) => f.garder !== false && !f.chapitre_ref_id).length;
+
+  // Crée un NŒUD canonique (persisté ; le trigger pose niveau/chemin_mat), puis aligne.
+  const creerNoeud = async () => {
+    const lib = (creer.libelle || '').trim();
+    if (!lib) { setErr('Libellé du nœud vide.'); return; }
+    setBusy(true); setErr(null);
+    try {
+      let { data: noeud, error } = await client.from('chapitres_ref')
+        .insert({ lot: ing.lot, libelle: lib, parent_id: creer.parentId || null, cree_par: 'utilisateur' })
+        .select('id,libelle,niveau,parent_id,ordre,chemin_mat').single();
+      if (error) {
+        if (error.code !== '23505') throw error;          // 23505 = existe déjà -> on le récupère
+        const { data: ex } = await client.from('chapitres_ref')
+          .select('id,libelle,niveau,parent_id,ordre,chemin_mat')
+          .eq('lot', ing.lot).eq('libelle', lib).limit(1);
+        noeud = ex && ex[0];
+        if (!noeud) throw new Error('Nœud existant introuvable.');
+      }
+      setArbre((a) => (a.some((n) => n.id === noeud.id) ? a : [...a, noeud]));
+      const ci = creer.i;
+      setFrags((fr) => fr.map((f, k) => (k === ci ? { ...f, chapitre_ref_id: noeud.id } : f)));
+      setCreer(null);
+    } catch (e) { setErr('Création nœud : ' + (e.message || e)); }
+    finally { setBusy(false); }
+  };
+
+  // Enregistre les corrections SANS capitaliser (on fiabilise tagging + alignement d'abord).
+  const enregistrer = async () => {
+    setBusy(true); setErr(null); setMsg(null);
+    try {
+      await client.from('ingestions').update({ fragments_json: frags, updated_at: new Date().toISOString() }).eq('id', ingestionId);
+      setMsg('Corrections enregistrées.');
+    } catch (e) { setErr('Erreur : ' + (e.message || e)); }
+    finally { setBusy(false); }
+  };
+
+  // Enregistre puis lance la capitalisation async. Garde-fou SOFT : seul « 0 retenu »
+  // bloque ; les non-alignés partent en « à aligner » (réglables plus tard).
+  const capitaliser = async () => {
+    if (nbGardes === 0) { setErr('Aucun fragment retenu : cochez au moins un fragment.'); return; }
+    setBusy(true); setErr(null); setMsg(null);
+    try {
+      await client.from('ingestions').update({ fragments_json: frags, updated_at: new Date().toISOString() }).eq('id', ingestionId);
+      await client.from('generation_jobs').insert({
+        projet_id: null, type: 'ingestion_capitalisation', statut: 'en_attente',
+        total_sections: nbGardes, payload_json: { ingestion_id: ingestionId }
+      });
+      await pousserWorker(client);
+      onRetour();
+    } catch (e) { setErr('Erreur : ' + (e.message || e)); setBusy(false); }
+  };
+
+  if (ing === null) return <div className="max-w-4xl mx-auto px-4 py-8 text-sm text-slate-400">Chargement…</div>;
+  if (ing === false) return <CentreMessage titre="Ingestion introuvable" />;
+
+  const tonsConfiance = { haute: 'ok', moyenne: 'neutre', faible: 'cours' };
+
+  // Anatomie d'une carte nœud : indentée par PROFONDEUR RÉELLE (chaîne parent_nid) ;
+  // zone ARBORESCENCE (titre/ordre + alignement) puis zone SIGNETS MÉTIER (§14.2).
+  const renderCarte = ({ f, i, depth }) => {
+    const exclu = f.garder === false;
+    const faible = f.confiance === 'faible';
+    const aAligner = !f.chapitre_ref_id;
+    const noeud = f.chapitre_ref_id ? noeudParId.get(f.chapitre_ref_id) : null;
+    const excluProb = exclu && exclusionProb.has(f.nid);   // exclu AVEC enfants retenus
+    const hasKids = aEnfants.has(f.nid), replie = !!plies[f.nid];
+    // Fil d'Ariane COMPLET : ancêtres (parent_nid) avec NUMÉRO + TITRE.
+    const anc = []; let p = (f.parent_nid != null) ? idxByNid.get(f.parent_nid) : undefined, garde = 0;
+    while (p !== undefined && garde++ < 50) {
+      const pf = frags[p];
+      anc.unshift((pf.ordre_chapitre ? pf.ordre_chapitre + ' ' : '') + (pf.titre || pf.ordre_chapitre || '(sans titre)'));
+      p = (pf.parent_nid != null) ? idxByNid.get(pf.parent_nid) : undefined;
+    }
+    const fil = anc.join('  ›  ');
+    // Voisins document (par nid) : ciblés « à aligner »/hors-arbo, sinon toggle.
+    const orphelin = aAligner || (f.parent_nid == null && !f.ordre_chapitre);
+    const montrerVoisins = orphelin || voisins[f.nid];
+    const prev = idxByNid.get(f.nid - 1), next = idxByNid.get(f.nid + 1);
+    const libVoisin = (j) => { const v = frags[j]; return (v.ordre_chapitre ? v.ordre_chapitre + ' ' : '') + (v.titre || (v.contenu || '').slice(0, 28) || '?'); };
+    // « Aligner comme le parent » : plus proche ancêtre DÉJÀ aligné.
+    const refParent = aAligner ? ancetreAligne(f) : null;
+    const libParent = refParent ? (noeudParId.get(refParent) || {}).libelle : null;
+    return (
+      <div key={i} id={'frag-' + f.nid} style={{ marginLeft: depth * 16 }}>
+        <div className={depth > 0 ? 'border-l-2 border-slate-200 pl-3' : ''}>
+          <Carte className={'p-4 ' + (exclu ? 'opacity-60 ' : '') + (excluProb ? 'border-amber-400 ' : (aAligner && !exclu ? 'border-amber-300 ' : ''))}>
+            {fil
+              ? <p className="text-[11px] text-slate-500 mb-1.5">🗂 {fil}</p>
+              : <p className="text-[11px] text-slate-400 mb-1.5">🗂 (racine{f.ordre_chapitre ? '' : ' · hors arborescence'})</p>}
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {hasKids
+                  ? <button onClick={() => toggle(f.nid)} className="w-4 text-slate-400 hover:text-slate-700">{replie ? '▸' : '▾'}</button>
+                  : <span className="w-4 text-center text-slate-300">·</span>}
+                {f.ordre_chapitre && <span className="text-xs font-mono text-slate-500">{f.ordre_chapitre}</span>}
+                <span className="text-sm font-medium text-slate-700">{f.titre || <em className="text-slate-400">(sans titre)</em>}</span>
+                <Badge>niv {depth + 1}</Badge>
+                {hasKids && replie && <span className="text-[11px] text-slate-400">(replié)</span>}
+                {aAligner && !exclu && <Badge ton="cours">à aligner</Badge>}
+                <Badge ton={tonsConfiance[f.confiance] || 'neutre'}>confiance {f.confiance}</Badge>
+                {faible && !exclu && <span className="text-xs text-amber-700">à vérifier</span>}
+              </div>
+              <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer shrink-0">
+                <input type="checkbox" checked={f.garder !== false} onChange={(e) => majFrag(i, 'garder', e.target.checked)} />
+                retenir
+              </label>
+            </div>
+            {excluProb && (
+              <p className="text-[11px] text-amber-700 mb-2">
+                ⚠ exclu mais des enfants sont retenus — ils seront <strong>re-rattachés au plus proche ancêtre retenu</strong> à la capitalisation.
+              </p>
+            )}
+            {montrerVoisins && (prev !== undefined || next !== undefined) && (
+              <p className="text-[11px] text-slate-500 mb-2 bg-slate-50 rounded px-2 py-1">
+                ↕ voisins :{prev !== undefined && <span className="ml-1">↑ {libVoisin(prev)}</span>}{next !== undefined && <span className="ml-3">↓ {libVoisin(next)}</span>}
+              </p>
+            )}
+            {!orphelin && (
+              <button onClick={() => setVoisins((v) => ({ ...v, [f.nid]: !v[f.nid] }))}
+                className="text-[11px] text-slate-400 hover:text-slate-600 mb-2 block">{voisins[f.nid] ? '− voisins' : '+ voisins'}</button>
+            )}
+
+        {/* ZONE ARBORESCENCE — identité source + alignement canonique */}
+        <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+          <p className="text-[11px] uppercase tracking-wide text-slate-400 mb-2">🗂 Arborescence</p>
+          <div className="grid sm:grid-cols-2 gap-2 mb-2">
+            <FieldMini label="Titre" value={f.titre} onChange={(v) => majFrag(i, 'titre', v || null)} placeholder="titre du chapitre" />
+            <FieldMini label="Ordre" value={f.ordre_chapitre} onChange={(v) => majFrag(i, 'ordre_chapitre', v || null)} placeholder="ex. 1.6" />
+          </div>
+          <ChapitreRefSelect value={f.chapitre_ref_id || ''} noeud={noeud} options={arbreOrdonne}
+            onPick={(id) => majFrag(i, 'chapitre_ref_id', id)}
+            onCreer={() => setCreer({ i, libelle: f.titre || '', parentId: '' })} />
+          {refParent && (
+            <button onClick={() => majFrag(i, 'chapitre_ref_id', refParent)}
+              className="mt-1.5 text-xs text-brand-600 hover:underline">↪ aligner comme le parent (« {libParent || 'aligné'} »)</button>
+          )}
+          {creer && creer.i === i && (
+            <div className="mt-2 p-3 rounded-lg border border-slate-300 bg-white flex flex-wrap items-end gap-2">
+              <div className="flex-1 min-w-[160px]">
+                <label className="block text-[11px] uppercase tracking-wide text-slate-400 mb-0.5">Nouveau nœud</label>
+                <input className="w-full border rounded px-2 py-1 text-sm" value={creer.libelle} autoFocus
+                  onChange={(e) => setCreer({ ...creer, libelle: e.target.value })} placeholder="ex. Régulation" />
+              </div>
+              <div className="min-w-[160px]">
+                <label className="block text-[11px] uppercase tracking-wide text-slate-400 mb-0.5">Sous</label>
+                <select className="w-full border rounded px-2 py-1 text-sm bg-white" value={creer.parentId}
+                  onChange={(e) => setCreer({ ...creer, parentId: e.target.value })}>
+                  <option value="">(racine)</option>
+                  {arbreOrdonne.map((n) => <option key={n.id} value={n.id}>{'  '.repeat((n.niveau || 1) - 1) + n.libelle}</option>)}
+                </select>
+              </div>
+              <button onClick={creerNoeud} disabled={busy}
+                className="px-3 py-1.5 rounded-md bg-brand-600 text-white text-sm hover:bg-brand-700 disabled:opacity-50">Créer &amp; aligner</button>
+              <button onClick={() => setCreer(null)} disabled={busy}
+                className="px-3 py-1.5 rounded-md border border-slate-300 text-sm text-slate-600">Annuler</button>
+            </div>
+          )}
+        </div>
+
+        {/* ZONE SIGNETS MÉTIER — axe transversal, distinct de l'arborescence (§14.2) */}
+        <div className="rounded-lg border border-slate-200 bg-white p-3 mt-2">
+          <MetierTags valeurs={toArr(f.metier_sous_lot)} options={metiers}
+            onChange={(arr) => majFrag(i, 'metier_sous_lot', arr)} />
+        </div>
+
+        <textarea
+          className="w-full border rounded-lg px-3 py-2 text-sm text-slate-700 font-sans mt-2"
+          rows={Math.min(8, Math.max(2, Math.ceil((f.contenu || '').length / 90)))}
+          value={f.contenu} onChange={(e) => majFrag(i, 'contenu', e.target.value)} />
+
+        <div className="grid sm:grid-cols-2 gap-2 mt-2">
+          <SelectMini label="Typologie" value={f.typologie || ''} onChange={(v) => majFrag(i, 'typologie', v || null)}
+            options={[{ v: '', l: '—' }, ...TYPOLOGIES]} />
+          <FieldMini label="Type de local" value={f.type_local} onChange={(v) => majFrag(i, 'type_local', v)} placeholder="ex. locaux humides" />
+        </div>
+          </Carte>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <button onClick={onRetour} className="text-sm text-slate-500 hover:underline mb-4">← Mine d'or</button>
+
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-1">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">{ing.source_cctp}</h1>
+          <p className="text-sm text-slate-500">
+            {frags.length} fragment(s) · {nbGardes} retenu(s) · <span className={nbAAligner ? 'text-amber-700' : ''}>{nbAAligner} à aligner</span> · lot {ing.lot}
+          </p>
+        </div>
+        <Badge ton="marque">Validation avant capitalisation</Badge>
+      </div>
+
+      {/* Barre d'action : garde-fou SOFT (le compteur « à aligner » n'empêche pas). */}
+      <Carte className="p-4 my-4 sticky top-2 z-10">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-slate-600">
+            Alignez l'<strong>arborescence</strong> + les <strong>signets métier</strong>, puis <strong>enregistrez</strong>.
+          </p>
+          <div className="flex items-center gap-2">
+            <button onClick={enregistrer} disabled={busy}
+              className="px-3 py-2 rounded-lg border border-slate-300 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+              {busy ? '…' : '💾 Enregistrer'}
+            </button>
+            <Bouton onClick={capitaliser} disabled={busy || nbGardes === 0}>
+              {busy ? 'Capitalisation…' : `✓ Valider & capitaliser (${nbGardes})`}
+            </Bouton>
+          </div>
+        </div>
+        {/* Aide à la navigation : aller au prochain/précédent « à aligner » (déplie + défile). */}
+        {aTraiter.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-slate-100">
+            <span className="text-xs text-amber-700">
+              <strong>{((posAligner % aTraiter.length + aTraiter.length) % aTraiter.length) + 1}/{aTraiter.length}</strong> à aligner
+            </span>
+            <button onClick={() => naviguer(-1)}
+              className="px-2.5 py-1 rounded-md border border-slate-300 text-xs text-slate-700 hover:bg-slate-50">⤒ précédent</button>
+            <button onClick={() => naviguer(1)}
+              className="px-2.5 py-1 rounded-md border border-amber-300 bg-amber-50 text-xs text-amber-800 hover:bg-amber-100">⤓ prochain à traiter</button>
+            <span className="text-[11px] text-slate-400">déplie le groupe + défile · non bloquant</span>
+          </div>
+        ) : (
+          <p className="text-xs text-green-700 mt-2">✓ tout est aligné.</p>
+        )}
+      </Carte>
+
+      {err && <p className="text-sm text-red-600 mb-3">{err}</p>}
+      {msg && <p className="text-sm text-green-700 mb-3">{msg}</p>}
+
+      {/* Arbre source réel (nid/parent_nid) : groupes pliables par racine, emboîtés par profondeur. */}
+      <div className="space-y-3">
+        {groupes.map((g) => {
+          const plie = plies[g.key];
+          return (
+            <div key={g.key} className="rounded-xl border border-slate-200 overflow-hidden">
+              <button onClick={() => toggle(g.key)}
+                className="w-full flex items-center justify-between gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-left">
+                <span className="text-sm font-semibold text-slate-700">
+                  {plie ? '▸' : '▾'} {g.num ? g.num + ' · ' : ''}{g.titre}
+                </span>
+                <span className="text-xs text-slate-500">{g.total} nœud(s)</span>
+              </button>
+              {!plie && <div className="p-3 space-y-2 bg-white">{g.items.map(renderCarte)}</div>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function FieldMini({ label, value, onChange, placeholder }) {
+  return (
+    <div>
+      <label className="block text-[11px] uppercase tracking-wide text-slate-400 mb-0.5">{label}</label>
+      <input className="w-full border rounded px-2 py-1 text-sm" placeholder={placeholder || ''}
+        value={value || ''} onChange={(e) => onChange(e.target.value)} />
+    </div>
+  );
+}
+
+function SelectMini({ label, value, onChange, options }) {
+  return (
+    <div>
+      <label className="block text-[11px] uppercase tracking-wide text-slate-400 mb-0.5">{label}</label>
+      <select className="w-full border rounded px-2 py-1 text-sm bg-white"
+        value={value} onChange={(e) => onChange(e.target.value)}>
+        {options.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+      </select>
+    </div>
+  );
+}
+
+// Select d'ALIGNEMENT CANONIQUE : « à aligner » (null) + arbre chapitres_ref du lot
+// (indenté par niveau), et une entrée pour créer un nœud. Bordure verte si aligné,
+// ambre si « à aligner ». `value` = id du nœud ; `noeud` = nœud sélectionné (affichage).
+function ChapitreRefSelect({ value, noeud, options, onPick, onCreer }) {
+  const aligne = !!value;
+  return (
+    <div>
+      <label className="block text-[11px] uppercase tracking-wide text-slate-400 mb-0.5">Alignement canonique</label>
+      <select
+        className={'w-full border rounded px-2 py-1.5 text-sm bg-white ' + (aligne ? 'border-green-400 text-slate-700' : 'border-amber-400 text-amber-700')}
+        value={value || ''}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v === '__creer__') { onCreer(); return; }
+          onPick(v || null);
+        }}>
+        <option value="">— à aligner —</option>
+        {/* nœud sélectionné mais absent de la liste (autre lot/inactif) : on le garde visible */}
+        {value && !options.some((n) => n.id === value) && <option value={value}>{(noeud && noeud.libelle) || '(nœud)'}</option>}
+        {options.map((n) => (
+          <option key={n.id} value={n.id}>
+            {'   '.repeat((n.niveau || 1) - 1) + ((n.niveau || 1) > 1 ? '↳ ' : '') + n.libelle}
+          </option>
+        ))}
+        <option value="__creer__">➕ Créer un nœud…</option>
+      </select>
+    </div>
+  );
+}
+
+// Édition MULTI-valeurs du SIGNET MÉTIER (§14.2) : badges supprimables + ajout
+// depuis le référentiel `metiers` du lot (pick-only : pas de texte 100 % libre).
+function MetierTags({ valeurs, options, onChange }) {
+  const restantes = options.filter((o) => !valeurs.includes(o));
+  return (
+    <div>
+      <label className="block text-[11px] uppercase tracking-wide text-slate-400 mb-0.5">🏷 Signets métier (multi)</label>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {valeurs.length === 0 && <span className="text-xs text-slate-400">aucun</span>}
+        {valeurs.map((v) => (
+          <span key={v} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-xs text-slate-700">
+            {v}
+            <button type="button" className="text-slate-400 hover:text-red-600"
+              onClick={() => onChange(valeurs.filter((x) => x !== v))}>×</button>
+          </span>
+        ))}
+        {restantes.length > 0 && (
+          <select className="border rounded px-2 py-1 text-xs bg-white" value=""
+            onChange={(e) => { if (e.target.value) onChange([...valeurs, e.target.value]); }}>
+            <option value="">+ ajouter…</option>
+            {restantes.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// ADMIN — ÉCRAN MINE D'OR (liste des ingestions + explorateur fragments)
+// ============================================================================
+function EcranAdminMineOr({ client, onDeposer, onRelire }) {
+  const [vue, setVue] = useState('ingestions');
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Mine d'or</h1>
+          <p className="text-sm text-slate-500">Base de connaissances transverse — alimentée par l'admin.</p>
+        </div>
+        <Bouton onClick={onDeposer}>+ Déposer un CCTP</Bouton>
+      </div>
+
+      <div className="border-b border-slate-200 flex gap-1 mb-6">
+        {[{ k: 'ingestions', l: 'Ingestions' }, { k: 'fragments', l: 'Fragments capitalisés' }].map(o => (
+          <button key={o.k} onClick={() => setVue(o.k)}
+            className={'px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ' +
+              (vue === o.k ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-700')}>
+            {o.l}
+          </button>
+        ))}
+      </div>
+
+      {vue === 'ingestions' ? <ListeIngestions client={client} onRelire={onRelire} onDeposer={onDeposer} />
+                            : <ExplorateurFragments client={client} />}
+    </div>
+  );
+}
+
+function ListeIngestions({ client, onRelire, onDeposer }) {
+  const [items, setItems] = useState(null);
+  const [confirmId, setConfirmId] = useState(null);   // ingestion en attente de confirmation de suppression
+  const [busyId, setBusyId] = useState(null);         // suppression en cours
+  const [erreurSuppr, setErreurSuppr] = useState(null);
+  const dernierPush = useRef(0);   // throttle du « nudge » worker (≤ 1 / 30 s)
+
+  const charger = useCallback(async () => {
+    const { data } = await client.from('ingestions').select('*')
+      .order('created_at', { ascending: false }).limit(50);
+    setItems(data || []);
+
+    // Reprise rapide : si une analyse est en cours, on relance le worker (au plus
+    // toutes les 30 s) — backstop si l'auto-enchaînement s'est interrompu, sans
+    // attendre le cron quotidien.
+    const enCours = (data || []).some((it) => it.statut === 'analyse');
+    if (enCours && Date.now() - dernierPush.current > 30000) {
+      dernierPush.current = Date.now();
+      pousserWorker(client);
+    }
+  }, [client]);
+
+  // Polling : les statuts évoluent au rythme du worker (analyse → a_valider → capitalisé).
+  useEffect(() => {
+    charger();
+    const t = setInterval(charger, 4000);
+    return () => clearInterval(t);
+  }, [charger]);
+
+  // Suppression d'une ingestion — STAGING UNIQUEMENT (admin). Nettoie : la ligne
+  // `ingestions`, le(s) job(s) `generation_jobs` liés (via payload_json.ingestion_id)
+  // et le fichier source dans le bucket `cctp_sources`. NE TOUCHE PAS aux fragments
+  // déjà capitalisés (`fragments_cctp`) : la mine d'or validée est préservée.
+  const supprimer = useCallback(async (it) => {
+    setBusyId(it.id); setErreurSuppr(null);
+    try {
+      // 1) job(s) de staging liés (analyse + capitalisation), repérés par l'ingestion_id du payload.
+      const { error: jErr } = await client.from('generation_jobs').delete()
+        .filter('payload_json->>ingestion_id', 'eq', it.id);
+      if (jErr) throw jErr;
+      // 2) fichier source archivé dans le bucket (si présent).
+      if (it.fichier_path) {
+        const { error: sErr } = await client.storage.from('cctp_sources').remove([it.fichier_path]);
+        if (sErr) throw sErr;
+      }
+      // 3) ligne de staging elle-même.
+      const { error: iErr } = await client.from('ingestions').delete().eq('id', it.id);
+      if (iErr) throw iErr;
+      setConfirmId(null);
+      await charger();
+    } catch (e) {
+      setErreurSuppr(`Suppression impossible : ${e.message || e}`);
+    } finally {
+      setBusyId(null);
+    }
+  }, [client, charger]);
+
+  if (items === null) return <p className="text-sm text-slate-400">Chargement…</p>;
+  if (items.length === 0) return (
+    <Carte className="p-10 text-center">
+      <p className="text-slate-600 font-medium">Aucun CCTP ingéré pour l'instant.</p>
+      <p className="text-sm text-slate-400 mt-1 mb-5">Déposez un premier CCTP pour amorcer la mine d'or.</p>
+      <Bouton onClick={onDeposer}>+ Déposer un CCTP</Bouton>
+    </Carte>
+  );
+
+  return (
+    <div className="space-y-2">
+      {erreurSuppr && (
+        <Carte className="p-3 border-red-200 bg-red-50 text-sm text-red-700">{erreurSuppr}</Carte>
+      )}
+      {items.map(it => {
+        const cliquable = it.statut === 'a_valider';
+        const enConfirm = confirmId === it.id;
+        const enCours = busyId === it.id;
+        return (
+          <Carte key={it.id}
+            className={'p-4 flex items-center justify-between gap-3 ' + (cliquable ? 'cursor-pointer hover:border-brand-300' : '')}
+            >
+            <button className="text-left flex-1 min-w-0" disabled={!cliquable}
+              onClick={() => cliquable && onRelire(it.id)}>
+              <p className="font-semibold text-slate-800">{it.source_cctp}</p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {libelle(TYPOLOGIES, it.typologie)} · lot {it.lot}
+                {it.statut === 'capitalise' && ` · ${it.nb_capitalises} fragment(s)`}
+                {it.statut === 'a_valider' && ` · ${(it.fragments_json || []).length} fragment(s) proposé(s) — cliquer pour relire`}
+                {it.statut === 'erreur' && it.erreur && ` · ${it.erreur}`}
+              </p>
+            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <Badge ton={tonStatutIngestion[it.statut] || 'neutre'}>{libelleStatutIngestion[it.statut] || it.statut}</Badge>
+              {enConfirm ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="text-xs text-slate-500">Supprimer&nbsp;?</span>
+                  <button disabled={enCours}
+                    className="px-2 py-1 rounded-md bg-red-600 text-white text-xs font-medium hover:bg-red-700 disabled:opacity-50"
+                    onClick={() => supprimer(it)}>{enCours ? '…' : 'Confirmer'}</button>
+                  <button disabled={enCours}
+                    className="px-2 py-1 rounded-md border border-slate-300 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                    onClick={() => setConfirmId(null)}>Annuler</button>
+                </span>
+              ) : (
+                <button title="Supprimer cette ingestion (staging uniquement — ne touche pas aux fragments capitalisés)"
+                  aria-label="Supprimer l'ingestion"
+                  className="px-2 py-1 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 text-sm"
+                  onClick={() => { setErreurSuppr(null); setConfirmId(it.id); }}>🗑</button>
+              )}
+            </div>
+          </Carte>
+        );
+      })}
+    </div>
+  );
+}
+
+// Explorateur léger de la mine d'or (VALIDATION #2 : vérifier le résultat).
+// Explorateur de la mine d'or CAPITALISÉE (§15 étape 5) : navigation EN ARBRE par
+// source (parent_id/chemin_mat), tri par seq, filtres métier + nœud canonique +
+// focus sous-arbre, et recherche SÉMANTIQUE (embed front + match_fragments). Plus
+// de limit 100, plus de chapitre_normalise (ancien modèle).
+function ExplorateurFragments({ client }) {
+  const [sources, setSources] = useState([]);        // ingestions capitalisées
+  const [source, setSource] = useState('');
+  const [lot, setLot] = useState('CVCP');
+  const [noeuds, setNoeuds] = useState(null);        // null = chargement
+  const [refs, setRefs] = useState([]);              // chapitres_ref du lot
+  const [metiers, setMetiers] = useState([]);
+  const [metierF, setMetierF] = useState('');
+  const [chapRefF, setChapRefF] = useState('');
+  const [focus, setFocus] = useState(null);          // { id, chemin_mat, titre } : sous-arbre source
+  const [q, setQ] = useState('');
+  const [mode, setMode] = useState('texte');         // 'texte' (filtre l'arbre) | 'semantique'
+  const [resultats, setResultats] = useState(null);  // résultats sémantiques (mode semantique)
+  const [plies, setPlies] = useState({});
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+
+  const toArr = (v) => (Array.isArray(v) ? v : (v ? [v] : []));
+  const toggle = (id) => setPlies((p) => ({ ...p, [id]: !p[id] }));
+
+  // 1) Sources = ingestions capitalisées (la mine d'or est une FORÊT de CCTP).
+  useEffect(() => {
+    (async () => {
+      const { data } = await client.from('ingestions').select('source_cctp,lot')
+        .eq('statut', 'capitalise').order('created_at', { ascending: false });
+      const seen = new Set(), uniq = [];
+      for (const r of (data || [])) if (r.source_cctp && !seen.has(r.source_cctp)) { seen.add(r.source_cctp); uniq.push(r); }
+      setSources(uniq);
+      if (uniq[0]) { setSource(uniq[0].source_cctp); setLot(uniq[0].lot || 'CVCP'); }
+    })();
+  }, [client]);
+
+  // 2) Au changement de source : TOUS les nœuds (pas de limit) + référentiels du lot.
+  useEffect(() => {
+    if (!source) return;
+    (async () => {
+      setNoeuds(null); setResultats(null); setFocus(null); setMetierF(''); setChapRefF(''); setPlies({});
+      const { data: ns } = await client.from('fragments_cctp')
+        .select('id,parent_id,type,titre,niveau,chemin_mat,ordre_chapitre,seq,metier_sous_lot,chapitre_ref_id,type_local,contenu,source_cctp')
+        .eq('source_cctp', source).order('seq', { ascending: true });
+      setNoeuds(ns || []);
+      const { data: cr } = await client.from('chapitres_ref')
+        .select('id,libelle,niveau,parent_id,ordre,chemin_mat').eq('actif', true).eq('lot', lot);
+      setRefs(cr || []);
+      const { data: me } = await client.from('metiers').select('libelle').eq('actif', true).eq('lot', lot);
+      setMetiers((me || []).map((m) => m.libelle));
+    })();
+  }, [client, source, lot]);
+
+  const refById = useMemo(() => new Map(refs.map((r) => [r.id, r])), [refs]);
+  // Référentiel canonique dans l'ordre de l'arbre (options indentées du filtre).
+  const refOrdonne = useMemo(() => {
+    const enf = new Map();
+    for (const n of refs) { const k = n.parent_id || ''; (enf.get(k) || enf.set(k, []).get(k)).push(n); }
+    for (const l of enf.values()) l.sort((a, b) => (a.ordre - b.ordre) || a.libelle.localeCompare(b.libelle));
+    const out = []; const walk = (k) => { for (const n of (enf.get(k) || [])) { out.push(n); walk(n.id); } }; walk(''); return out;
+  }, [refs]);
+  // Sous-arbre canonique sélectionné -> ensemble d'ids (alignements acceptés).
+  const refSubtreeIds = useMemo(() => {
+    if (!chapRefF) return null;
+    const sel = refById.get(chapRefF); if (!sel) return null;
+    return new Set(refs.filter((r) => (r.chemin_mat || '').startsWith(sel.chemin_mat)).map((r) => r.id));
+  }, [chapRefF, refs, refById]);
+
+  // 3) Arbre filtré (mode texte) : nœuds visibles = matches + leurs ANCÊTRES (contexte).
+  const vue = useMemo(() => {
+    const ns = noeuds || [];
+    const idById = new Map(ns.map((n) => [n.id, n]));
+    const aEnfants = new Set(ns.map((n) => n.parent_id).filter(Boolean));
+    const ql = mode === 'texte' ? q.trim().toLowerCase() : '';
+    const matchN = (n) => {
+      if (focus && !(n.chemin_mat || '').startsWith(focus.chemin_mat)) return false;
+      if (metierF && !toArr(n.metier_sous_lot).includes(metierF)) return false;
+      if (refSubtreeIds && !(n.chapitre_ref_id && refSubtreeIds.has(n.chapitre_ref_id))) return false;
+      if (ql && !((n.contenu || '').toLowerCase().includes(ql) || (n.titre || '').toLowerCase().includes(ql))) return false;
+      return true;
+    };
+    const visibles = new Set(), estMatch = new Set();
+    for (const n of ns) if (matchN(n)) {
+      estMatch.add(n.id); visibles.add(n.id);
+      let p = n.parent_id;
+      while (p && idById.has(p)) { if (visibles.has(p)) break; visibles.add(p); p = idById.get(p).parent_id; }
+    }
+    const foldedCm = ns.filter((n) => plies[n.id]).map((n) => n.chemin_mat);
+    const cacheFold = (n) => foldedCm.some((cm) => (n.chemin_mat || '').startsWith(cm) && n.chemin_mat !== cm);
+    const affiches = ns.filter((n) => visibles.has(n.id) && !cacheFold(n))
+      .map((n) => ({ n, depth: Math.max(0, (n.niveau || 1) - 1), match: estMatch.has(n.id), hasKids: aEnfants.has(n.id) }));
+    return { affiches, nbMatch: estMatch.size, total: ns.length };
+  }, [noeuds, q, mode, metierF, refSubtreeIds, focus, plies]);
+
+  // Recherche SÉMANTIQUE : embed (fonction edge) -> match_fragments (filtres actifs).
+  const lancerSemantique = async () => {
+    const texte = q.trim();
+    if (!texte) { setResultats(null); return; }
+    setBusy(true); setErr(null);
+    try {
+      const { data: emb, error: e1 } = await client.functions.invoke('embeddings', { body: { input: texte } });
+      if (e1) throw e1;
+      const vec = emb && emb.embeddings && emb.embeddings[0];
+      if (!vec) throw new Error('Embedding indisponible.');
+      const { data, error: e2 } = await client.rpc('match_fragments', {
+        query_embedding: vec, match_count: 40, f_lot: lot,
+        f_metier: metierF || null, f_chapitre_ref: chapRefF || null,
+        f_sous_arbre: !!chapRefF, f_noeud: focus ? focus.id : null
+      });
+      if (e2) throw e2;
+      setResultats(data || []);
+    } catch (e) { setErr('Recherche sémantique : ' + (e.message || e)); setResultats([]); }
+    finally { setBusy(false); }
+  };
+  const changerMode = (m) => { setMode(m); if (m === 'texte') setResultats(null); };
+  const onSearchKey = (e) => { if (e.key === 'Enter' && mode === 'semantique') lancerSemantique(); };
+
+  const badgeMetier = (arr) => toArr(arr).map((m) => <Badge key={m}>{m}</Badge>);
+  const badgeAlign = (id) => id
+    ? <Badge ton="ok">{(refById.get(id) || {}).libelle || 'aligné'}</Badge>
+    : <Badge ton="cours">non aligné</Badge>;
+
+  const enMode = mode === 'semantique' && resultats !== null;
+
+  return (
+    <div>
+      {/* Barre de filtres : source · métier · nœud canonique · recherche (texte/sémantique) */}
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <select className="border rounded-lg px-3 py-2 text-sm bg-white" value={source}
+          onChange={(e) => { const s = sources.find((x) => x.source_cctp === e.target.value); setSource(e.target.value); setLot((s && s.lot) || 'CVCP'); }}>
+          {sources.length === 0 && <option value="">— aucune source capitalisée —</option>}
+          {sources.map((s) => <option key={s.source_cctp} value={s.source_cctp}>{s.source_cctp}</option>)}
+        </select>
+        <select className="border rounded-lg px-3 py-2 text-sm bg-white" value={metierF} onChange={(e) => setMetierF(e.target.value)}>
+          <option value="">Tous métiers</option>
+          {metiers.map((m) => <option key={m} value={m}>{m}</option>)}
+        </select>
+        <select className="border rounded-lg px-3 py-2 text-sm bg-white max-w-[220px]" value={chapRefF} onChange={(e) => setChapRefF(e.target.value)}>
+          <option value="">Tout l'arbre canonique</option>
+          {refOrdonne.map((n) => <option key={n.id} value={n.id}>{'  '.repeat((n.niveau || 1) - 1) + n.libelle}</option>)}
+        </select>
+        <div className="flex items-center gap-1 flex-1 min-w-[220px]">
+          <input className="border rounded-lg px-3 py-2 text-sm flex-1"
+            placeholder={mode === 'texte' ? 'Filtrer dans l\'arbre…' : 'Recherche par sens (Entrée)…'}
+            value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey} />
+          {mode === 'semantique' && (
+            <button onClick={lancerSemantique} disabled={busy}
+              className="px-3 py-2 rounded-lg bg-brand-600 text-white text-sm hover:bg-brand-700 disabled:opacity-50">{busy ? '…' : '🔍'}</button>
+          )}
+        </div>
+        <div className="inline-flex rounded-lg border border-slate-300 overflow-hidden text-sm">
+          {[{ k: 'texte', l: 'Texte' }, { k: 'semantique', l: 'Sémantique' }].map((o) => (
+            <button key={o.k} onClick={() => changerMode(o.k)}
+              className={'px-3 py-2 ' + (mode === o.k ? 'bg-brand-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50')}>{o.l}</button>
+          ))}
+        </div>
+      </div>
+
+      {focus && (
+        <div className="mb-3">
+          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-brand-50 text-brand-700 text-xs">
+            ⌖ sous-arbre : {focus.titre}
+            <button className="hover:text-red-600" onClick={() => setFocus(null)}>✕</button>
+          </span>
+        </div>
+      )}
+      {err && <p className="text-sm text-red-600 mb-3">{err}</p>}
+
+      {noeuds === null && <p className="text-sm text-slate-400">Chargement…</p>}
+
+      {/* MODE SÉMANTIQUE : résultats rankés (plat, cross-source) */}
+      {noeuds !== null && enMode && (
+        <div className="space-y-2">
+          <p className="text-xs text-slate-500 mb-1">{resultats.length} résultat(s) par similarité (mine d'or entière, lot {lot}).</p>
+          {resultats.length === 0 && <p className="text-sm text-slate-400">Aucun résultat.</p>}
+          {resultats.map((r) => (
+            <Carte key={r.id} className="p-3">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <Badge ton="ok">{Math.round((r.similarite || 0) * 100)}%</Badge>
+                {r.ordre_chapitre && <span className="text-xs font-mono text-slate-500">{r.ordre_chapitre}</span>}
+                <span className="text-sm font-medium text-slate-700">{r.titre || <em className="text-slate-400">(sans titre)</em>}</span>
+                <Badge ton={r.type === 'titre' ? 'neutre' : 'marque'}>{r.type}</Badge>
+                {badgeMetier(r.metier_sous_lot)}
+                {badgeAlign(r.chapitre_ref_id)}
+              </div>
+              {r.contenu && <p className="text-xs text-slate-600 whitespace-pre-wrap line-clamp-3">{r.contenu}</p>}
+              <p className="text-[11px] text-slate-400 mt-1">source : {r.source_cctp}</p>
+            </Carte>
+          ))}
+        </div>
+      )}
+
+      {/* MODE ARBRE : nœuds de la source, emboîtés par profondeur, filtrés (contexte gardé) */}
+      {noeuds !== null && !enMode && (
+        <div>
+          <p className="text-xs text-slate-500 mb-2">{vue.nbMatch} / {vue.total} nœud(s){vue.nbMatch !== vue.total ? ' (filtré)' : ''}.</p>
+          {vue.affiches.length === 0 && <p className="text-sm text-slate-400">Aucun nœud ne correspond.</p>}
+          <div className="space-y-1.5">
+            {vue.affiches.map(({ n, depth, match, hasKids }) => (
+              <div key={n.id} style={{ marginLeft: depth * 18 }}
+                className={'rounded-lg border p-3 ' + (match ? 'border-slate-200 bg-white' : 'border-slate-100 bg-slate-50/50 opacity-70')}>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {hasKids
+                    ? <button onClick={() => toggle(n.id)} className="w-4 text-slate-400 hover:text-slate-700">{plies[n.id] ? '▸' : '▾'}</button>
+                    : <span className="w-4 text-slate-300 text-center">·</span>}
+                  {n.ordre_chapitre && <span className="text-xs font-mono text-slate-500">{n.ordre_chapitre}</span>}
+                  <span className="text-sm font-medium text-slate-700">{n.titre || <em className="text-slate-400">(sans titre)</em>}</span>
+                  <Badge ton={n.type === 'titre' ? 'neutre' : 'marque'}>{n.type}</Badge>
+                  <span className="text-[11px] text-slate-400">niv {n.niveau}</span>
+                  {badgeMetier(n.metier_sous_lot)}
+                  {badgeAlign(n.chapitre_ref_id)}
+                  <button onClick={() => setFocus({ id: n.id, chemin_mat: n.chemin_mat, titre: n.titre || n.ordre_chapitre || 'nœud' })}
+                    className="text-[11px] text-brand-600 hover:underline ml-auto">⌖ focus</button>
+                </div>
+                {n.contenu && n.type === 'contenu' && (
+                  <p className="text-xs text-slate-600 whitespace-pre-wrap line-clamp-3 mt-1">{n.contenu}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// APPLICATION — navigation par état (accueil / nouveau-projet / projet)
+// ============================================================================
+function App() {
+  const { client, erreur } = useSupabase();
+  const [session, setSession] = useState(undefined); // undefined = en cours, null = déconnecté
+  const [profil, setProfil] = useState(null);
+  const [nav, setNav] = useState({ ecran: 'accueil', projet: null });
+
+  useEffect(() => {
+    if (!client) return;
+    client.auth.getSession().then(({ data }) => setSession(data.session || null));
+    const { data: sub } = client.auth.onAuthStateChange((_e, s) => setSession(s));
+    return () => sub.subscription.unsubscribe();
+  }, [client]);
+
+  useEffect(() => {
+    if (!client || !session) { setProfil(null); return; }
+    client.from('profiles').select('*').eq('id', session.user.id).single()
+      .then(({ data }) => setProfil(data));
+  }, [client, session]);
+
+  const accueil = () => setNav({ ecran: 'accueil', projet: null });
+
+  if (erreur) return <CentreMessage titre="Erreur de configuration" texte={erreur} />;
+  if (!client || session === undefined) return <CentreMessage titre="Chargement…" />;
+  if (!session) return <Auth client={client} />;
+
+  const estAdmin = profil && profil.role === 'admin';
+  const versAdmin = () => setNav({ ecran: 'admin' });
+
+  return (
+    <div className="min-h-screen">
+      <EnTete session={session} profil={profil} client={client}
+        onAccueil={accueil} onAdmin={versAdmin} />
+
+      {nav.ecran === 'accueil' && (
+        <EcranAccueil client={client}
+          onNouveau={() => setNav({ ecran: 'nouveau-projet' })}
+          onOuvrir={(p) => setNav({ ecran: 'projet', projet: p })} />
+      )}
+      {nav.ecran === 'nouveau-projet' && (
+        <EcranNouveauProjet client={client} user={session.user}
+          onCree={(p) => setNav({ ecran: 'projet', projet: p })}
+          onAnnuler={accueil} />
+      )}
+      {nav.ecran === 'projet' && nav.projet && (
+        <EcranProjet client={client} projet={nav.projet} onRetour={accueil} />
+      )}
+
+      {/* --- Écrans ADMIN (gardés par le rôle : inaccessibles sinon) --- */}
+      {nav.ecran === 'admin' && estAdmin && (
+        <EcranAdminMineOr client={client}
+          onDeposer={() => setNav({ ecran: 'admin-depot' })}
+          onRelire={(id) => setNav({ ecran: 'admin-relecture', ingestionId: id })} />
+      )}
+      {nav.ecran === 'admin-depot' && estAdmin && (
+        <EcranDepotCCTP client={client} user={session.user}
+          onAnnuler={versAdmin} onDepose={versAdmin} />
+      )}
+      {nav.ecran === 'admin-relecture' && estAdmin && nav.ingestionId && (
+        <EcranRelectureIngestion client={client} ingestionId={nav.ingestionId} onRetour={versAdmin} />
+      )}
+      {nav.ecran && nav.ecran.startsWith('admin') && !estAdmin && (
+        <CentreMessage titre="Accès réservé" texte="Cette section est réservée aux administrateurs." />
+      )}
+
+      <p className="max-w-5xl mx-auto px-4 pb-8 text-xs text-slate-400">
+        Interface navigable (écrans réels, données Supabase). Le moteur IA — architecture,
+        entonnoir, génération, export — est branché au bloc B.
+      </p>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>moeïa — 3 directions esthétiques</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===================== base ===================== */
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; scroll-padding-top:64px; }
+body { font-family:'Inter',system-ui,sans-serif; background:#111318; color:#2A2D33; }
+.meta-nav { position:sticky; top:0; z-index:50; display:flex; align-items:center; gap:8px;
+  background:#111318; color:#fff; padding:12px 24px; border-bottom:1px solid #2A2D33; }
+.meta-nav .t { font-weight:600; font-size:14px; margin-right:16px; letter-spacing:.02em; }
+.meta-nav a { color:#9CA3AF; text-decoration:none; font-size:13px; padding:6px 14px; border-radius:99px; border:1px solid #2A2D33; }
+.meta-nav a:hover { color:#fff; border-color:#04B7F9; }
+.meta-nav .reco { margin-left:auto; font-size:12px; color:#04B7F9; }
+.section { padding:48px 0 72px; }
+.wrap { max-width:1180px; margin:0 auto; padding:0 28px; }
+.dirhead { margin-bottom:28px; }
+.dirhead .k { font-size:12px; letter-spacing:.18em; text-transform:uppercase; opacity:.55; margin-bottom:6px; font-weight:600;}
+.dirhead h2 { font-size:30px; letter-spacing:-.01em; margin-bottom:10px; }
+.dirhead p { font-size:14.5px; line-height:1.65; max-width:840px; opacity:.8; }
+.rationale { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:26px; }
+.rationale .cell { border:1px solid; border-radius:10px; padding:14px 16px; font-size:13px; line-height:1.6; }
+.rationale .cell b { display:block; font-size:11px; letter-spacing:.14em; text-transform:uppercase; margin-bottom:6px; }
+.swatches { display:flex; gap:8px; margin:18px 0 26px; flex-wrap:wrap;}
+.sw { width:88px; border-radius:8px; overflow:hidden; border:1px solid rgba(0,0,0,.12); font-size:10px; }
+.sw .c { height:44px; } .sw .l { padding:5px 7px; font-family:'JetBrains Mono',monospace; }
+/* ===================== app frame commun ===================== */
+.frame { border-radius:14px; overflow:hidden; border:1px solid; box-shadow:0 18px 50px rgba(0,0,0,.28); }
+.appbar { display:flex; align-items:center; gap:22px; padding:0 22px; height:58px; }
+.appbar .logo svg { height:26px; display:block; }
+.appbar nav { display:flex; gap:4px; margin-left:8px; }
+.appbar nav a { font-size:12.5px; text-decoration:none; padding:7px 12px; border-radius:7px; font-weight:500; }
+.appbar .right { margin-left:auto; display:flex; align-items:center; gap:10px; }
+.content { padding:22px; }
+.crumb { font-size:12px; margin-bottom:14px; display:flex; gap:8px; align-items:center; }
+.pagehead { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:18px; gap:16px; flex-wrap:wrap;}
+.pagehead h3 { font-size:19px; letter-spacing:-.01em; }
+.pagehead .sub { font-size:12.5px; margin-top:4px; }
+.actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.btn { font-size:12.5px; font-weight:600; padding:8px 14px; border-radius:7px; border:1px solid transparent; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:7px;}
+.stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:18px; }
+.stat { border:1px solid; border-radius:10px; padding:12px 14px; }
+.stat .lb { font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; font-weight:600; }
+.stat .v { font-size:22px; font-weight:700; margin-top:4px; font-variant-numeric:tabular-nums; }
+.stat .d { font-size:11px; margin-top:2px; }
+.tabs { display:flex; gap:2px; border-bottom:1px solid; margin-bottom:16px; }
+.tabs a { font-size:12.5px; padding:9px 14px; text-decoration:none; font-weight:500; border-bottom:2px solid transparent; }
+.panel { border:1px solid; border-radius:10px; overflow:hidden; margin-bottom:16px; }
+.panel .ph { display:flex; align-items:center; justify-content:space-between; padding:11px 16px; border-bottom:1px solid; font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; font-weight:600; }
+table { width:100%; border-collapse:collapse; font-size:12.5px; }
+th { font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; text-align:right; padding:9px 12px; font-weight:600; }
+th:first-child, td:first-child { text-align:left; }
+td { padding:8px 12px; border-top:1px solid; text-align:right; font-variant-numeric:tabular-nums; }
+.badge { display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:600; padding:2.5px 8px; border-radius:5px; letter-spacing:.02em;}
+.badge.pill { border-radius:99px; }
+.iapanel { display:flex; align-items:center; gap:14px; padding:13px 16px; border-radius:10px; border:1px solid; margin-bottom:16px; font-size:12.5px; }
+.iapanel .bar { flex:1; height:5px; border-radius:99px; overflow:hidden; }
+.iapanel .bar i { display:block; height:100%; width:64%; border-radius:99px; }
+.upload { border:1.5px dashed; border-radius:10px; padding:22px; text-align:center; font-size:12.5px; }
+.upload b { display:block; font-size:13px; margin-bottom:3px; }
+.foot-note { font-size:11px; opacity:.55; margin-top:10px; }
+.num { font-family:'JetBrains Mono',monospace; font-size:11.5px; }
+
+/* ===================== DIRECTION A — Précision éditoriale ===================== */
+.dir-a { background:#F7F8F9; color:#0E1116;
+  --ink:#0E1116; --ink-2:#4B5563; --ink-3:#8A919C;
+  --paper:#FFFFFF; --bg:#F7F8F9; --line:#E3E6EA; --line-2:#EDEFF2;
+  --accent:#04B7F9; --accent-fn:#0273C4; --accent-soft:#EAF7FE;
+  --ok:#0F7B4D; --ok-soft:#E8F5EE; --warn:#9A6700; --warn-soft:#FBF3DE; --err:#B42318; --err-soft:#FBEAE9; }
+.dir-a .dirhead h2 { font-weight:700; }
+.dir-a .frame { border-color:var(--line); background:var(--paper); box-shadow:0 10px 34px rgba(14,17,22,.08); border-radius:8px;}
+.dir-a .appbar { background:var(--paper); border-bottom:1px solid var(--line); color:var(--ink); }
+.dir-a .appbar .accentbar { position:relative; }
+.dir-a .appbar nav a { color:var(--ink-2); border-radius:5px;}
+.dir-a .appbar nav a.on { color:var(--ink); background:var(--line-2); }
+.dir-a .appbar nav a:hover { color:var(--ink); }
+.dir-a .content { background:var(--bg); }
+.dir-a .crumb { color:var(--ink-3); }
+.dir-a .crumb b { color:var(--ink); font-weight:600;}
+.dir-a .pagehead .sub { color:var(--ink-2); }
+.dir-a .btn { border-radius:5px; }
+.dir-a .btn.primary { background:var(--ink); color:#fff; }
+.dir-a .btn.primary:hover { background:#000; }
+.dir-a .btn.accent { background:var(--accent-fn); color:#fff; }
+.dir-a .btn.ghost { background:var(--paper); border-color:var(--line); color:var(--ink); }
+.dir-a .stat { background:var(--paper); border-color:var(--line); border-radius:6px;}
+.dir-a .stat .lb { color:var(--ink-3); } .dir-a .stat .d { color:var(--ink-3); }
+.dir-a .stat.hl { border-top:2px solid var(--accent); }
+.dir-a .tabs { border-color:var(--line); }
+.dir-a .tabs a { color:var(--ink-2); }
+.dir-a .tabs a.on { color:var(--ink); border-bottom-color:var(--ink); font-weight:600;}
+.dir-a .panel { background:var(--paper); border-color:var(--line); border-radius:6px;}
+.dir-a .panel .ph { border-color:var(--line); color:var(--ink-3); background:var(--paper);}
+.dir-a th { color:var(--ink-3); border-bottom:1px solid var(--ink); background:var(--paper);}
+.dir-a td { border-color:var(--line-2); }
+.dir-a tr.best td { background:var(--accent-soft); }
+.dir-a .badge { border-radius:4px;}
+.dir-a .badge.ok { background:var(--ok-soft); color:var(--ok); }
+.dir-a .badge.err { background:var(--err-soft); color:var(--err); }
+.dir-a .badge.warn { background:var(--warn-soft); color:var(--warn); }
+.dir-a .badge.neutral { background:var(--line-2); color:var(--ink-2); }
+.dir-a .badge.ia { background:#fff; color:var(--accent-fn); border:1px solid var(--accent); }
+.dir-a .iapanel { background:var(--paper); border-color:var(--line); }
+.dir-a .iapanel .bar { background:var(--line-2); } .dir-a .iapanel .bar i { background:var(--accent); }
+.dir-a .upload { border-color:var(--line); color:var(--ink-2); background:var(--paper); border-radius:6px;}
+.dir-a .upload b { color:var(--ink); }
+.dir-a .rationale .cell { border-color:var(--line); background:var(--paper); color:var(--ink-2); }
+.dir-a .rationale .cell b { color:var(--ink); }
+
+/* ===================== DIRECTION B — Atelier minéral ===================== */
+.dir-b { background:#F6F5F2; color:#221F1A;
+  --ink:#221F1A; --ink-2:#57534E; --ink-3:#948F88;
+  --paper:#FFFFFF; --bg:#F6F5F2; --card:#FBFAF8; --line:#E5E2DC; --line-2:#EFEDE8;
+  --terra:#B4531D; --terra-deep:#93441A; --terra-soft:#F8ECE3;
+  --ia:#04B7F9; --ia-fn:#0273C4; --ia-soft:#E9F7FE;
+  --ok:#3E7A4E; --ok-soft:#EAF2EC; --warn:#9A6700; --warn-soft:#F8F0DC; --err:#B3352B; --err-soft:#F9EAE8; }
+.dir-b .dirhead h2, .dir-b .pagehead h3, .dir-b .stat .v { font-family:'Space Grotesk',sans-serif; }
+.dir-b .frame { border-color:var(--line); background:var(--paper); box-shadow:0 14px 40px rgba(34,31,26,.10); border-radius:14px;}
+.dir-b .appbar { background:var(--paper); border-bottom:1px solid var(--line); color:var(--ink); }
+.dir-b .appbar nav a { color:var(--ink-2); border-radius:8px;}
+.dir-b .appbar nav a.on { color:var(--terra-deep); background:var(--terra-soft); }
+.dir-b .content { background:var(--bg); }
+.dir-b .crumb { color:var(--ink-3); } .dir-b .crumb b { color:var(--ink); }
+.dir-b .pagehead .sub { color:var(--ink-2); }
+.dir-b .btn { border-radius:8px; }
+.dir-b .btn.primary { background:var(--terra); color:#fff; }
+.dir-b .btn.primary:hover { background:var(--terra-deep); }
+.dir-b .btn.accent { background:var(--ia-fn); color:#fff; }
+.dir-b .btn.ghost { background:var(--paper); border-color:var(--line); color:var(--ink); }
+.dir-b .stat { background:var(--card); border-color:var(--line); border-radius:12px; }
+.dir-b .stat .lb { color:var(--ink-3); } .dir-b .stat .d { color:var(--ink-3); }
+.dir-b .stat.hl { border-left:3px solid var(--terra); }
+.dir-b .tabs { border-color:var(--line); }
+.dir-b .tabs a { color:var(--ink-2); }
+.dir-b .tabs a.on { color:var(--terra-deep); border-bottom-color:var(--terra); font-weight:600;}
+.dir-b .panel { background:var(--paper); border-color:var(--line); border-radius:12px;}
+.dir-b .panel .ph { border-color:var(--line); color:var(--ink-3); background:var(--card);}
+.dir-b th { color:var(--ink-3); background:var(--card); border-bottom:1px solid var(--line);}
+.dir-b td { border-color:var(--line-2); }
+.dir-b tr.best td { background:var(--terra-soft); }
+.dir-b .badge { border-radius:99px; }
+.dir-b .badge.ok { background:var(--ok-soft); color:var(--ok); }
+.dir-b .badge.err { background:var(--err-soft); color:var(--err); }
+.dir-b .badge.warn { background:var(--warn-soft); color:var(--warn); }
+.dir-b .badge.neutral { background:var(--line-2); color:var(--ink-2); }
+.dir-b .badge.ia { background:var(--ia-soft); color:var(--ia-fn); }
+.dir-b .iapanel { background:var(--ia-soft); border-color:#BEE7FA; }
+.dir-b .iapanel .bar { background:#D3F0FD; } .dir-b .iapanel .bar i { background:var(--ia); }
+.dir-b .upload { border-color:#D8CFC2; color:var(--ink-2); background:var(--card); border-radius:12px;}
+.dir-b .upload b { color:var(--ink); }
+.dir-b .rationale .cell { border-color:var(--line); background:var(--paper); color:var(--ink-2); }
+.dir-b .rationale .cell b { color:var(--ink); }
+
+/* ===================== DIRECTION C — Blueprint contrôle ===================== */
+.dir-c { background:#0A0F1A; color:#E4E9F1;
+  --ink:#E4E9F1; --ink-2:#9AA6B8; --ink-3:#5D6B80;
+  --bg:#0A0F1A; --panel:#0F1626; --panel-2:#141D30; --line:#1D2840; --line-2:#182238;
+  --accent:#04B7F9; --accent-2:#0E96FA; --accent-soft:rgba(4,183,249,.10);
+  --ok:#34D399; --ok-soft:rgba(52,211,153,.12); --warn:#FBBF24; --warn-soft:rgba(251,191,36,.12);
+  --err:#F87171; --err-soft:rgba(248,113,113,.12); }
+.dir-c .section-inner { background-image:linear-gradient(var(--line-2) 1px, transparent 1px), linear-gradient(90deg, var(--line-2) 1px, transparent 1px); background-size:36px 36px; }
+.dir-c .dirhead h2 { color:#fff; }
+.dir-c .frame { border-color:var(--line); background:var(--panel); box-shadow:0 24px 70px rgba(0,0,0,.55); border-radius:12px;}
+.dir-c .appbar { background:var(--panel-2); border-bottom:1px solid var(--line); color:var(--ink); position:relative;}
+.dir-c .appbar::after { content:''; position:absolute; left:0; right:0; bottom:-1px; height:1px;
+  background:linear-gradient(90deg, var(--accent), var(--accent-2) 40%, transparent 80%); }
+.dir-c .appbar nav a { color:var(--ink-2); border-radius:6px; }
+.dir-c .appbar nav a.on { color:#fff; background:var(--accent-soft); }
+.dir-c .content { background:var(--bg); }
+.dir-c .crumb { color:var(--ink-3); } .dir-c .crumb b { color:var(--ink); }
+.dir-c .pagehead h3 { color:#fff; } .dir-c .pagehead .sub { color:var(--ink-2); }
+.dir-c .btn { border-radius:6px; }
+.dir-c .btn.primary { background:linear-gradient(90deg,var(--accent),var(--accent-2)); color:#04121C; font-weight:700;}
+.dir-c .btn.primary:hover { filter:brightness(1.1); }
+.dir-c .btn.accent { background:var(--accent-soft); color:var(--accent); border-color:rgba(4,183,249,.4);}
+.dir-c .btn.ghost { background:transparent; border-color:var(--line); color:var(--ink); }
+.dir-c .stat { background:var(--panel); border-color:var(--line); border-radius:8px;}
+.dir-c .stat .lb { color:var(--ink-3); } .dir-c .stat .v { color:#fff; } .dir-c .stat .d { color:var(--ink-3); }
+.dir-c .stat.hl { border-color:rgba(4,183,249,.5); box-shadow:0 0 24px rgba(4,183,249,.12); }
+.dir-c .stat.hl .v { color:var(--accent); }
+.dir-c .tabs { border-color:var(--line); }
+.dir-c .tabs a { color:var(--ink-2); }
+.dir-c .tabs a.on { color:var(--accent); border-bottom-color:var(--accent); font-weight:600;}
+.dir-c .panel { background:var(--panel); border-color:var(--line); border-radius:8px;}
+.dir-c .panel .ph { border-color:var(--line); color:var(--ink-3); background:var(--panel-2);}
+.dir-c th { color:var(--ink-3); background:var(--panel-2); border-bottom:1px solid var(--line);}
+.dir-c td { border-color:var(--line-2); }
+.dir-c tr.best td { background:var(--accent-soft); }
+.dir-c .badge { border-radius:5px; }
+.dir-c .badge.ok { background:var(--ok-soft); color:var(--ok); }
+.dir-c .badge.err { background:var(--err-soft); color:var(--err); }
+.dir-c .badge.warn { background:var(--warn-soft); color:var(--warn); }
+.dir-c .badge.neutral { background:var(--line-2); color:var(--ink-2); }
+.dir-c .badge.ia { background:var(--accent-soft); color:var(--accent); border:1px solid rgba(4,183,249,.35); }
+.dir-c .iapanel { background:var(--panel); border-color:rgba(4,183,249,.35); box-shadow:0 0 30px rgba(4,183,249,.08);}
+.dir-c .iapanel .bar { background:var(--line-2); }
+.dir-c .iapanel .bar i { background:linear-gradient(90deg,var(--accent),var(--accent-2)); }
+.dir-c .upload { border-color:var(--line); color:var(--ink-2); background:var(--panel); border-radius:8px;}
+.dir-c .upload b { color:var(--ink); }
+.dir-c .rationale .cell { border-color:var(--line); background:var(--panel); color:var(--ink-2); }
+.dir-c .rationale .cell b { color:var(--ink); }
+@media (max-width:900px){ .stats{grid-template-columns:repeat(2,1fr);} .rationale{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+
+<div class="meta-nav">
+  <span class="t">moeïa — 3 directions esthétiques</span>
+  <a href="#dir-a">A · Précision éditoriale</a>
+  <a href="#dir-b">B · Atelier minéral</a>
+  <a href="#dir-c">C · Blueprint contrôle</a>
+  <span class="reco">Recommandation DA : direction A (détails en fin de section)</span>
+</div>
+
+<!-- ============================== DIRECTION A ============================== -->
+<section class="section dir-a" id="dir-a">
+<div class="wrap">
+  <div class="dirhead">
+    <div class="k">Direction A</div>
+    <h2>Précision éditoriale — encre, papier, un seul signal</h2>
+    <p>L'interface comme un document d'ingénierie : encre quasi noire sur papier, bordures fines,
+    chiffres en mono à alignement tabulaire. Le cyan du logo (#04B7F9) est l'<b>unique</b> couleur de marque,
+    utilisé avec parcimonie : action principale, focus, moments IA. Les statuts gardent des couleurs
+    fonctionnelles sourdes. Presque monochrome — c'est précisément ce qui différencie des SaaS bleu-gris.</p>
+  </div>
+  <div class="swatches">
+    <div class="sw"><div class="c" style="background:#0E1116"></div><div class="l">#0E1116 encre</div></div>
+    <div class="sw"><div class="c" style="background:#F7F8F9"></div><div class="l">#F7F8F9 fond</div></div>
+    <div class="sw"><div class="c" style="background:#FFFFFF;border-bottom:1px solid #eee"></div><div class="l">#FFFFFF papier</div></div>
+    <div class="sw"><div class="c" style="background:#E3E6EA"></div><div class="l">#E3E6EA filet</div></div>
+    <div class="sw"><div class="c" style="background:#04B7F9"></div><div class="l">#04B7F9 signal</div></div>
+    <div class="sw"><div class="c" style="background:#0273C4"></div><div class="l">#0273C4 action</div></div>
+  </div>
+
+  <div class="frame">
+    <div class="appbar">
+      <span class="logo" style="color:#0E1116"><svg xmlns="http://www.w3.org/2000/svg" viewBox="1768 220 4836 1039">
+  <g transform="translate(0,1344) scale(0.1,-0.1)"><path fill="currentColor" d="M29255 10622 c-41 -23 -120 -77 -375 -257 -275 -195 -330 -228 -568
+-339 -409 -192 -630 -368 -748 -598 -75 -148 -91 -352 -75 -958 6 -234 16
+-733 21 -1110 5 -377 14 -950 20 -1275 6 -324 17 -1130 25 -1790 16 -1275 30
+-2215 41 -2612 l7 -243 46 0 c25 0 75 7 111 16 69 16 407 120 580 179 58 20
+138 43 179 51 41 9 140 42 220 73 80 32 244 91 364 130 l217 73 0 4339 c0
+4126 -1 4339 -17 4339 -10 -1 -32 -9 -48 -18z M18280 6419 l0 -4180 233 -114
+c127 -62 315 -148 417 -190 171 -71 270 -119 610 -298 69 -36 164 -79 212 -96
+80 -28 237 -66 244 -59 5 6 23 1374 34 2508 10 1118 22 2180 41 3795 17 1383
+13 1494 -69 1649 -65 125 -109 158 -502 386 -210 122 -278 166 -585 381 -271
+189 -400 267 -507 304 -46 16 -48 18 -48 56 0 39 0 39 -40 39 l-40 0 0 -4181z
+M47925 8845 c-268 -30 -476 -86 -705 -187 -324 -143 -590 -321 -834 -558 -264
+-256 -482 -572 -591 -855 -200 -518 -239 -1079 -104 -1500 36 -115 157 -401
+227 -542 182 -361 522 -728 893 -961 162 -102 454 -240 594 -280 314 -91 370
+-104 527 -121 145 -16 474 -14 613 4 549 71 1033 271 1435 592 390 311 694
+806 820 1338 84 353 102 802 44 1080 -98 460 -336 880 -706 1241 -129 126
+-202 185 -343 277 -367 240 -767 394 -1185 458 -176 27 -515 34 -685 14z m520
+-646 c388 -48 752 -196 1052 -427 122 -95 194 -163 262 -246 263 -324 381
+-679 381 -1147 0 -476 -149 -901 -439 -1251 -71 -87 -91 -103 -91 -73 0 44
+-79 -30 -149 -140 -71 -113 -431 -296 -735 -376 -196 -50 -293 -62 -516 -63
+-219 -1 -272 6 -465 61 -353 101 -705 313 -906 545 -90 105 -232 324 -300 463
+-140 290 -196 555 -187 889 5 155 9 184 41 307 121 463 329 792 654 1035 240
+179 411 275 616 343 273 90 507 114 782 80z M54165 8849 c-495 -43 -964 -231
+-1315 -527 -101 -85 -359 -357 -458 -482 -145 -183 -242 -350 -316 -542 -268
+-697 -236 -1483 88 -2126 135 -267 362 -538 633 -754 495 -394 1034 -581 1678
+-581 226 0 364 14 578 59 226 47 545 164 702 256 463 272 773 574 948 923 44
+88 101 234 94 241 -5 5 -285 22 -498 30 -175 6 -189 6 -252 -15 -82 -28 -110
+-54 -195 -185 -125 -192 -231 -276 -547 -434 -279 -140 -447 -176 -810 -176
+-235 0 -322 10 -520 61 -224 58 -504 188 -668 312 -118 88 -275 252 -349 362
+-114 169 -188 353 -239 588 -16 75 -31 146 -34 159 l-5 22 2159 0 2160 0 19
+25 c30 38 37 149 24 375 -15 243 -33 373 -83 569 -95 374 -257 670 -527 960
+-141 151 -356 345 -465 419 -510 347 -1171 515 -1802 461z m729 -704 c128 -24
+244 -68 401 -152 383 -206 622 -416 795 -698 93 -150 108 -196 130 -389 11
+-97 20 -178 20 -181 0 -3 -801 -5 -1780 -5 -1136 0 -1780 3 -1780 10 0 5 9 55
+20 110 67 346 214 620 461 854 227 216 601 401 919 454 144 23 683 22 814 -3z
+M62420 8836 c-248 -29 -551 -133 -812 -277 -359 -199 -681 -486 -956 -852
+-194 -258 -330 -589 -403 -977 -26 -137 -37 -491 -20 -640 51 -448 264 -937
+575 -1324 339 -421 768 -693 1346 -852 223 -62 388 -86 631 -91 379 -9 560 24
+954 178 469 183 776 417 915 698 30 59 32 61 70 61 l40 0 0 -380 0 -380 339 0
+338 0 8 1313 c8 1562 10 1523 -90 1817 -85 250 -235 519 -411 740 -87 108
+-284 305 -394 393 -349 280 -831 480 -1355 563 -138 22 -617 28 -775 10z m760
+-672 c393 -57 710 -214 985 -489 140 -140 222 -239 317 -385 84 -128 126 -214
+168 -345 70 -220 95 -407 87 -650 -10 -303 -75 -572 -192 -792 -186 -351 -494
+-657 -805 -801 -268 -124 -317 -145 -398 -171 -159 -52 -264 -64 -520 -58
+-251 6 -334 18 -535 83 -203 66 -464 195 -592 293 -98 74 -272 250 -345 346
+-171 228 -272 444 -351 753 -32 125 -40 178 -45 285 -15 314 50 616 195 912
+106 215 211 367 349 505 181 180 328 282 549 380 311 136 753 189 1133 134z
+M39240 8834 c-95 -9 -268 -36 -345 -54 -83 -19 -299 -110 -421 -178 -39 -21
+-93 -44 -120 -51 -75 -19 -100 -39 -247 -196 -192 -205 -279 -322 -372 -503
+-25 -48 -49 -92 -54 -98 -17 -20 -43 -77 -62 -133 -26 -74 -84 -387 -100 -536
+-14 -129 -15 -1106 -3 -2447 l7 -678 378 0 379 0 0 51 c0 231 30 2873 34 3009
+10 308 58 480 186 670 20 30 35 60 33 66 -10 29 219 207 353 276 186 95 295
+118 602 125 232 6 232 5 232 -16 0 -18 -6 -21 -37 -22 -28 0 -9 -8 72 -28 184
+-47 334 -119 488 -234 94 -72 143 -126 201 -225 79 -135 137 -307 166 -493 16
+-99 28 -1024 29 -2226 l1 -953 378 0 379 0 6 1478 c4 893 11 1517 17 1577 29
+277 100 493 232 701 116 184 376 339 668 399 115 24 389 16 535 -15 278 -59
+491 -179 633 -356 163 -202 251 -435 282 -744 9 -89 28 -1906 30 -2787 l0
+-253 359 0 358 0 8 1584 c4 871 4 1637 0 1702 -5 93 -13 140 -37 213 -144 443
+-423 802 -840 1082 -279 188 -662 291 -1083 292 -380 1 -626 -59 -896 -219
+-50 -30 -93 -54 -96 -54 -3 0 -49 -35 -102 -77 -114 -93 -323 -299 -319 -317
+3 -12 -138 -196 -151 -196 -4 0 -29 46 -57 102 -43 89 -62 116 -149 207 -140
+145 -345 295 -533 390 -218 110 -452 160 -777 166 -110 1 -220 1 -245 -1z
+M58280 6320 l0 -2360 380 0 380 0 0 2360 0 2360 -380 0 -380 0 0 -2360z
+M21520 5140 l0 -2780 31 0 c53 0 110 18 744 235 341 117 659 225 707 240 48
+15 94 32 102 39 18 13 28 295 46 1231 11 583 24 1190 41 1825 15 551 0 717
+-76 875 -60 125 -124 175 -460 360 -230 126 -267 150 -500 330 -276 214 -409
+299 -517 334 -35 12 -38 15 -38 52 0 39 0 39 -40 39 l-40 0 0 -2780z"/></g>
+  <g transform="translate(0,1344) scale(0.1,-0.1)"><path fill="#04B7F9" d="M59165 10571 c-170 -70 -378 -172 -460 -225 -185 -121 -270 -241
+-344 -486 -70 -235 -81 -297 -81 -447 l0 -136 63 6 c71 6 494 149 590 200 148
+78 242 253 301 562 33 172 46 299 46 440 0 113 0 115 -22 115 -13 0 -54 -13
+-93 -29z M25923 7962 c-59 -43 -227 -167 -372 -276 -145 -109 -280 -205 -300
+-214 -254 -111 -390 -193 -508 -306 -72 -67 -87 -90 -189 -286 -41 -78 -47
+-172 -35 -505 12 -309 24 -770 41 -1570 16 -774 30 -1276 36 -1362 l6 -83 62
+0 c48 0 82 8 152 36 49 20 361 128 694 239 l605 202 3 2101 2 2102 -44 0 c-39
+0 -56 -9 -153 -78z"/></g>
+</svg></span>
+      <nav>
+        <a href="#dir-a" class="on">AO</a><a href="#dir-a">CCTP</a><a href="#dir-a">Budget</a><a href="#dir-a" style="font-weight:600">ACT</a><a href="#dir-a">Visas</a>
+      </nav>
+      <div class="right">
+        <span class="badge ia">✦ IA</span>
+        <span class="num" style="color:#8A919C">2025-FFT-CVC</span>
+      </div>
+    </div>
+    <div class="content">
+      <div class="crumb"><b>FFT — Roland-Garros</b><span>/</span><span>Lot CVC — Inv. 2026</span><span>/</span><span>Analyse DPGF</span></div>
+      <div class="pagehead">
+        <div><h3>Analyse comparative des offres</h3><div class="sub">Tour d'offre 2 · 6 entreprises consultées · estimation BET 91 182,06 € HT</div></div>
+        <div class="actions">
+          <button class="btn ghost">Exporter</button>
+          <button class="btn accent">✦ Générer les commentaires</button>
+          <button class="btn primary">Nouveau tour d'offre</button>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat hl"><div class="lb">Moins-disante</div><div class="v">29 381 €</div><div class="d">Spie Facilities · −67,8 %</div></div>
+        <div class="stat"><div class="lb">Moyenne recevables</div><div class="v">56 838 €</div><div class="d">−37,7 % vs BET</div></div>
+        <div class="stat"><div class="lb">Recevables</div><div class="v">5 / 7</div><div class="d">2 non recevables</div></div>
+        <div class="stat"><div class="lb">Écart type</div><div class="v">16,4 k€</div><div class="d">dispersion forte</div></div>
+      </div>
+      <div class="tabs">
+        <a href="#dir-a">Marché</a><a href="#dir-a">Cadrage</a><a href="#dir-a">Réponses</a><a href="#dir-a" class="on">Analyse DPGF</a><a href="#dir-a">Notation</a><a href="#dir-a">Classement</a><a href="#dir-a">Génération</a>
+      </div>
+      <div class="panel">
+        <div class="ph"><span>Critères financiers — prestation de base</span><span class="badge neutral">HT</span></div>
+        <table>
+          <thead><tr><th>Entreprise</th><th>Statut</th><th>Prix HT</th><th>Écart vs BET</th><th>TTC</th><th>Note /60</th></tr></thead>
+          <tbody>
+            <tr><td><b>Estimation BET</b></td><td><span class="badge neutral">Référence</span></td><td class="num">91 182,06 €</td><td class="num">—</td><td class="num">109 418,47 €</td><td>—</td></tr>
+            <tr class="best"><td><b>Spie Facilities</b></td><td><span class="badge ok">Recevable</span></td><td class="num"><b>29 381,85 €</b></td><td class="num">−67,8 %</td><td class="num">35 258,22 €</td><td><b>60,00</b></td></tr>
+            <tr><td><b>Foret Entreprise</b></td><td><span class="badge ok">Recevable</span></td><td class="num">61 053,30 €</td><td class="num">−33,0 %</td><td class="num">73 263,96 €</td><td>28,87</td></tr>
+            <tr><td><b>Ocellis Énergies</b></td><td><span class="badge ok">Recevable</span></td><td class="num">65 013,40 €</td><td class="num">−28,7 %</td><td class="num">78 016,08 €</td><td>27,12</td></tr>
+            <tr><td><b>Aurion</b></td><td><span class="badge warn">Réserve chiffrage</span></td><td class="num">71 678,14 €</td><td class="num">−21,4 %</td><td class="num">86 013,77 €</td><td>24,59</td></tr>
+            <tr><td><b>Tempere Entreprise</b></td><td><span class="badge ok">Recevable</span></td><td class="num">47 142,93 €</td><td class="num">−48,3 %</td><td class="num">56 571,52 €</td><td>37,40</td></tr>
+            <tr><td>Entreprise C.</td><td><span class="badge err">Non recevable</span></td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="iapanel">
+        <span class="badge ia">✦ IA</span>
+        <span>Analyse des écarts &gt; 50 % — ligne 34/53 · <b>Spie Facilities : absence chiffrage GTB détectée</b></span>
+        <div class="bar"><i></i></div>
+        <span class="num">64 %</span>
+      </div>
+      <div class="upload"><b>Déposer les DPGF entreprises</b>XLSX, PDF — glisser-déposer ou <a href="#dir-a" style="color:#0273C4">parcourir</a></div>
+      <div class="foot-note">Densité : rangée 33 px · texte 12,5 px · chiffres JetBrains Mono tabulaire</div>
+    </div>
+  </div>
+
+  <div class="rationale">
+    <div class="cell"><b>Positionnement</b>Le sérieux du document technique porté à l'écran. Crédible immédiatement face à un BET ou un architecte : l'outil ressemble aux pièces qu'il produit (CCTP, DPGF), pas à un outil marketing.</div>
+    <div class="cell"><b>Forces</b>Différenciation maximale vs SaaS générique (le quasi-monochrome est rare). Le cyan, unique, devient signature. Excellente tenue en densité extrême et à l'impression. Hiérarchie par la typographie, pas par la couleur.</div>
+    <div class="cell"><b>Risques</b>Exigeant : la rigueur typographique doit être irréprochable, sinon l'ensemble paraît austère. Peut sembler froid pour la partie commerciale/site vitrine (compensable par la photographie et le picto).</div>
+  </div>
+</div>
+</section>
+
+<!-- ============================== DIRECTION B ============================== -->
+<section class="section dir-b" id="dir-b">
+<div class="wrap">
+  <div class="dirhead">
+    <div class="k">Direction B</div>
+    <h2>Atelier minéral — matière chaude, deux registres</h2>
+    <p>Ancrage dans le monde physique du bâtiment : neutres pierre (héritage des gris <i>stone</i> déjà
+    dominants dans AO et ACT), terracotta en couleur d'action — la terre cuite, le chantier — et le cyan
+    du logo <b>réservé exclusivement aux moments IA</b>. Deux registres lisibles d'un coup d'œil :
+    le métier est terre, l'intelligence est ciel. Titres en Space Grotesk pour le caractère.</p>
+  </div>
+  <div class="swatches">
+    <div class="sw"><div class="c" style="background:#221F1A"></div><div class="l">#221F1A encre</div></div>
+    <div class="sw"><div class="c" style="background:#F6F5F2"></div><div class="l">#F6F5F2 fond</div></div>
+    <div class="sw"><div class="c" style="background:#E5E2DC"></div><div class="l">#E5E2DC filet</div></div>
+    <div class="sw"><div class="c" style="background:#B4531D"></div><div class="l">#B4531D terra</div></div>
+    <div class="sw"><div class="c" style="background:#04B7F9"></div><div class="l">#04B7F9 IA</div></div>
+    <div class="sw"><div class="c" style="background:#3E7A4E"></div><div class="l">#3E7A4E ok</div></div>
+  </div>
+
+  <div class="frame">
+    <div class="appbar">
+      <span class="logo" style="color:#221F1A"><svg xmlns="http://www.w3.org/2000/svg" viewBox="1768 220 4836 1039">
+  <g transform="translate(0,1344) scale(0.1,-0.1)"><path fill="currentColor" d="M29255 10622 c-41 -23 -120 -77 -375 -257 -275 -195 -330 -228 -568
+-339 -409 -192 -630 -368 -748 -598 -75 -148 -91 -352 -75 -958 6 -234 16
+-733 21 -1110 5 -377 14 -950 20 -1275 6 -324 17 -1130 25 -1790 16 -1275 30
+-2215 41 -2612 l7 -243 46 0 c25 0 75 7 111 16 69 16 407 120 580 179 58 20
+138 43 179 51 41 9 140 42 220 73 80 32 244 91 364 130 l217 73 0 4339 c0
+4126 -1 4339 -17 4339 -10 -1 -32 -9 -48 -18z M18280 6419 l0 -4180 233 -114
+c127 -62 315 -148 417 -190 171 -71 270 -119 610 -298 69 -36 164 -79 212 -96
+80 -28 237 -66 244 -59 5 6 23 1374 34 2508 10 1118 22 2180 41 3795 17 1383
+13 1494 -69 1649 -65 125 -109 158 -502 386 -210 122 -278 166 -585 381 -271
+189 -400 267 -507 304 -46 16 -48 18 -48 56 0 39 0 39 -40 39 l-40 0 0 -4181z
+M47925 8845 c-268 -30 -476 -86 -705 -187 -324 -143 -590 -321 -834 -558 -264
+-256 -482 -572 -591 -855 -200 -518 -239 -1079 -104 -1500 36 -115 157 -401
+227 -542 182 -361 522 -728 893 -961 162 -102 454 -240 594 -280 314 -91 370
+-104 527 -121 145 -16 474 -14 613 4 549 71 1033 271 1435 592 390 311 694
+806 820 1338 84 353 102 802 44 1080 -98 460 -336 880 -706 1241 -129 126
+-202 185 -343 277 -367 240 -767 394 -1185 458 -176 27 -515 34 -685 14z m520
+-646 c388 -48 752 -196 1052 -427 122 -95 194 -163 262 -246 263 -324 381
+-679 381 -1147 0 -476 -149 -901 -439 -1251 -71 -87 -91 -103 -91 -73 0 44
+-79 -30 -149 -140 -71 -113 -431 -296 -735 -376 -196 -50 -293 -62 -516 -63
+-219 -1 -272 6 -465 61 -353 101 -705 313 -906 545 -90 105 -232 324 -300 463
+-140 290 -196 555 -187 889 5 155 9 184 41 307 121 463 329 792 654 1035 240
+179 411 275 616 343 273 90 507 114 782 80z M54165 8849 c-495 -43 -964 -231
+-1315 -527 -101 -85 -359 -357 -458 -482 -145 -183 -242 -350 -316 -542 -268
+-697 -236 -1483 88 -2126 135 -267 362 -538 633 -754 495 -394 1034 -581 1678
+-581 226 0 364 14 578 59 226 47 545 164 702 256 463 272 773 574 948 923 44
+88 101 234 94 241 -5 5 -285 22 -498 30 -175 6 -189 6 -252 -15 -82 -28 -110
+-54 -195 -185 -125 -192 -231 -276 -547 -434 -279 -140 -447 -176 -810 -176
+-235 0 -322 10 -520 61 -224 58 -504 188 -668 312 -118 88 -275 252 -349 362
+-114 169 -188 353 -239 588 -16 75 -31 146 -34 159 l-5 22 2159 0 2160 0 19
+25 c30 38 37 149 24 375 -15 243 -33 373 -83 569 -95 374 -257 670 -527 960
+-141 151 -356 345 -465 419 -510 347 -1171 515 -1802 461z m729 -704 c128 -24
+244 -68 401 -152 383 -206 622 -416 795 -698 93 -150 108 -196 130 -389 11
+-97 20 -178 20 -181 0 -3 -801 -5 -1780 -5 -1136 0 -1780 3 -1780 10 0 5 9 55
+20 110 67 346 214 620 461 854 227 216 601 401 919 454 144 23 683 22 814 -3z
+M62420 8836 c-248 -29 -551 -133 -812 -277 -359 -199 -681 -486 -956 -852
+-194 -258 -330 -589 -403 -977 -26 -137 -37 -491 -20 -640 51 -448 264 -937
+575 -1324 339 -421 768 -693 1346 -852 223 -62 388 -86 631 -91 379 -9 560 24
+954 178 469 183 776 417 915 698 30 59 32 61 70 61 l40 0 0 -380 0 -380 339 0
+338 0 8 1313 c8 1562 10 1523 -90 1817 -85 250 -235 519 -411 740 -87 108
+-284 305 -394 393 -349 280 -831 480 -1355 563 -138 22 -617 28 -775 10z m760
+-672 c393 -57 710 -214 985 -489 140 -140 222 -239 317 -385 84 -128 126 -214
+168 -345 70 -220 95 -407 87 -650 -10 -303 -75 -572 -192 -792 -186 -351 -494
+-657 -805 -801 -268 -124 -317 -145 -398 -171 -159 -52 -264 -64 -520 -58
+-251 6 -334 18 -535 83 -203 66 -464 195 -592 293 -98 74 -272 250 -345 346
+-171 228 -272 444 -351 753 -32 125 -40 178 -45 285 -15 314 50 616 195 912
+106 215 211 367 349 505 181 180 328 282 549 380 311 136 753 189 1133 134z
+M39240 8834 c-95 -9 -268 -36 -345 -54 -83 -19 -299 -110 -421 -178 -39 -21
+-93 -44 -120 -51 -75 -19 -100 -39 -247 -196 -192 -205 -279 -322 -372 -503
+-25 -48 -49 -92 -54 -98 -17 -20 -43 -77 -62 -133 -26 -74 -84 -387 -100 -536
+-14 -129 -15 -1106 -3 -2447 l7 -678 378 0 379 0 0 51 c0 231 30 2873 34 3009
+10 308 58 480 186 670 20 30 35 60 33 66 -10 29 219 207 353 276 186 95 295
+118 602 125 232 6 232 5 232 -16 0 -18 -6 -21 -37 -22 -28 0 -9 -8 72 -28 184
+-47 334 -119 488 -234 94 -72 143 -126 201 -225 79 -135 137 -307 166 -493 16
+-99 28 -1024 29 -2226 l1 -953 378 0 379 0 6 1478 c4 893 11 1517 17 1577 29
+277 100 493 232 701 116 184 376 339 668 399 115 24 389 16 535 -15 278 -59
+491 -179 633 -356 163 -202 251 -435 282 -744 9 -89 28 -1906 30 -2787 l0
+-253 359 0 358 0 8 1584 c4 871 4 1637 0 1702 -5 93 -13 140 -37 213 -144 443
+-423 802 -840 1082 -279 188 -662 291 -1083 292 -380 1 -626 -59 -896 -219
+-50 -30 -93 -54 -96 -54 -3 0 -49 -35 -102 -77 -114 -93 -323 -299 -319 -317
+3 -12 -138 -196 -151 -196 -4 0 -29 46 -57 102 -43 89 -62 116 -149 207 -140
+145 -345 295 -533 390 -218 110 -452 160 -777 166 -110 1 -220 1 -245 -1z
+M58280 6320 l0 -2360 380 0 380 0 0 2360 0 2360 -380 0 -380 0 0 -2360z
+M21520 5140 l0 -2780 31 0 c53 0 110 18 744 235 341 117 659 225 707 240 48
+15 94 32 102 39 18 13 28 295 46 1231 11 583 24 1190 41 1825 15 551 0 717
+-76 875 -60 125 -124 175 -460 360 -230 126 -267 150 -500 330 -276 214 -409
+299 -517 334 -35 12 -38 15 -38 52 0 39 0 39 -40 39 l-40 0 0 -2780z"/></g>
+  <g transform="translate(0,1344) scale(0.1,-0.1)"><path fill="#04B7F9" d="M59165 10571 c-170 -70 -378 -172 -460 -225 -185 -121 -270 -241
+-344 -486 -70 -235 -81 -297 -81 -447 l0 -136 63 6 c71 6 494 149 590 200 148
+78 242 253 301 562 33 172 46 299 46 440 0 113 0 115 -22 115 -13 0 -54 -13
+-93 -29z M25923 7962 c-59 -43 -227 -167 -372 -276 -145 -109 -280 -205 -300
+-214 -254 -111 -390 -193 -508 -306 -72 -67 -87 -90 -189 -286 -41 -78 -47
+-172 -35 -505 12 -309 24 -770 41 -1570 16 -774 30 -1276 36 -1362 l6 -83 62
+0 c48 0 82 8 152 36 49 20 361 128 694 239 l605 202 3 2101 2 2102 -44 0 c-39
+0 -56 -9 -153 -78z"/></g>
+</svg></span>
+      <nav>
+        <a href="#dir-b" class="on">AO</a><a href="#dir-b">CCTP</a><a href="#dir-b">Budget</a><a href="#dir-b">ACT</a><a href="#dir-b">Visas</a>
+      </nav>
+      <div class="right">
+        <span class="badge ia">✦ IA</span>
+        <span class="num" style="color:#948F88">2025-FFT-CVC</span>
+      </div>
+    </div>
+    <div class="content">
+      <div class="crumb"><b>FFT — Roland-Garros</b><span>/</span><span>Lot CVC — Inv. 2026</span><span>/</span><span>Analyse DPGF</span></div>
+      <div class="pagehead">
+        <div><h3>Analyse comparative des offres</h3><div class="sub">Tour d'offre 2 · 6 entreprises consultées · estimation BET 91 182,06 € HT</div></div>
+        <div class="actions">
+          <button class="btn ghost">Exporter</button>
+          <button class="btn accent">✦ Générer les commentaires</button>
+          <button class="btn primary">Nouveau tour d'offre</button>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat hl"><div class="lb">Moins-disante</div><div class="v">29 381 €</div><div class="d">Spie Facilities · −67,8 %</div></div>
+        <div class="stat"><div class="lb">Moyenne recevables</div><div class="v">56 838 €</div><div class="d">−37,7 % vs BET</div></div>
+        <div class="stat"><div class="lb">Recevables</div><div class="v">5 / 7</div><div class="d">2 non recevables</div></div>
+        <div class="stat"><div class="lb">Écart type</div><div class="v">16,4 k€</div><div class="d">dispersion forte</div></div>
+      </div>
+      <div class="tabs">
+        <a href="#dir-b">Marché</a><a href="#dir-b">Cadrage</a><a href="#dir-b">Réponses</a><a href="#dir-b" class="on">Analyse DPGF</a><a href="#dir-b">Notation</a><a href="#dir-b">Classement</a><a href="#dir-b">Génération</a>
+      </div>
+      <div class="panel">
+        <div class="ph"><span>Critères financiers — prestation de base</span><span class="badge neutral">HT</span></div>
+        <table>
+          <thead><tr><th>Entreprise</th><th>Statut</th><th>Prix HT</th><th>Écart vs BET</th><th>TTC</th><th>Note /60</th></tr></thead>
+          <tbody>
+            <tr><td><b>Estimation BET</b></td><td><span class="badge neutral">Référence</span></td><td class="num">91 182,06 €</td><td class="num">—</td><td class="num">109 418,47 €</td><td>—</td></tr>
+            <tr class="best"><td><b>Spie Facilities</b></td><td><span class="badge ok">Recevable</span></td><td class="num"><b>29 381,85 €</b></td><td class="num">−67,8 %</td><td class="num">35 258,22 €</td><td><b>60,00</b></td></tr>
+            <tr><td><b>Foret Entreprise</b></td><td><span class="badge ok">Recevable</span></td><td class="num">61 053,30 €</td><td class="num">−33,0 %</td><td class="num">73 263,96 €</td><td>28,87</td></tr>
+            <tr><td><b>Ocellis Énergies</b></td><td><span class="badge ok">Recevable</span></td><td class="num">65 013,40 €</td><td class="num">−28,7 %</td><td class="num">78 016,08 €</td><td>27,12</td></tr>
+            <tr><td><b>Aurion</b></td><td><span class="badge warn">Réserve chiffrage</span></td><td class="num">71 678,14 €</td><td class="num">−21,4 %</td><td class="num">86 013,77 €</td><td>24,59</td></tr>
+            <tr><td><b>Tempere Entreprise</b></td><td><span class="badge ok">Recevable</span></td><td class="num">47 142,93 €</td><td class="num">−48,3 %</td><td class="num">56 571,52 €</td><td>37,40</td></tr>
+            <tr><td>Entreprise C.</td><td><span class="badge err">Non recevable</span></td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="iapanel">
+        <span class="badge ia">✦ IA</span>
+        <span>Analyse des écarts &gt; 50 % — ligne 34/53 · <b>Spie Facilities : absence chiffrage GTB détectée</b></span>
+        <div class="bar"><i></i></div>
+        <span class="num">64 %</span>
+      </div>
+      <div class="upload"><b>Déposer les DPGF entreprises</b>XLSX, PDF — glisser-déposer ou <a href="#dir-b" style="color:#B4531D">parcourir</a></div>
+      <div class="foot-note">Densité : rangée 33 px · texte 12,5 px · titres Space Grotesk</div>
+    </div>
+  </div>
+
+  <div class="rationale">
+    <div class="cell"><b>Positionnement</b>La MOE comme métier de matière et de terrain, augmentée — pas remplacée — par l'IA. Chaleureux et humain là où les concurrents sont cliniques. Parle aux architectes autant qu'aux ingénieurs.</div>
+    <div class="cell"><b>Forces</b>Continuité avec l'existant (les neutres stone dominent déjà AO/ACT → migration douce). La dualité terra/cyan donne un système sémantique clair : on sait toujours si une action est humaine ou IA.</div>
+    <div class="cell"><b>Risques</b>Deux couleurs d'accent = discipline nécessaire pour ne pas recréer le patchwork actuel. Le terracotta est proche des couleurs d'alerte (amber/red) : la sémantique des statuts doit être verrouillée finement.</div>
+  </div>
+</div>
+</section>
+
+<!-- ============================== DIRECTION C ============================== -->
+<section class="section dir-c" id="dir-c">
+<div class="section-inner" style="padding:1px 0;">
+<div class="wrap">
+  <div class="dirhead">
+    <div class="k" style="color:#5D6B80">Direction C</div>
+    <h2>Blueprint contrôle — sombre, luminescent, IA en avant</h2>
+    <p style="color:#9AA6B8">L'héritage assumé des en-têtes sombres d'AO et des dégradés cyan d'ACT, poussé jusqu'au bout :
+    une salle de contrôle. Fond bleu-noir, grille de calque technique, cyan luminescent pour les actions
+    et l'IA, dégradé cyan→bleu comme signature. Les données deviennent spectaculaires ; l'IA est
+    scénarisée comme cœur du produit.</p>
+  </div>
+  <div class="swatches">
+    <div class="sw" style="border-color:#1D2840"><div class="c" style="background:#0A0F1A"></div><div class="l" style="color:#9AA6B8">#0A0F1A fond</div></div>
+    <div class="sw" style="border-color:#1D2840"><div class="c" style="background:#0F1626"></div><div class="l" style="color:#9AA6B8">#0F1626 panneau</div></div>
+    <div class="sw" style="border-color:#1D2840"><div class="c" style="background:#1D2840"></div><div class="l" style="color:#9AA6B8">#1D2840 filet</div></div>
+    <div class="sw" style="border-color:#1D2840"><div class="c" style="background:#E4E9F1"></div><div class="l" style="color:#9AA6B8">#E4E9F1 texte</div></div>
+    <div class="sw" style="border-color:#1D2840"><div class="c" style="background:#04B7F9"></div><div class="l" style="color:#9AA6B8">#04B7F9 accent</div></div>
+    <div class="sw" style="border-color:#1D2840"><div class="c" style="background:linear-gradient(90deg,#04B7F9,#0E96FA)"></div><div class="l" style="color:#9AA6B8">dégradé signature</div></div>
+  </div>
+
+  <div class="frame">
+    <div class="appbar">
+      <span class="logo" style="color:#FFFFFF"><svg xmlns="http://www.w3.org/2000/svg" viewBox="1768 220 4836 1039">
+  <g transform="translate(0,1344) scale(0.1,-0.1)"><path fill="currentColor" d="M29255 10622 c-41 -23 -120 -77 -375 -257 -275 -195 -330 -228 -568
+-339 -409 -192 -630 -368 -748 -598 -75 -148 -91 -352 -75 -958 6 -234 16
+-733 21 -1110 5 -377 14 -950 20 -1275 6 -324 17 -1130 25 -1790 16 -1275 30
+-2215 41 -2612 l7 -243 46 0 c25 0 75 7 111 16 69 16 407 120 580 179 58 20
+138 43 179 51 41 9 140 42 220 73 80 32 244 91 364 130 l217 73 0 4339 c0
+4126 -1 4339 -17 4339 -10 -1 -32 -9 -48 -18z M18280 6419 l0 -4180 233 -114
+c127 -62 315 -148 417 -190 171 -71 270 -119 610 -298 69 -36 164 -79 212 -96
+80 -28 237 -66 244 -59 5 6 23 1374 34 2508 10 1118 22 2180 41 3795 17 1383
+13 1494 -69 1649 -65 125 -109 158 -502 386 -210 122 -278 166 -585 381 -271
+189 -400 267 -507 304 -46 16 -48 18 -48 56 0 39 0 39 -40 39 l-40 0 0 -4181z
+M47925 8845 c-268 -30 -476 -86 -705 -187 -324 -143 -590 -321 -834 -558 -264
+-256 -482 -572 -591 -855 -200 -518 -239 -1079 -104 -1500 36 -115 157 -401
+227 -542 182 -361 522 -728 893 -961 162 -102 454 -240 594 -280 314 -91 370
+-104 527 -121 145 -16 474 -14 613 4 549 71 1033 271 1435 592 390 311 694
+806 820 1338 84 353 102 802 44 1080 -98 460 -336 880 -706 1241 -129 126
+-202 185 -343 277 -367 240 -767 394 -1185 458 -176 27 -515 34 -685 14z m520
+-646 c388 -48 752 -196 1052 -427 122 -95 194 -163 262 -246 263 -324 381
+-679 381 -1147 0 -476 -149 -901 -439 -1251 -71 -87 -91 -103 -91 -73 0 44
+-79 -30 -149 -140 -71 -113 -431 -296 -735 -376 -196 -50 -293 -62 -516 -63
+-219 -1 -272 6 -465 61 -353 101 -705 313 -906 545 -90 105 -232 324 -300 463
+-140 290 -196 555 -187 889 5 155 9 184 41 307 121 463 329 792 654 1035 240
+179 411 275 616 343 273 90 507 114 782 80z M54165 8849 c-495 -43 -964 -231
+-1315 -527 -101 -85 -359 -357 -458 -482 -145 -183 -242 -350 -316 -542 -268
+-697 -236 -1483 88 -2126 135 -267 362 -538 633 -754 495 -394 1034 -581 1678
+-581 226 0 364 14 578 59 226 47 545 164 702 256 463 272 773 574 948 923 44
+88 101 234 94 241 -5 5 -285 22 -498 30 -175 6 -189 6 -252 -15 -82 -28 -110
+-54 -195 -185 -125 -192 -231 -276 -547 -434 -279 -140 -447 -176 -810 -176
+-235 0 -322 10 -520 61 -224 58 -504 188 -668 312 -118 88 -275 252 -349 362
+-114 169 -188 353 -239 588 -16 75 -31 146 -34 159 l-5 22 2159 0 2160 0 19
+25 c30 38 37 149 24 375 -15 243 -33 373 -83 569 -95 374 -257 670 -527 960
+-141 151 -356 345 -465 419 -510 347 -1171 515 -1802 461z m729 -704 c128 -24
+244 -68 401 -152 383 -206 622 -416 795 -698 93 -150 108 -196 130 -389 11
+-97 20 -178 20 -181 0 -3 -801 -5 -1780 -5 -1136 0 -1780 3 -1780 10 0 5 9 55
+20 110 67 346 214 620 461 854 227 216 601 401 919 454 144 23 683 22 814 -3z
+M62420 8836 c-248 -29 -551 -133 -812 -277 -359 -199 -681 -486 -956 -852
+-194 -258 -330 -589 -403 -977 -26 -137 -37 -491 -20 -640 51 -448 264 -937
+575 -1324 339 -421 768 -693 1346 -852 223 -62 388 -86 631 -91 379 -9 560 24
+954 178 469 183 776 417 915 698 30 59 32 61 70 61 l40 0 0 -380 0 -380 339 0
+338 0 8 1313 c8 1562 10 1523 -90 1817 -85 250 -235 519 -411 740 -87 108
+-284 305 -394 393 -349 280 -831 480 -1355 563 -138 22 -617 28 -775 10z m760
+-672 c393 -57 710 -214 985 -489 140 -140 222 -239 317 -385 84 -128 126 -214
+168 -345 70 -220 95 -407 87 -650 -10 -303 -75 -572 -192 -792 -186 -351 -494
+-657 -805 -801 -268 -124 -317 -145 -398 -171 -159 -52 -264 -64 -520 -58
+-251 6 -334 18 -535 83 -203 66 -464 195 -592 293 -98 74 -272 250 -345 346
+-171 228 -272 444 -351 753 -32 125 -40 178 -45 285 -15 314 50 616 195 912
+106 215 211 367 349 505 181 180 328 282 549 380 311 136 753 189 1133 134z
+M39240 8834 c-95 -9 -268 -36 -345 -54 -83 -19 -299 -110 -421 -178 -39 -21
+-93 -44 -120 -51 -75 -19 -100 -39 -247 -196 -192 -205 -279 -322 -372 -503
+-25 -48 -49 -92 -54 -98 -17 -20 -43 -77 -62 -133 -26 -74 -84 -387 -100 -536
+-14 -129 -15 -1106 -3 -2447 l7 -678 378 0 379 0 0 51 c0 231 30 2873 34 3009
+10 308 58 480 186 670 20 30 35 60 33 66 -10 29 219 207 353 276 186 95 295
+118 602 125 232 6 232 5 232 -16 0 -18 -6 -21 -37 -22 -28 0 -9 -8 72 -28 184
+-47 334 -119 488 -234 94 -72 143 -126 201 -225 79 -135 137 -307 166 -493 16
+-99 28 -1024 29 -2226 l1 -953 378 0 379 0 6 1478 c4 893 11 1517 17 1577 29
+277 100 493 232 701 116 184 376 339 668 399 115 24 389 16 535 -15 278 -59
+491 -179 633 -356 163 -202 251 -435 282 -744 9 -89 28 -1906 30 -2787 l0
+-253 359 0 358 0 8 1584 c4 871 4 1637 0 1702 -5 93 -13 140 -37 213 -144 443
+-423 802 -840 1082 -279 188 -662 291 -1083 292 -380 1 -626 -59 -896 -219
+-50 -30 -93 -54 -96 -54 -3 0 -49 -35 -102 -77 -114 -93 -323 -299 -319 -317
+3 -12 -138 -196 -151 -196 -4 0 -29 46 -57 102 -43 89 -62 116 -149 207 -140
+145 -345 295 -533 390 -218 110 -452 160 -777 166 -110 1 -220 1 -245 -1z
+M58280 6320 l0 -2360 380 0 380 0 0 2360 0 2360 -380 0 -380 0 0 -2360z
+M21520 5140 l0 -2780 31 0 c53 0 110 18 744 235 341 117 659 225 707 240 48
+15 94 32 102 39 18 13 28 295 46 1231 11 583 24 1190 41 1825 15 551 0 717
+-76 875 -60 125 -124 175 -460 360 -230 126 -267 150 -500 330 -276 214 -409
+299 -517 334 -35 12 -38 15 -38 52 0 39 0 39 -40 39 l-40 0 0 -2780z"/></g>
+  <g transform="translate(0,1344) scale(0.1,-0.1)"><path fill="#04B7F9" d="M59165 10571 c-170 -70 -378 -172 -460 -225 -185 -121 -270 -241
+-344 -486 -70 -235 -81 -297 -81 -447 l0 -136 63 6 c71 6 494 149 590 200 148
+78 242 253 301 562 33 172 46 299 46 440 0 113 0 115 -22 115 -13 0 -54 -13
+-93 -29z M25923 7962 c-59 -43 -227 -167 -372 -276 -145 -109 -280 -205 -300
+-214 -254 -111 -390 -193 -508 -306 -72 -67 -87 -90 -189 -286 -41 -78 -47
+-172 -35 -505 12 -309 24 -770 41 -1570 16 -774 30 -1276 36 -1362 l6 -83 62
+0 c48 0 82 8 152 36 49 20 361 128 694 239 l605 202 3 2101 2 2102 -44 0 c-39
+0 -56 -9 -153 -78z"/></g>
+</svg></span>
+      <nav>
+        <a href="#dir-c" class="on">AO</a><a href="#dir-c">CCTP</a><a href="#dir-c">Budget</a><a href="#dir-c">ACT</a><a href="#dir-c">Visas</a>
+      </nav>
+      <div class="right">
+        <span class="badge ia">✦ IA</span>
+        <span class="num" style="color:#5D6B80">2025-FFT-CVC</span>
+      </div>
+    </div>
+    <div class="content">
+      <div class="crumb"><b>FFT — Roland-Garros</b><span>/</span><span>Lot CVC — Inv. 2026</span><span>/</span><span>Analyse DPGF</span></div>
+      <div class="pagehead">
+        <div><h3>Analyse comparative des offres</h3><div class="sub">Tour d'offre 2 · 6 entreprises consultées · estimation BET 91 182,06 € HT</div></div>
+        <div class="actions">
+          <button class="btn ghost">Exporter</button>
+          <button class="btn accent">✦ Générer les commentaires</button>
+          <button class="btn primary">Nouveau tour d'offre</button>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat hl"><div class="lb">Moins-disante</div><div class="v">29 381 €</div><div class="d">Spie Facilities · −67,8 %</div></div>
+        <div class="stat"><div class="lb">Moyenne recevables</div><div class="v">56 838 €</div><div class="d">−37,7 % vs BET</div></div>
+        <div class="stat"><div class="lb">Recevables</div><div class="v">5 / 7</div><div class="d">2 non recevables</div></div>
+        <div class="stat"><div class="lb">Écart type</div><div class="v">16,4 k€</div><div class="d">dispersion forte</div></div>
+      </div>
+      <div class="tabs">
+        <a href="#dir-c">Marché</a><a href="#dir-c">Cadrage</a><a href="#dir-c">Réponses</a><a href="#dir-c" class="on">Analyse DPGF</a><a href="#dir-c">Notation</a><a href="#dir-c">Classement</a><a href="#dir-c">Génération</a>
+      </div>
+      <div class="panel">
+        <div class="ph"><span>Critères financiers — prestation de base</span><span class="badge neutral">HT</span></div>
+        <table>
+          <thead><tr><th>Entreprise</th><th>Statut</th><th>Prix HT</th><th>Écart vs BET</th><th>TTC</th><th>Note /60</th></tr></thead>
+          <tbody>
+            <tr><td><b>Estimation BET</b></td><td><span class="badge neutral">Référence</span></td><td class="num">91 182,06 €</td><td class="num">—</td><td class="num">109 418,47 €</td><td>—</td></tr>
+            <tr class="best"><td><b>Spie Facilities</b></td><td><span class="badge ok">Recevable</span></td><td class="num"><b>29 381,85 €</b></td><td class="num">−67,8 %</td><td class="num">35 258,22 €</td><td><b>60,00</b></td></tr>
+            <tr><td><b>Foret Entreprise</b></td><td><span class="badge ok">Recevable</span></td><td class="num">61 053,30 €</td><td class="num">−33,0 %</td><td class="num">73 263,96 €</td><td>28,87</td></tr>
+            <tr><td><b>Ocellis Énergies</b></td><td><span class="badge ok">Recevable</span></td><td class="num">65 013,40 €</td><td class="num">−28,7 %</td><td class="num">78 016,08 €</td><td>27,12</td></tr>
+            <tr><td><b>Aurion</b></td><td><span class="badge warn">Réserve chiffrage</span></td><td class="num">71 678,14 €</td><td class="num">−21,4 %</td><td class="num">86 013,77 €</td><td>24,59</td></tr>
+            <tr><td><b>Tempere Entreprise</b></td><td><span class="badge ok">Recevable</span></td><td class="num">47 142,93 €</td><td class="num">−48,3 %</td><td class="num">56 571,52 €</td><td>37,40</td></tr>
+            <tr><td>Entreprise C.</td><td><span class="badge err">Non recevable</span></td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="iapanel">
+        <span class="badge ia">✦ IA</span>
+        <span>Analyse des écarts &gt; 50 % — ligne 34/53 · <b style="color:#fff">Spie Facilities : absence chiffrage GTB détectée</b></span>
+        <div class="bar"><i></i></div>
+        <span class="num" style="color:#04B7F9">64 %</span>
+      </div>
+      <div class="upload"><b>Déposer les DPGF entreprises</b>XLSX, PDF — glisser-déposer ou <a href="#dir-c" style="color:#04B7F9">parcourir</a></div>
+      <div class="foot-note">Densité : rangée 33 px · texte 12,5 px · grille blueprint 36 px en fond de page</div>
+    </div>
+  </div>
+
+  <div class="rationale">
+    <div class="cell"><b>Positionnement</b>moeïa comme cockpit : la promesse "augmentée par l'IA" rendue visible en permanence. Impressionne en démo commerciale et en capture d'écran — fort pour la conquête.</div>
+    <div class="cell"><b>Forces</b>Cohérent avec l'ADN visuel déjà présent (header sombre AO, dégradés ACT, moitié sombre du logo). Signature immédiatement reconnaissable. Le cyan est fait pour vivre sur fond sombre : contraste natif.</div>
+    <div class="cell"><b>Risques</b>Journées entières sur DPGF en mode sombre = fatigue et lisibilité moindre des tableaux denses ; exports et impressions restent clairs (rupture écran/document). Style « tech » qui peut dater plus vite. Recommandé plutôt comme thème sombre optionnel de la direction retenue.</div>
+  </div>
+</div>
+</div>
+</section>
+
+<div style="background:#111318; color:#9CA3AF; padding:40px 28px; font-size:13px; line-height:1.7;">
+  <div style="max-width:1180px; margin:0 auto;">
+    <b style="color:#fff;">Recommandation du DA — Direction A, avec deux emprunts.</b><br>
+    A « Précision éditoriale » est la plus crédible face à des acheteurs BET/architectes, la plus durable sur des écrans denses,
+    et la plus différenciante (le quasi-monochrome signé d'un seul cyan est un territoire libre sur ce marché).
+    Emprunts recommandés : le principe B d'un <span style="color:#fff;">registre IA strictement réservé au cyan</span> (déjà compatible avec A),
+    et le C conservé comme <span style="color:#fff;">thème sombre optionnel</span> (les tokens le permettront sans surcoût).
+    La décision reste la vôtre — le document final déclinera la direction validée.
+  </div>
+</div>
+</body>
+</html>
