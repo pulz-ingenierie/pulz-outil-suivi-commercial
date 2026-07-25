@@ -269,6 +269,10 @@ h1 { font-weight: 700; }
 .fil { display: flex; flex-direction: column; gap: 12px; }
 .fil-item { border: 1px solid var(--line); border-radius: 12px; padding: 13px 15px; background: var(--surface-2); }
 .fil-h { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.fil-h form { margin-left: auto; display: inline-flex; }
+.fil-del { font: inherit; font-size: 11.5px; color: var(--faint); background: none; border: none; padding: 2px 4px;
+       cursor: pointer; border-radius: 4px; }
+.fil-del:hover { color: var(--crit); }
 .fil-date { font-size: 12px; font-weight: 600; color: var(--muted); }
 .fil-resume { margin: 0; font-size: 14.5px; line-height: 1.5; }
 .fil-points { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 13.5px; }

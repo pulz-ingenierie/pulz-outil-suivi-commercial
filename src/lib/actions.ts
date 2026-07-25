@@ -549,6 +549,24 @@ export async function supprimerBrouillon(fd: FormData) {
   redirect("/brouillons");
 }
 
+// Supprime un compte rendu (validé ou brouillon). Les rattachements (cr_entites,
+// cr_operations, pièces) sont supprimés en cascade ; les relances qui en
+// découlent voient leur référence mise à null (schéma 0001).
+export async function supprimerCr(fd: FormData) {
+  const supabase = requireSupabase();
+  const org_id = await currentOrgId(supabase);
+  const id = str(fd, "cr_id");
+  if (!id) throw new Error("Compte rendu introuvable.");
+
+  const { data: ex } = await supabase.from("crs").select("id, org_id").eq("id", id).maybeSingle();
+  if (!ex || ex.org_id !== org_id) throw new Error("Accès refusé.");
+
+  const { error } = await supabase.from("crs").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/", "layout");
+}
+
 // -----------------------------------------------------------------------------
 // Relances — les suites à donner (créées à la main ou par l'IA)
 // -----------------------------------------------------------------------------

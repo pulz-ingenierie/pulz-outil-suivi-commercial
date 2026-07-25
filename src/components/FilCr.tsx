@@ -21,6 +21,7 @@ function dateFr(d: string | null): string {
 
 import Link from "next/link";
 import { lienPersonne } from "@/lib/personnes";
+import DeleteCrButton from "@/components/DeleteCrButton";
 
 export type CrItem = {
   id: string;
@@ -72,6 +73,7 @@ export default function FilCr({
             <div className="fil-h">
               <span className="fil-date">{dateFr(c.date_rdv)}</span>
               <span className="sig-d type"><span className="sig-lbl">{typeLbl}</span></span>
+              <DeleteCrButton id={c.id} />
             </div>
 
             {resume && <p className="fil-resume">{resume}</p>}
