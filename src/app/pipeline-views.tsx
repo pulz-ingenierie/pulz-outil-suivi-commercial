@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { STATUT_LABELS, STATUT_ORDRE, type OperationStatut } from "@/lib/types";
+import Signet from "@/components/Signet";
 
 // Couleur associée à chaque étape (variables CSS définies dans globals.css).
 const STATUT_VAR: Record<string, string> = {
@@ -110,11 +111,7 @@ function CarteOp({
         <div className="ometa">
           {avecEtape && <EtapeChip statut={op.statut} />}
           {avecProspects &&
-            entites.map((e) => (
-              <Link className="sig-d struct" href={`/entites/${e.id}`} key={e.id}>
-                <span className="sig-lbl">{e.nom}</span>
-              </Link>
-            ))}
+            entites.map((e) => <Signet key={e.id} type="entite" id={e.id} cat="struct" label={e.nom} />)}
           {montant && <span className="amt">{montant}</span>}
         </div>
       )}

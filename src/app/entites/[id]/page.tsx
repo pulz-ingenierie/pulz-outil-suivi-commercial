@@ -4,6 +4,7 @@ import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
 import { STATUT_LABELS, type OperationStatut } from "@/lib/types";
 import FilCr from "@/components/FilCr";
 import BackButton from "@/components/BackButton";
+import Signet from "@/components/Signet";
 import { indexerLiens } from "@/lib/personnes";
 
 export const dynamic = "force-dynamic";
@@ -149,11 +150,7 @@ export default async function FicheStructure({ params }: { params: Promise<{ id:
             <div className="sig-wrap">
               {personnes.map((c: any) => {
                 const nomComplet = [c.prenom, c.nom].filter(Boolean).join(" ") || c.nom;
-                return (
-                  <Link className="sig-d pers" href={`/personnes/${c.id}`} key={c.id}>
-                    <span className="sig-lbl">{nomComplet}</span>
-                  </Link>
-                );
+                return <Signet key={c.id} type="personne" id={c.id} cat="pers" label={nomComplet} />;
               })}
             </div>
           ) : (

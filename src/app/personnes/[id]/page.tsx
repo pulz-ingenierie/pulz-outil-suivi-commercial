@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
 import { STATUT_LABELS, type OperationStatut } from "@/lib/types";
 import BackButton from "@/components/BackButton";
+import Signet from "@/components/Signet";
 import { normNom } from "@/lib/personnes";
 
 export const dynamic = "force-dynamic";
@@ -121,11 +122,7 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
         <div className="block">
           <div className="block-h">
             <div className="eyebrow">Repères</div>
-            {struct && (
-              <Link className="sig-d struct" href={`/entites/${struct.id}`}>
-                <span className="sig-lbl">{struct.nom}</span>
-              </Link>
-            )}
+            {struct && <Signet type="entite" id={struct.id} cat="struct" label={struct.nom} />}
           </div>
           <div className="kv"><span className="k">Fonction</span><span>{contact.fonction || "—"}</span></div>
           {contact.tel && <div className="kv"><span className="k">Téléphone</span><span>{contact.tel}</span></div>}

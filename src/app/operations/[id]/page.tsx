@@ -5,6 +5,7 @@ import { type Operation, type OperationStatut } from "@/lib/types";
 import FilCr from "@/components/FilCr";
 import PhaseSelect from "./PhaseSelect";
 import BackButton from "@/components/BackButton";
+import Signet from "@/components/Signet";
 import { indexerLiens, lienPersonne } from "@/lib/personnes";
 
 export const dynamic = "force-dynamic";
@@ -107,10 +108,8 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
           <div className="eyebrow">Structures — portes d'entrée</div>
           {entites.length ? (
             <div className="sig-wrap">{entites.map((e: any) => (
-              <Link className="sig-d struct" href={`/entites/${e.id}`} key={e.id}>
-                <span className="sig-lbl">{e.nom}</span>
-                {(e.role || e.type) && <span className="sig-sub">{e.role || e.type}{e.ville ? ` · ${e.ville}` : ""}</span>}
-              </Link>
+              <Signet key={e.id} type="entite" id={e.id} cat="struct" label={e.nom}
+                sub={(e.role || e.type) ? `${e.role || e.type}${e.ville ? ` · ${e.ville}` : ""}` : undefined} />
             ))}</div>
           ) : <div className="empty">Aucune structure rattachée.</div>}
         </div>

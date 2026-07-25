@@ -5,6 +5,7 @@ import { envoyerRappelsMaintenant, envoyerEmailTest } from "@/lib/admin-actions"
 import { getIdentite } from "@/lib/auth";
 import { indexerLiens, lienPersonne } from "@/lib/personnes";
 import ReporterRelance from "@/components/ReporterRelance";
+import Signet from "@/components/Signet";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +51,7 @@ function RelanceCard({
   // Toutes les associations d'un rappel : l'opération, sa/ses structure(s), la
   // personne — chacune un signet cliquable vers sa carte.
   const op = r.operation_id && r.operations?.nom
-    ? { nom: r.operations.nom, href: `/operations/${r.operation_id}` }
+    ? { id: r.operation_id, nom: r.operations.nom, href: `/operations/${r.operation_id}` }
     : null;
   const structsBrut = r.operation_id
     ? (opStructures[r.operation_id] ?? [])
@@ -80,13 +81,13 @@ function RelanceCard({
         <div className="rel-meta sig-rows">
           {op && (
             <div className="sig-row">
-              <Link className="sig-d op" href={op.href}><span className="sig-lbl">{op.nom}</span></Link>
+              <Signet type="operation" id={op.id} cat="op" label={op.nom} />
             </div>
           )}
           {structs.length > 0 && (
             <div className="sig-row">
               {structs.map((s) => (
-                <Link className="sig-d struct" href={`/entites/${s.id}`} key={s.id}><span className="sig-lbl">{s.nom}</span></Link>
+                <Signet key={s.id} type="entite" id={s.id} cat="struct" label={s.nom} />
               ))}
             </div>
           )}

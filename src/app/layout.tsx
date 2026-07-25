@@ -5,6 +5,7 @@ import "./globals.css";
 import { getIdentite } from "@/lib/auth";
 import { signOut } from "@/lib/auth-actions";
 import MoeiaLogo from "@/components/MoeiaLogo";
+import ObjectSheet from "@/components/ObjectSheet";
 
 // Fontes moeïa : Inter (UI), Space Grotesk (titres), JetBrains Mono (chiffres).
 const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-ui", display: "swap" });
@@ -74,6 +75,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </header>
         )}
         {children}
+        <ObjectSheet />
       </body>
     </html>
   );

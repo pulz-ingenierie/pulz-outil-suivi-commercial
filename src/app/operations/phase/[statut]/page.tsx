@@ -7,6 +7,7 @@ import {
   type Operation,
   type OperationStatut,
 } from "@/lib/types";
+import Signet from "@/components/Signet";
 
 export const dynamic = "force-dynamic";
 
@@ -111,9 +112,7 @@ export default async function PhasePage({ params }: { params: Promise<{ statut: 
                 {(ents.length > 0 || montant) && (
                   <div className="ometa">
                     {ents.map((e) => (
-                      <Link className="sig-d struct" href={`/entites/${e.id}`} key={e.id}>
-                        <span className="sig-lbl">{e.nom}</span>
-                      </Link>
+                      <Signet key={e.id} type="entite" id={e.id} cat="struct" label={e.nom} />
                     ))}
                     {montant && <span className="amt">{montant}</span>}
                   </div>
