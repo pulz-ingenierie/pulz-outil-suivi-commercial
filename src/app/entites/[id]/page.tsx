@@ -143,22 +143,14 @@ export default async function FicheStructure({ params }: { params: Promise<{ id:
         <div className="block">
           <div className="eyebrow">Personnes à joindre</div>
           {personnes.length ? (
-            <div className="persons">
+            <div className="sig-wrap">
               {personnes.map((c: any) => {
                 const nomComplet = [c.prenom, c.nom].filter(Boolean).join(" ") || c.nom;
                 return (
-                  <div className="person" key={c.id}>
-                    <div className="pmain">
-                      <span className="pnm">{nomComplet}</span>
-                      {c.fonction && <span className="pfn">{c.fonction}</span>}
-                    </div>
-                    {(c.tel || c.email) && (
-                      <div className="contact-acts">
-                        {c.tel && <a className="btn ghost mini" href={`tel:${c.tel}`}>Appeler</a>}
-                        {c.email && <a className="btn ghost mini" href={`mailto:${c.email}`}>E-mail</a>}
-                      </div>
-                    )}
-                  </div>
+                  <Link className="sig-d pers" href={`/personnes/${c.id}`} key={c.id}>
+                    <span className="sig-lbl">{nomComplet}</span>
+                    {c.fonction && <span className="sig-sub">{c.fonction}</span>}
+                  </Link>
                 );
               })}
             </div>

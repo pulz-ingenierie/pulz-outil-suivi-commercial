@@ -55,11 +55,16 @@ export default function FilCr({
         const typeLbl = TYPE_RDV_LABELS[c.type_rdv] ?? "RDV";
 
         // Participants : uniquement les personnes réellement évoquées (jamais
-        // l'auteur automatiquement).
+        // l'auteur automatiquement), dédupliquées par nom.
         const participants: { nom: string; moi: boolean }[] = [];
+        const vus = new Set<string>();
         for (const ct of contacts) {
           const nom = [ct?.prenom, ct?.nom].filter(Boolean).join(" ").trim();
-          if (nom) participants.push({ nom, moi: false });
+          const k = nom.toLowerCase().replace(/\s+/g, " ");
+          if (nom && !vus.has(k)) {
+            vus.add(k);
+            participants.push({ nom, moi: false });
+          }
         }
 
         return (

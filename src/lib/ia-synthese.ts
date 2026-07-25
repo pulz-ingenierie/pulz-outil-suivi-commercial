@@ -22,6 +22,7 @@ export async function analyseCompteRendu(
   knownOps: string[],
   today: string,
   attachments: PieceJointeIA[] = [],
+  knownPersonnes: string[] = [],
 ): Promise<Synthese | null> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return null;
@@ -46,7 +47,7 @@ export async function analyseCompteRendu(
   const response = await client.messages.create({
     model: MODEL,
     max_tokens: 2000,
-    system: syntheseSystemPrompt(knownEntites, knownOps, today),
+    system: syntheseSystemPrompt(knownEntites, knownOps, knownPersonnes, today),
     messages: [{ role: "user", content }],
   });
 

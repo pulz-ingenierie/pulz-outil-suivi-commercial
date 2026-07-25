@@ -35,10 +35,11 @@ export async function releverEmails(): Promise<IntakeResult> {
   const supabase = getServerSupabase();
   if (!supabase) throw new Error("La base de données n'est pas connectée.");
 
-  const [{ data: users }, { data: entites }, { data: operations }] = await Promise.all([
+  const [{ data: users }, { data: entites }, { data: operations }, { data: contacts }] = await Promise.all([
     supabase.from("utilisateurs").select("id, nom, email, org_id, actif").eq("actif", true),
     supabase.from("entites").select("id, nom"),
     supabase.from("operations").select("id, nom"),
+    supabase.from("contacts").select("nom, prenom"),
   ]);
 
   const memberByEmail = new Map(
@@ -46,6 +47,9 @@ export async function releverEmails(): Promise<IntakeResult> {
   );
   const knownEntites = (entites ?? []).map((e: any) => e.nom as string);
   const knownOps = (operations ?? []).map((o: any) => o.nom as string);
+  const knownPersonnes = (contacts ?? [])
+    .map((c: any) => [c.prenom, c.nom].filter(Boolean).join(" ").trim())
+    .filter(Boolean) as string[];
   const today = new Date().toISOString().slice(0, 10);
 
   const client = new ImapFlow({
@@ -108,7 +112,7 @@ export async function releverEmails(): Promise<IntakeResult> {
 
           let synth = null;
           try {
-            synth = await analyseCompteRendu(texte, knownEntites, knownOps, today, pieces);
+            synth = await analyseCompteRendu(texte, knownEntites, knownOps, today, pieces, knownPersonnes);
           } catch {
             synth = null; // l'analyse a échoué : on crée quand même le brouillon brut
           }

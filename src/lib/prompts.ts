@@ -6,9 +6,10 @@
 // Objectif : transformer une dictée brute en un compte rendu structuré et des
 // suites à donner, SANS rien inventer. Le pilotage se fait par affaire, jamais
 // par euro : ne pas extrapoler de montant.
-export function syntheseSystemPrompt(entites: string[], operations: string[], today: string): string {
+export function syntheseSystemPrompt(entites: string[], operations: string[], personnes: string[], today: string): string {
   const listeEntites = entites.length ? entites.map((n) => `- ${n}`).join("\n") : "(aucune connue)";
   const listeOps = operations.length ? operations.map((n) => `- ${n}`).join("\n") : "(aucune connue)";
+  const listePersonnes = personnes.length ? personnes.map((n) => `- ${n}`).join("\n") : "(aucune connue)";
   return `Tu assistes un professionnel de la maîtrise d'œuvre qui dicte, après un rendez-vous, un compte rendu commercial oral. Ta mission : le structurer fidèlement.
 
 Nous sommes le ${today} (format AAAA-MM-JJ). Sers-t'en pour résoudre les dates relatives.
@@ -32,6 +33,11 @@ ${listeEntites}
 
 Opérations déjà connues (même règle) :
 ${listeOps}
+
+Personnes déjà connues dans l'outil (« Prénom Nom ») :
+${listePersonnes}
+- Si une personne évoquée dans le texte correspond à une personne connue ci-dessus — MÊME si seul son prénom est prononcé (ex. « Florian » → « Florian Dupont ») — utilise son prénom ET son nom EXACTS tels qu'écrits ci-dessus, et inclus-la dans "contacts". Idem pour le champ "personne" d'une relance : reprends le « Prénom Nom » complet et exact de la personne connue.
+- Ne confonds jamais deux personnes différentes ; en cas de doute (aucune correspondance sûre), garde uniquement le prénom prononcé.
 
 Structures et affaires NOUVELLES : si une structure ou une affaire est clairement nommée dans le texte mais N'EXISTE PAS dans les listes connues ci-dessus, propose-la dans "nouvelles_entites" / "nouvelles_operations" (et NON dans "entites"/"operations"). Ne propose que ce qui est réellement évoqué — n'invente jamais.
 
@@ -59,9 +65,10 @@ export const SYNTHESE_USER_PREFIX =
 // parle (ou écrit) une consigne du type « la date c'est mardi dernier »,
 // « enlève le rattachement X », « c'est Dujardin, pas du jardin ». L'IA applique
 // la consigne et renvoie la fiche COMPLÈTE corrigée, au même format.
-export function affineSystemPrompt(entites: string[], operations: string[], today: string): string {
+export function affineSystemPrompt(entites: string[], operations: string[], personnes: string[], today: string): string {
   const listeEntites = entites.length ? entites.map((n) => `- ${n}`).join("\n") : "(aucune connue)";
   const listeOps = operations.length ? operations.map((n) => `- ${n}`).join("\n") : "(aucune connue)";
+  const listePersonnes = personnes.length ? personnes.map((n) => `- ${n}`).join("\n") : "(aucune connue)";
   return `Tu aides un professionnel de la maîtrise d'œuvre à corriger un compte rendu commercial déjà structuré. Il te donne la fiche actuelle (JSON), le texte d'origine, et une consigne de correction en langage naturel.
 
 Ta mission : appliquer UNIQUEMENT la correction demandée, et renvoyer la fiche COMPLÈTE mise à jour.
@@ -80,6 +87,9 @@ ${listeEntites}
 
 Opérations connues :
 ${listeOps}
+
+Personnes connues (« Prénom Nom ») — si l'une est évoquée, même par son seul prénom, reprends son prénom et nom EXACTS :
+${listePersonnes}
 
 Réponds UNIQUEMENT par l'objet JSON complet et corrigé, sans texte autour, de la forme :
 {
