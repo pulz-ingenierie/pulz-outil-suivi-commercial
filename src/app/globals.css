@@ -75,18 +75,16 @@ h1 { font-weight: 550; }
 
 /* Relances */
 .rel-group { margin: 22px 0 4px; }
-.rel-h { font-size: 15px; display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
-.rel-h .tnum { font-size: 12.5px; font-weight: 600; padding: 1px 9px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+.rel-h { font-size: 11px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase;
+       display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: var(--faint); }
+.rel-h .tnum { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
 .rel-h.crit { color: var(--crit); } .rel-h.crit .tnum { background: color-mix(in srgb, var(--crit) 14%, transparent); color: var(--crit); }
-.rel-h.muted-h { color: var(--muted); }
-.relcard { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 13px 16px; margin-bottom: 9px; box-shadow: var(--shadow); }
-.relcard.late { border-left: 3px solid var(--crit); }
+.rel-h.muted-h { color: var(--faint); }
+.relcard { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 13px 15px; margin-bottom: 9px; box-shadow: var(--shadow); }
+.relcard.late { border-left: 2px solid var(--crit); }
 .rel-main { min-width: 220px; flex: 1; }
-.rel-obj { font-weight: 600; font-size: 14.5px; }
-.rel-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 5px; }
-.rel-cible { font-size: 12.5px; color: var(--accent-ink); background: var(--accent-soft); padding: 2px 9px; border-radius: 999px; }
-.rel-date { font-size: 12.5px; color: var(--muted); }
-.rel-date.crit { color: var(--crit); font-weight: 560; }
+.rel-obj { font-weight: 560; font-size: 14.5px; }
+.rel-meta { margin-top: 8px; }
 .rel-acts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .rel-acts form { display: inline-flex; }
 .rel-report { align-items: center; gap: 6px; }
@@ -127,8 +125,8 @@ h1 { font-weight: 550; }
 
 /* Carte d'une affaire. Le nom mène à la fiche ; les signets sont cliquables
    à part (chacun ouvre sa propre carte). */
-.op { display: block; background: var(--surface); border: 1px solid var(--line); border-radius: 11px;
-      padding: 11px 12px; margin-bottom: 9px; box-shadow: var(--shadow); }
+.op { display: block; background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+      padding: 12px 14px; margin-bottom: 9px; box-shadow: var(--shadow); }
 .op .onm { display: block; font-weight: 560; font-size: 14.5px; line-height: 1.25;
       text-decoration: none; color: var(--ink); }
 .op .onm:hover { color: var(--accent); text-decoration: underline; }
@@ -466,6 +464,7 @@ a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); tran
 .sig-d.struct { --cat: var(--c-struct); } .sig-d.op { --cat: var(--c-op); }
 .sig-d.pers { --cat: var(--c-pers); } .sig-d.rel { --cat: var(--c-rel); }
 .sig-d.date { --cat: var(--faint); } .sig-d.type { --cat: var(--c-type); }
+.sig-d.late { --cat: var(--crit); } .sig-d.ia { --cat: var(--muted); }
 /* Signet « moi » (l'auteur du CR, présent au rendez-vous) : légèrement rempli. */
 .sig-d.moi { background: color-mix(in srgb, var(--c-pers) 12%, var(--surface)); font-style: normal; }
 /* Signet « phase » (étape du pipeline). --cat porté en inline selon l'étape. */

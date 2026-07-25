@@ -50,14 +50,14 @@ function RelanceCard({ r, today }: { r: Rel; today: string }) {
     <div className={`relcard${enRetard ? " late" : ""}`}>
       <div className="rel-main">
         <div className="rel-obj">{r.objet}</div>
-        <div className="rel-meta">
+        <div className="rel-meta sig-wrap">
           {cible && (
             <Link className={`sig-d ${cible.kind}`} href={cible.href}>
               <span className="sig-lbl">{cible.nom}</span>
             </Link>
           )}
-          <span className={`rel-date${enRetard ? " crit" : ""}`}>{dateFr(r.date_echeance)}</span>
-          {r.auto && <span className="pill auto">proposée par l'IA</span>}
+          <span className={`sig-d date${enRetard ? " late" : ""}`}><span className="sig-lbl">{dateFr(r.date_echeance)}</span></span>
+          {r.auto && <span className="sig-d ia"><span className="sig-lbl">IA</span></span>}
         </div>
       </div>
       <div className="rel-acts">
