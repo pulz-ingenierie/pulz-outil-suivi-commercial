@@ -76,9 +76,23 @@ export default async function Dashboard() {
   // Pour chaque opération : les prospects (entités) qui y sont rattachés.
   // Sert aux vues « Par prospect » et à l'affichage des portes d'entrée.
   const opEntites: Record<string, { id: string; nom: string }[]> = {};
+  const entitesParOp: Record<string, string[]> = {};
   for (const l of (liens ?? []) as any[]) {
     if (!l.operation_id || !l.entite_id) continue;
     (opEntites[l.operation_id] ??= []).push({ id: l.entite_id, nom: l.entites?.nom ?? "—" });
+    (entitesParOp[l.operation_id] ??= []).push(l.entite_id);
+  }
+
+  // Prochaine relance (échéance la plus proche) par structure : soit une relance
+  // rattachée directement à la structure, soit via une de ses opérations.
+  const prochaineRelanceParEntite: Record<string, string> = {};
+  const majProchaine = (eid: string | null | undefined, d: string | null | undefined) => {
+    if (!eid || !d) return;
+    if (!prochaineRelanceParEntite[eid] || d < prochaineRelanceParEntite[eid]) prochaineRelanceParEntite[eid] = d;
+  };
+  for (const r of rels) {
+    majProchaine(r.entite_id, r.date_echeance);
+    if (r.operation_id) for (const eid of entitesParOp[r.operation_id] ?? []) majProchaine(eid, r.date_echeance);
   }
 
   // Dernier RDV connu pour chaque entité (via les comptes rendus rattachés).
@@ -149,6 +163,7 @@ export default async function Dashboard() {
       dormant: e.statut_vie === "dormant",
       ops: entiteOps[e.id] ?? [],
       contacts: entiteContacts[e.id] ?? [],
+      prochaineRelance: prochaineRelanceParEntite[e.id] ?? null,
     }))
     .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
 

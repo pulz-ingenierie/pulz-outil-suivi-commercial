@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
 import { STATUT_LABELS, type OperationStatut } from "@/lib/types";
 import BackButton from "@/components/BackButton";
+import { normNom } from "@/lib/personnes";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,15 @@ const STATUT_VAR: Record<string, string> = {
 function euro(n: number | null): string | null {
   if (n == null) return null;
   return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n) + " €";
+}
+
+function dateFr(d: string | null): string {
+  if (!d) return "—";
+  try {
+    return new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+  } catch {
+    return d;
+  }
 }
 
 export default async function FichePersonne({ params }: { params: Promise<{ id: string }> }) {
@@ -47,14 +57,15 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
     tel: string | null; email: string | null; entite_id: string | null;
   };
 
-  // Sa structure + les affaires de cette structure (contexte).
-  const [{ data: structure }, { data: liens }] = await Promise.all([
+  // Sa structure + les affaires de cette structure (contexte) + les relances.
+  const [{ data: structure }, { data: liens }, { data: relances }] = await Promise.all([
     contact.entite_id
       ? supabase.from("entites").select("id, nom, type").eq("id", contact.entite_id).maybeSingle()
       : Promise.resolve({ data: null }),
     contact.entite_id
       ? supabase.from("entite_operation").select("operations(id, nom, statut, montant_estime)").eq("entite_id", contact.entite_id)
       : Promise.resolve({ data: [] as any[] }),
+    supabase.from("relances").select("*, operations(nom)").eq("statut", "a_faire").order("date_echeance", { ascending: true }),
   ]);
 
   const struct = structure as { id: string; nom: string; type: string } | null;
@@ -64,6 +75,13 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
     .sort((a: any, b: any) => a.nom.localeCompare(b.nom, "fr"));
 
   const nomComplet = [contact.prenom, contact.nom].filter(Boolean).join(" ") || contact.nom;
+
+  // Prochaine relance qui concerne cette personne (par son nom).
+  const nomNorm = normNom(nomComplet);
+  const prochaine = ((relances ?? []) as any[]).find((r) => r.personne && normNom(r.personne) === nomNorm) ?? null;
+  const prochaineHref = prochaine
+    ? (prochaine.operation_id ? `/operations/${prochaine.operation_id}` : "/relances")
+    : null;
 
   return (
     <main className="wrap">
@@ -81,6 +99,14 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
           <h1>{nomComplet}</h1>
         </div>
       </div>
+
+      {prochaine && (
+        <div className="sig-wrap" style={{ marginBottom: 16 }}>
+          <Link className="sig-d rel" href={prochaineHref!}>
+            <span className="sig-lbl">Prochaine relance · {dateFr(prochaine.date_echeance)}</span>
+          </Link>
+        </div>
+      )}
 
       <div className="blocks">
         <div className="block">

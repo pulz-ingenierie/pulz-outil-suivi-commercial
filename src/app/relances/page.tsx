@@ -68,15 +68,23 @@ function RelanceCard({
         <div className={`rel-echeance${enRetard ? " crit" : ""}`}>
           Échéance : {dateFr(r.date_echeance)}{enRetard ? " · en retard" : ""}
         </div>
-        <div className="rel-meta sig-wrap">
-          {r.personne && (persHref
-            ? <Link className="sig-d pers" href={persHref}><span className="sig-lbl">{r.personne}</span></Link>
-            : <span className="sig-d pers"><span className="sig-lbl">{r.personne}</span></span>)}
-          {structs.map((s) => (
-            <Link className="sig-d struct" href={`/entites/${s.id}`} key={s.id}><span className="sig-lbl">{s.nom}</span></Link>
-          ))}
-          {op && <Link className="sig-d op" href={op.href}><span className="sig-lbl">{op.nom}</span></Link>}
-          {r.auto && <span className="sig-d ia"><span className="sig-lbl">IA</span></span>}
+        <div className="rel-meta sig-rows">
+          {(op || structs.length > 0 || r.auto) && (
+            <div className="sig-row">
+              {op && <Link className="sig-d op" href={op.href}><span className="sig-lbl">{op.nom}</span></Link>}
+              {structs.map((s) => (
+                <Link className="sig-d struct" href={`/entites/${s.id}`} key={s.id}><span className="sig-lbl">{s.nom}</span></Link>
+              ))}
+              {r.auto && <span className="sig-d ia"><span className="sig-lbl">IA</span></span>}
+            </div>
+          )}
+          {r.personne && (
+            <div className="sig-row">
+              {persHref
+                ? <Link className="sig-d pers" href={persHref}><span className="sig-lbl">{r.personne}</span></Link>
+                : <span className="sig-d pers"><span className="sig-lbl">{r.personne}</span></span>}
+            </div>
+          )}
         </div>
       </div>
       <div className="rel-acts">

@@ -62,9 +62,13 @@ export default async function FicheMembre({ params }: { params: Promise<{ id: st
 
   const operations = (ops ?? []).sort((a: any, b: any) => a.nom.localeCompare(b.nom, "fr"));
   const nomNorm = normNom(membre.nom);
-  const rels = (relances ?? []).filter(
-    (r: any) => r.assignee_id === id || (r.personne && normNom(r.personne) === nomNorm),
-  );
+  const rels = (relances ?? [])
+    .filter((r: any) => r.assignee_id === id || (r.personne && normNom(r.personne) === nomNorm))
+    .sort((a: any, b: any) => (a.date_echeance < b.date_echeance ? -1 : 1));
+  const prochaine = rels[0] ?? null;
+  const prochaineHref = prochaine
+    ? (prochaine.operation_id ? `/operations/${prochaine.operation_id}` : "/relances")
+    : null;
   const today = new Date().toISOString().slice(0, 10);
 
   return (
@@ -77,6 +81,14 @@ export default async function FicheMembre({ params }: { params: Promise<{ id: st
           <h1>{membre.nom}</h1>
         </div>
       </div>
+
+      {prochaine && (
+        <div className="sig-wrap" style={{ marginBottom: 16 }}>
+          <Link className="sig-d rel" href={prochaineHref!}>
+            <span className="sig-lbl">Prochaine relance · {dateFr(prochaine.date_echeance)}</span>
+          </Link>
+        </div>
+      )}
 
       <div className="blocks">
         <div className="block">

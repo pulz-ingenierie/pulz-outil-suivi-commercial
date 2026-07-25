@@ -278,7 +278,11 @@ h1 { font-weight: 550; }
 .minicard .mc-nom { font-weight: 560; font-size: 14.5px; line-height: 1.25; min-width: 0;
        overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .minicard .mc-top .sig-d { flex: none; max-width: 58%; }
-.minicard .mc-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; color: var(--muted); font-size: 12.5px; }
+.minicard .mc-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; color: var(--muted); font-size: 12.5px; margin-top: 9px; }
+/* Signets groupés par type, une ligne par catégorie (relance, opérations, personnes). */
+.sig-rows { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.sig-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.mc-more { font-size: 11.5px; color: var(--faint); font-weight: 560; align-self: center; }
 
 /* Annuaire réseau : les entités « au chaud » sans opération en cours. */
 .netgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }

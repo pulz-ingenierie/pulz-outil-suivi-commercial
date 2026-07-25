@@ -47,7 +47,16 @@ type Structure = {
   dormant: boolean;
   ops: Op[];
   contacts: Personne[];
+  prochaineRelance: string | null;
 };
+
+function dateCourt(d: string): string {
+  try {
+    return new Date(d + "T00:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  } catch {
+    return d;
+  }
+}
 
 type PersonneListe = {
   id: string;
@@ -250,12 +259,40 @@ function VueStructures({ reseau }: { reseau: Structure[] }) {
                 <span className="mc-nom">{s.nom}</span>
                 <span className="sig-d type"><span className="sig-lbl">{s.type}</span></span>
               </div>
-              <div className="mc-meta">
-                <span>{s.ops.length} affaire{s.ops.length > 1 ? "s" : ""}</span>
-                {s.ville && <span>· {s.ville}</span>}
-                {s.dormant && <span className="pill dormant">en sommeil</span>}
-                {s.silencieux && s.ops.length === 0 && <span className="pill silence">à réchauffer</span>}
-              </div>
+              {/* Signets groupés par type, ordre : relance (haut), opérations, personnes. */}
+              {(s.prochaineRelance || s.ops.length > 0 || s.contacts.length > 0) && (
+                <div className="sig-rows">
+                  {s.prochaineRelance && (
+                    <div className="sig-row">
+                      <span className="sig-d rel"><span className="sig-lbl">Relance · {dateCourt(s.prochaineRelance)}</span></span>
+                    </div>
+                  )}
+                  {s.ops.length > 0 && (
+                    <div className="sig-row">
+                      {s.ops.slice(0, 4).map((o) => (
+                        <span className="sig-d op" key={o.id}><span className="sig-lbl">{o.nom}</span></span>
+                      ))}
+                      {s.ops.length > 4 && <span className="mc-more">+{s.ops.length - 4}</span>}
+                    </div>
+                  )}
+                  {s.contacts.length > 0 && (
+                    <div className="sig-row">
+                      {s.contacts.slice(0, 4).map((c) => {
+                        const n = [c.prenom, c.nom].filter(Boolean).join(" ") || c.nom;
+                        return <span className="sig-d pers" key={c.id}><span className="sig-lbl">{n}</span></span>;
+                      })}
+                      {s.contacts.length > 4 && <span className="mc-more">+{s.contacts.length - 4}</span>}
+                    </div>
+                  )}
+                </div>
+              )}
+              {(s.ville || s.dormant || (s.silencieux && s.ops.length === 0)) && (
+                <div className="mc-meta">
+                  {s.ville && <span>{s.ville}</span>}
+                  {s.dormant && <span className="pill dormant">en sommeil</span>}
+                  {s.silencieux && s.ops.length === 0 && <span className="pill silence">à réchauffer</span>}
+                </div>
+              )}
             </Link>
           ))}
         </div>
