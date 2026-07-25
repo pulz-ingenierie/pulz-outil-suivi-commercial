@@ -4,6 +4,7 @@ import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
 import { type Operation, type OperationStatut } from "@/lib/types";
 import FilCr from "@/components/FilCr";
 import PhaseSelect from "./PhaseSelect";
+import { indexerPersonnes, resoudrePersonne } from "@/lib/personnes";
 
 export const dynamic = "force-dynamic";
 
@@ -45,17 +46,19 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
   const operation = op as Operation;
 
   // Données liées (requêtes simples, robustes)
-  const [{ data: referent }, { data: liens }, { data: relances }, { data: crLiens }] = await Promise.all([
+  const [{ data: referent }, { data: liens }, { data: relances }, { data: crLiens }, { data: contacts }] = await Promise.all([
     operation.referent_id
       ? supabase.from("utilisateurs").select("nom").eq("id", operation.referent_id).maybeSingle()
       : Promise.resolve({ data: null }),
     supabase.from("entite_operation").select("role_entree, entites(id, nom, type, ville)").eq("operation_id", id),
     supabase.from("relances").select("*").eq("operation_id", id),
     supabase.from("cr_operations").select("crs(id, date_rdv, type_rdv, transcription, synthese, auteur:utilisateurs(nom))").eq("operation_id", id),
+    supabase.from("contacts").select("id, nom, prenom"),
   ]);
 
   const st = operation.statut;
   const today = new Date().toISOString().slice(0, 10);
+  const personnesIdx = indexerPersonnes((contacts ?? []) as any);
   const entites = (liens ?? []).map((l: any) => ({ role: l.role_entree, ...(l.entites ?? {}) })).filter((e: any) => e.nom);
   const crs = (crLiens ?? []).map((c: any) => c.crs).filter(Boolean)
     .sort((a: any, b: any) => (a.date_rdv < b.date_rdv ? 1 : -1));
@@ -112,7 +115,7 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
 
         <div className="block">
           <div className="eyebrow">Fil des comptes rendus</div>
-          <FilCr crs={crs} />
+          <FilCr crs={crs} personnesIdx={personnesIdx} />
         </div>
 
         <div className="block">
@@ -125,7 +128,12 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
                   <div className="rel-line" key={r.id}>
                     <span className="rel-line-obj">{r.objet}</span>
                     <div className="sig-wrap">
-                      {r.personne && <span className="sig-d pers"><span className="sig-lbl">{r.personne}</span></span>}
+                      {r.personne && (() => {
+                        const pid = resoudrePersonne(personnesIdx, r.personne);
+                        return pid
+                          ? <Link className="sig-d pers" href={`/personnes/${pid}`}><span className="sig-lbl">{r.personne}</span></Link>
+                          : <span className="sig-d pers"><span className="sig-lbl">{r.personne}</span></span>;
+                      })()}
                       <span className={`sig-d date${late ? " late" : ""}`}><span className="sig-lbl">{dateFr(r.date_echeance)}</span></span>
                       {r.auto && <span className="sig-d ia"><span className="sig-lbl">IA</span></span>}
                     </div>

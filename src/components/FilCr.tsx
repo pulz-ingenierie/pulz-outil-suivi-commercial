@@ -19,6 +19,9 @@ function dateFr(d: string | null): string {
   }
 }
 
+import Link from "next/link";
+import { resoudrePersonne } from "@/lib/personnes";
+
 export type CrItem = {
   id: string;
   date_rdv: string | null;
@@ -28,7 +31,13 @@ export type CrItem = {
   auteur?: { nom: string } | null;
 };
 
-export default function FilCr({ crs }: { crs: CrItem[] }) {
+export default function FilCr({
+  crs,
+  personnesIdx = {},
+}: {
+  crs: CrItem[];
+  personnesIdx?: Record<string, string>;
+}) {
   if (!crs.length) {
     return <div className="empty">Aucun compte rendu pour l'instant.</div>;
   }
@@ -45,11 +54,9 @@ export default function FilCr({ crs }: { crs: CrItem[] }) {
         const structure = !resume && !points.length; // pas de synthèse : on retombe sur le texte
         const typeLbl = TYPE_RDV_LABELS[c.type_rdv] ?? "RDV";
 
-        // Participants : l'auteur (celui qui a fait le CR, présent au RDV) en
-        // premier, puis les personnes évoquées par l'IA.
-        const auteurNom = typeof c.auteur?.nom === "string" ? c.auteur.nom.trim() : "";
+        // Participants : uniquement les personnes réellement évoquées (jamais
+        // l'auteur automatiquement).
         const participants: { nom: string; moi: boolean }[] = [];
-        if (auteurNom) participants.push({ nom: auteurNom, moi: true });
         for (const ct of contacts) {
           const nom = [ct?.prenom, ct?.nom].filter(Boolean).join(" ").trim();
           if (nom) participants.push({ nom, moi: false });
@@ -69,12 +76,22 @@ export default function FilCr({ crs }: { crs: CrItem[] }) {
 
             {participants.length > 0 && (
               <div className="sig-wrap fil-sigs">
-                {participants.map((p, i) => (
-                  <span className={`sig-d pers${p.moi ? " moi" : ""}`} key={i}>
-                    <span className="sig-lbl">{p.nom}</span>
-                    {p.moi && <span className="sig-sub">moi</span>}
-                  </span>
-                ))}
+                {participants.map((p, i) => {
+                  const pid = p.moi ? null : resoudrePersonne(personnesIdx, p.nom);
+                  if (pid) {
+                    return (
+                      <Link className="sig-d pers" href={`/personnes/${pid}`} key={i}>
+                        <span className="sig-lbl">{p.nom}</span>
+                      </Link>
+                    );
+                  }
+                  return (
+                    <span className={`sig-d pers${p.moi ? " moi" : ""}`} key={i}>
+                      <span className="sig-lbl">{p.nom}</span>
+                      {p.moi && <span className="sig-sub">moi</span>}
+                    </span>
+                  );
+                })}
               </div>
             )}
 

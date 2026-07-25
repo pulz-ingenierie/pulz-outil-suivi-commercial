@@ -203,6 +203,7 @@ async function materialiserCr(
   org_id: string,
   crId: string,
   fd: FormData,
+  authorNom: string | null = null,
 ): Promise<{ entiteIds: string[]; operationIds: string[] }> {
   const sb = supabase!;
   const entiteIds = fd.getAll("entite_ids").map(String).filter(Boolean);
@@ -292,11 +293,13 @@ async function materialiserCr(
         date_echeance: dateInDays(r.dans_jours),
         auto: true,
       }));
+      // Personne du rappel : celle extraite par l'IA si explicite, sinon
+      // l'auteur (il n'apparaît que si l'action n'est attribuée à personne).
       // La colonne « personne » peut ne pas encore exister (migration 0003) :
       // on tente avec, et on retombe proprement sans elle en cas d'échec.
       const { error: relErr } = await sb
         .from("relances")
-        .insert(base.map((row: any, i: number) => ({ ...row, personne: suites[i].personne })));
+        .insert(base.map((row: any, i: number) => ({ ...row, personne: suites[i].personne || authorNom || null })));
       if (relErr) await sb.from("relances").insert(base);
     }
   }
@@ -342,7 +345,7 @@ export async function createCr(fd: FormData) {
     .single();
   if (error) throw new Error(error.message);
 
-  const { operationIds } = await materialiserCr(supabase, org_id, cr.id, fd);
+  const { operationIds } = await materialiserCr(supabase, org_id, cr.id, fd, profil?.nom ?? null);
 
   // Compte rendu généré depuis une relance : on la clôt (faite) et on la relie
   // au compte rendu qui la « résout ».

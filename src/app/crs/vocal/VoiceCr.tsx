@@ -566,11 +566,16 @@ export default function VoiceCr({
         return (
           <>{head}
             <div className="carte-body">
-              {p.entite.trim() && (
-                <SectionAssoc titre="Structure" icon="structure">
-                  <span className="sig-d struct" style={{ cursor: "default" }}>{p.entite}</span>
-                </SectionAssoc>
-              )}
+              {p.entite.trim() && (() => {
+                const si = structRat.find((x) => x.r.name.trim().toLowerCase() === p.entite.trim().toLowerCase());
+                return (
+                  <SectionAssoc titre="Structure" icon="structure">
+                    {si
+                      ? <AssocSignet kind="struct" label={p.entite} onClick={() => ouvrirCarte("rat", si.idx)} />
+                      : <span className="sig-d struct" style={{ cursor: "default" }}><span className="sig-lbl">{p.entite}</span></span>}
+                  </SectionAssoc>
+                );
+              })()}
               {opsRat.length > 0 && (
                 <SectionAssoc titre="Opérations évoquées" icon="operation">
                   {opsRat.map(({ r: o, idx }) => <AssocSignet key={idx} kind="op" label={o.name} onClick={() => ouvrirCarte("rat", idx)} />)}
@@ -616,9 +621,24 @@ export default function VoiceCr({
         return (
           <>{head}
             <div className="carte-body">
-              {r.personne.trim() && (
-                <SectionAssoc titre="Personne concernée" icon="personne">
-                  <span className="sig-d pers" style={{ cursor: "default" }}><span className="sig-lbl">{r.personne}</span></span>
+              {r.personne.trim() && (() => {
+                const pi = personnes.findIndex((p) => [p.prenom, p.nom].filter(Boolean).join(" ").trim().toLowerCase() === r.personne.trim().toLowerCase());
+                return (
+                  <SectionAssoc titre="Personne concernée" icon="personne">
+                    {pi >= 0
+                      ? <AssocSignet kind="pers" label={r.personne} onClick={() => ouvrirCarte("pers", pi)} />
+                      : <span className="sig-d pers" style={{ cursor: "default" }}><span className="sig-lbl">{r.personne}</span></span>}
+                  </SectionAssoc>
+                );
+              })()}
+              {structRat.length > 0 && (
+                <SectionAssoc titre="Structures" icon="structure">
+                  {structRat.map(({ r: s, idx }) => <AssocSignet key={idx} kind="struct" label={s.name} onClick={() => ouvrirCarte("rat", idx)} />)}
+                </SectionAssoc>
+              )}
+              {opsRat.length > 0 && (
+                <SectionAssoc titre="Opérations" icon="operation">
+                  {opsRat.map(({ r: o, idx }) => <AssocSignet key={idx} kind="op" label={o.name} onClick={() => ouvrirCarte("rat", idx)} />)}
                 </SectionAssoc>
               )}
               <div className="carte-foot">
@@ -784,12 +804,6 @@ export default function VoiceCr({
         <div className="bloc">
           <div className="encart-h pers"><Icon name="personne" /> Personnes</div>
           <div className="sig-wrap">
-            {moiNom && (
-              <span className="sig-d pers moi" title="Vous participez à ce rendez-vous — inclus automatiquement.">
-                <span className="sig-lbl">{moiNom}</span>
-                <span className="sig-sub">moi</span>
-              </span>
-            )}
             {personnes.map((p, i) => {
               const nomComplet = [p.prenom, p.nom].filter(Boolean).join(" ") || "(à nommer)";
               const enBase = persEnBase(p);

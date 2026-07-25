@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
 import { STATUT_LABELS, type OperationStatut } from "@/lib/types";
 import FilCr from "@/components/FilCr";
+import { indexerPersonnes } from "@/lib/personnes";
 
 export const dynamic = "force-dynamic";
 
@@ -64,11 +65,13 @@ export default async function FicheStructure({ params }: { params: Promise<{ id:
   const entite = ent as { id: string; nom: string; type: string; ville: string | null; statut_vie: string | null };
 
   // Données liées : toutes ses opérations, ses personnes, ses comptes rendus.
-  const [{ data: liens }, { data: contacts }, { data: crLiens }] = await Promise.all([
+  const [{ data: liens }, { data: contacts }, { data: crLiens }, { data: tousContacts }] = await Promise.all([
     supabase.from("entite_operation").select("role_entree, operations(id, nom, statut, montant_estime)").eq("entite_id", id),
     supabase.from("contacts").select("id, nom, prenom, fonction, tel, email").eq("entite_id", id),
     supabase.from("cr_entites").select("crs(id, date_rdv, type_rdv, transcription, synthese, auteur:utilisateurs(nom))").eq("entite_id", id),
+    supabase.from("contacts").select("id, nom, prenom"),
   ]);
+  const personnesIdx = indexerPersonnes((tousContacts ?? []) as any);
 
   const operations = (liens ?? [])
     .map((l: any) => ({ role: l.role_entree, ...(l.operations ?? {}) }))
@@ -166,7 +169,7 @@ export default async function FicheStructure({ params }: { params: Promise<{ id:
 
         <div className="block">
           <div className="eyebrow">Fil des comptes rendus</div>
-          <FilCr crs={crs} />
+          <FilCr crs={crs} personnesIdx={personnesIdx} />
         </div>
       </div>
     </main>

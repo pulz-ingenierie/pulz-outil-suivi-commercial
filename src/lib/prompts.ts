@@ -35,7 +35,7 @@ ${listeOps}
 
 Structures et affaires NOUVELLES : si une structure ou une affaire est clairement nommée dans le texte mais N'EXISTE PAS dans les listes connues ci-dessus, propose-la dans "nouvelles_entites" / "nouvelles_operations" (et NON dans "entites"/"operations"). Ne propose que ce qui est réellement évoqué — n'invente jamais.
 
-RELANCES (suites à donner) — règle stricte : le champ "objet" décrit UNIQUEMENT l'action à réaliser, à l'impératif, SANS le nom de la personne qui doit la faire ni de la personne concernée. N'écris JAMAIS « Maxence doit rappeler… » ni « rappeler Romain » ; écris « Rappeler pour la remise de l'offre ». La personne concernée par la relance (celle à recontacter, ou le contact lié) se met à part dans "personne" (son nom, ou "Prénom Nom"), ou null si aucune personne précise.
+RELANCES (suites à donner) — règle stricte : le champ "objet" décrit UNIQUEMENT l'action à réaliser, à l'impératif, SANS le nom de la personne. N'écris JAMAIS « Florian doit relancer Vilogia » ni « rappeler Romain » ; écris « Relancer Vilogia pour le parking silo ». Mets la personne RESPONSABLE de l'action ou concernée (celui qui doit la réaliser, OU la personne à recontacter) à part dans "personne" — même si seul son prénom est cité (ex. « Florian »). Si AUCUNE personne n'est explicitement responsable/concernée, mets "personne" à null (surtout n'invente personne).
 
 Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, de la forme :
 {
