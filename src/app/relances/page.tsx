@@ -4,6 +4,7 @@ import { createRelance, updateRelance } from "@/lib/actions";
 import { envoyerRappelsMaintenant, envoyerEmailTest } from "@/lib/admin-actions";
 import { getIdentite } from "@/lib/auth";
 import { indexerLiens, lienPersonne } from "@/lib/personnes";
+import ReporterRelance from "@/components/ReporterRelance";
 
 export const dynamic = "force-dynamic";
 
@@ -51,9 +52,17 @@ function RelanceCard({
   const op = r.operation_id && r.operations?.nom
     ? { nom: r.operations.nom, href: `/operations/${r.operation_id}` }
     : null;
-  const structs = r.operation_id
+  const structsBrut = r.operation_id
     ? (opStructures[r.operation_id] ?? [])
     : (r.entite_id && r.entites?.nom ? [{ id: r.entite_id, nom: r.entites.nom }] : []);
+  // Dédoublonnage par nom (évite un même libellé affiché deux fois).
+  const vusStruct = new Set<string>();
+  const structs = structsBrut.filter((s) => {
+    const k = (s.nom ?? "").trim().toLowerCase();
+    if (!k || vusStruct.has(k)) return false;
+    vusStruct.add(k);
+    return true;
+  });
   // « Traiter » une relance = raconter le recontact dans un nouveau compte rendu,
   // pré-rattaché à l'opération/entité de la relance (qui sera close à l'enregistrement).
   const crHref = r.operation_id
@@ -94,12 +103,7 @@ function RelanceCard({
           <input type="hidden" name="action" value="faite" />
           <button className="btn ghost mini" type="submit" title="Marquer comme fait">Fait</button>
         </form>
-        <form action={updateRelance} className="rel-report">
-          <input type="hidden" name="id" value={r.id} />
-          <input type="hidden" name="action" value="reporter" />
-          <input type="date" name="date_echeance" defaultValue={plusJours(7)} aria-label="Reporter au" />
-          <button className="btn ghost mini" type="submit">Reporter</button>
-        </form>
+        <ReporterRelance id={r.id} defaultDate={plusJours(7)} />
         <form action={updateRelance}>
           <input type="hidden" name="id" value={r.id} />
           <input type="hidden" name="action" value="abandonner" />
