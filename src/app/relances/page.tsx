@@ -78,10 +78,9 @@ function RelanceCard({
           Échéance : {dateFr(r.date_echeance)}{enRetard ? " · en retard" : ""}
         </div>
         <div className="rel-meta sig-rows">
-          {(op || r.auto) && (
+          {op && (
             <div className="sig-row">
-              {op && <Link className="sig-d op" href={op.href}><span className="sig-lbl">{op.nom}</span></Link>}
-              {r.auto && <span className="sig-d ia"><span className="sig-lbl">IA</span></span>}
+              <Link className="sig-d op" href={op.href}><span className="sig-lbl">{op.nom}</span></Link>
             </div>
           )}
           {structs.length > 0 && (
