@@ -25,6 +25,7 @@ type Rel = {
   objet: string;
   date_echeance: string;
   auto: boolean;
+  personne: string | null;
   operation_id: string | null;
   entite_id: string | null;
   operations: { nom: string } | null;
@@ -56,6 +57,7 @@ function RelanceCard({ r, today }: { r: Rel; today: string }) {
               <span className="sig-lbl">{cible.nom}</span>
             </Link>
           )}
+          {r.personne && <span className="sig-d pers"><span className="sig-lbl">{r.personne}</span></span>}
           <span className={`sig-d date${enRetard ? " late" : ""}`}><span className="sig-lbl">{dateFr(r.date_echeance)}</span></span>
           {r.auto && <span className="sig-d ia"><span className="sig-lbl">IA</span></span>}
         </div>
@@ -102,7 +104,7 @@ export default async function Relances({
   const [{ data: relances }, { data: operations }, { data: entites }, { data: utilisateurs }] = await Promise.all([
     supabase
       .from("relances")
-      .select("id, objet, date_echeance, auto, operation_id, entite_id, operations(nom), entites(nom)")
+      .select("*, operations(nom), entites(nom)")
       .eq("statut", "a_faire")
       .order("date_echeance", { ascending: true }),
     supabase.from("operations").select("id, nom").order("created_at", { ascending: false }),

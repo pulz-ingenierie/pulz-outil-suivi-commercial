@@ -36,7 +36,7 @@ function Icon({ name }: { name: "structure" | "operation" | "personne" | "relanc
   return <svg {...p}><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6" /><path d="M10 20a2 2 0 0 0 4 0" /></svg>;
 }
 type PersonneEdit = { prenom: string; nom: string; fonction: string; entite: string };
-type RelanceEdit = { objet: string; date: string };
+type RelanceEdit = { objet: string; date: string; personne: string };
 
 const TYPES_RDV = [
   { v: "dejeuner", l: "Déjeuner" },
@@ -284,7 +284,7 @@ export default function VoiceCr({
         entite: c.entite ?? "",
       })),
     );
-    setRelances((s.relances ?? []).map((r) => ({ objet: r.objet, date: addDays(today, r.dans_jours) })));
+    setRelances((s.relances ?? []).map((r) => ({ objet: r.objet, date: addDays(today, r.dans_jours), personne: r.personne ?? "" })));
   }
 
   async function doSynth(text: string): Promise<void> {
@@ -432,7 +432,7 @@ export default function VoiceCr({
     }));
   const relancesPayload = relances
     .filter((r) => r.objet.trim())
-    .map((r) => ({ objet: r.objet.trim(), dans_jours: diffDays(today, r.date) }));
+    .map((r) => ({ objet: r.objet.trim(), dans_jours: diffDays(today, r.date), personne: r.personne.trim() || null }));
   const syntheseOut = { ...(synthese ?? {}), relances: relancesPayload };
 
   const canSave = transcription.trim().length > 0 && ratsNets.length > 0;
@@ -616,6 +616,11 @@ export default function VoiceCr({
         return (
           <>{head}
             <div className="carte-body">
+              {r.personne.trim() && (
+                <SectionAssoc titre="Personne concernée" icon="personne">
+                  <span className="sig-d pers" style={{ cursor: "default" }}><span className="sig-lbl">{r.personne}</span></span>
+                </SectionAssoc>
+              )}
               <div className="carte-foot">
                 <button type="button" className="btn ghost mini danger" onClick={() => { setRelances((rr) => rr.filter((_, j) => j !== i)); fermerCarte(); }}>Supprimer</button>
                 <button type="button" className="btn" onClick={() => setCardMode("edit")}>Modifier</button>
@@ -627,8 +632,10 @@ export default function VoiceCr({
       return (
         <>{head}
           <div className="carte-body">
-            <label className="field"><span className="lab">Action de suivi</span>
-              <input value={r.objet} placeholder="Ex. Rappeler…" onChange={(e) => majRel(i, { objet: e.target.value })} /></label>
+            <label className="field"><span className="lab">Action de suivi (sans le nom de la personne)</span>
+              <input value={r.objet} placeholder="Ex. Rappeler pour la remise de l'offre" onChange={(e) => majRel(i, { objet: e.target.value })} /></label>
+            <label className="field"><span className="lab">Personne concernée</span>
+              <input list="dl-personnes" value={r.personne} placeholder="Ex. Romain Mission" onChange={(e) => majRel(i, { personne: e.target.value })} /></label>
             <label className="field"><span className="lab">Échéance</span>
               <input type="date" value={r.date} onChange={(e) => majRel(i, { date: e.target.value })} /></label>
             <div className="carte-foot"><button type="button" className="btn" onClick={() => setCardMode("view")}>OK</button></div>
@@ -644,6 +651,12 @@ export default function VoiceCr({
       {/* Listes de suggestions (choix OU saisie libre). */}
       <datalist id="dl-structures">{entites.map((e) => <option key={e.id} value={e.nom} />)}</datalist>
       <datalist id="dl-operations">{operations.map((o) => <option key={o.id} value={o.nom} />)}</datalist>
+      <datalist id="dl-personnes">
+        {personnes.map((p, i) => {
+          const n = [p.prenom, p.nom].filter(Boolean).join(" ").trim();
+          return n ? <option key={i} value={n} /> : null;
+        })}
+      </datalist>
 
       {/* Capture vocale — masquée en mode brouillon. */}
       {!draftId && (
@@ -801,12 +814,13 @@ export default function VoiceCr({
               <li key={i}>
                 <button type="button" className="rel-item" onClick={() => ouvrirCarte("rel", i)}>
                   <span className="rel-item-obj">{r.objet.trim() || "(à préciser)"}</span>
+                  {r.personne.trim() && <span className="rel-item-pers">{r.personne}</span>}
                   <span className="rel-item-date">{dateCourt(r.date)}</span>
                 </button>
               </li>
             ))}
             <li>
-              <button type="button" className="rel-add" onClick={() => { setRelances((rr) => [...rr, { objet: "", date: addDays(today, 30) }]); ouvrirCarte("rel", relances.length, "edit"); }}>＋ Ajouter une relance</button>
+              <button type="button" className="rel-add" onClick={() => { setRelances((rr) => [...rr, { objet: "", date: addDays(today, 30), personne: "" }]); ouvrirCarte("rel", relances.length, "edit"); }}>＋ Ajouter une relance</button>
             </li>
           </ul>
         </div>

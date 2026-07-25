@@ -50,7 +50,7 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
       ? supabase.from("utilisateurs").select("nom").eq("id", operation.referent_id).maybeSingle()
       : Promise.resolve({ data: null }),
     supabase.from("entite_operation").select("role_entree, entites(id, nom, type, ville)").eq("operation_id", id),
-    supabase.from("relances").select("id, objet, date_echeance, auto, statut").eq("operation_id", id),
+    supabase.from("relances").select("*").eq("operation_id", id),
     supabase.from("cr_operations").select("crs(id, date_rdv, type_rdv, transcription, synthese, auteur:utilisateurs(nom))").eq("operation_id", id),
   ]);
 
@@ -117,14 +117,23 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
 
         <div className="block">
           <div className="eyebrow">Prochaines relances</div>
-          {rels.length ? rels.map((r: any) => (
-            <div className="kv" key={r.id}>
-              <span className="k">{r.objet}</span>
-              <span>{r.date_echeance < today
-                ? <span className="pill retard">retard · {dateFr(r.date_echeance)}</span>
-                : (r.auto ? <span className="pill auto">auto · {dateFr(r.date_echeance)}</span> : dateFr(r.date_echeance))}</span>
+          {rels.length ? (
+            <div className="fil">
+              {rels.map((r: any) => {
+                const late = r.date_echeance < today;
+                return (
+                  <div className="rel-line" key={r.id}>
+                    <span className="rel-line-obj">{r.objet}</span>
+                    <div className="sig-wrap">
+                      {r.personne && <span className="sig-d pers"><span className="sig-lbl">{r.personne}</span></span>}
+                      <span className={`sig-d date${late ? " late" : ""}`}><span className="sig-lbl">{dateFr(r.date_echeance)}</span></span>
+                      {r.auto && <span className="sig-d ia"><span className="sig-lbl">IA</span></span>}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          )) : <div className="empty">Aucune relance planifiée.</div>}
+          ) : <div className="empty">Aucune relance planifiée.</div>}
         </div>
       </div>
     </main>

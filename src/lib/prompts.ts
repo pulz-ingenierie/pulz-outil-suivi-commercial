@@ -35,6 +35,8 @@ ${listeOps}
 
 Structures et affaires NOUVELLES : si une structure ou une affaire est clairement nommée dans le texte mais N'EXISTE PAS dans les listes connues ci-dessus, propose-la dans "nouvelles_entites" / "nouvelles_operations" (et NON dans "entites"/"operations"). Ne propose que ce qui est réellement évoqué — n'invente jamais.
 
+RELANCES (suites à donner) — règle stricte : le champ "objet" décrit UNIQUEMENT l'action à réaliser, à l'impératif, SANS le nom de la personne qui doit la faire ni de la personne concernée. N'écris JAMAIS « Maxence doit rappeler… » ni « rappeler Romain » ; écris « Rappeler pour la remise de l'offre ». La personne concernée par la relance (celle à recontacter, ou le contact lié) se met à part dans "personne" (son nom, ou "Prénom Nom"), ou null si aucune personne précise.
+
 Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, de la forme :
 {
   "type_rdv": "dejeuner" | "appel" | "visite" | "salon" | "autre",
@@ -46,7 +48,7 @@ Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, de la forme :
   "nouvelles_entites": [{ "nom": "structure évoquée mais absente des connues", "type": "MOA|archi|promoteur|bet|confrere|autre (bet = bureau d'études techniques)" }],
   "nouvelles_operations": [{ "nom": "affaire/projet évoqué mais absent des connues" }],
   "contacts": [{ "nom": "nom de famille", "prenom": "prénom ou null", "fonction": "fonction ou null", "entite": "libellé de sa structure (connue ou nouvelle) ou null" }],
-  "relances": [{ "objet": "action de suivi à faire", "dans_jours": 14 }]
+  "relances": [{ "objet": "action de suivi à faire, à l'impératif, SANS nom de personne", "personne": "personne concernée (nom ou « Prénom Nom ») ou null", "dans_jours": 14 }]
 }`;
 }
 
@@ -71,6 +73,7 @@ Règles absolues :
 - Nous sommes le ${today} (AAAA-MM-JJ) : résous les dates relatives (« hier », « mardi dernier »).
 - Pour les rattachements, n'utilise que les libellés EXACTS existants ci-dessous ; si la consigne demande de retirer un rattachement, enlève-le de la liste.
 - Une STRUCTURE (organisation) va dans "entites" ; une PERSONNE physique (nom, prénom, fonction) va dans "contacts" — jamais l'inverse.
+- Relances : "objet" = l'action seule, à l'impératif, SANS nom de personne (« Rappeler… », pas « Maxence doit rappeler… ») ; la personne concernée va dans "personne".
 
 Entités connues :
 ${listeEntites}
@@ -89,6 +92,6 @@ Réponds UNIQUEMENT par l'objet JSON complet et corrigé, sans texte autour, de 
   "nouvelles_entites": [{ "nom": "structure nouvelle", "type": "MOA|archi|promoteur|bet|confrere|autre (bet = bureau d'études techniques)" }],
   "nouvelles_operations": [{ "nom": "affaire nouvelle" }],
   "contacts": [{ "nom": "…", "prenom": "… ou null", "fonction": "… ou null", "entite": "structure ou null" }],
-  "relances": [{ "objet": "…", "dans_jours": 14 }]
+  "relances": [{ "objet": "action à l'impératif, SANS nom de personne", "personne": "personne concernée ou null", "dans_jours": 14 }]
 }`;
 }

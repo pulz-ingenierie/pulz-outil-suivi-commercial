@@ -27,7 +27,7 @@ export interface Synthese {
   nouvelles_entites: NouvelleEntite[];
   nouvelles_operations: { nom: string }[];
   contacts: ContactExtrait[];
-  relances: { objet: string; dans_jours: number }[];
+  relances: { objet: string; dans_jours: number; personne: string | null }[];
 }
 
 const ENTITE_TYPES = ["MOA", "archi", "promoteur", "bet", "confrere", "autre"];
@@ -80,6 +80,7 @@ export function validateSynthese(
         .map((r) => ({
           objet: typeof r.objet === "string" ? r.objet.trim() : "",
           dans_jours: Number.isFinite(r.dans_jours as number) ? Math.max(1, Math.round(r.dans_jours as number)) : 14,
+          personne: typeof r.personne === "string" && r.personne.trim() ? r.personne.trim() : null,
         }))
         .filter((r) => r.objet.length > 0)
     : [];

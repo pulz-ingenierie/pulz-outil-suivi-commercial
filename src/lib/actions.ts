@@ -279,20 +279,25 @@ async function materialiserCr(
       .map((r: any) => ({
         objet: typeof r?.objet === "string" ? r.objet.trim() : "",
         dans_jours: Number.isFinite(r?.dans_jours) ? Math.max(1, Math.round(r.dans_jours)) : 14,
+        personne: typeof r?.personne === "string" && r.personne.trim() ? r.personne.trim() : null,
       }))
       .filter((r: any) => r.objet.length > 0);
     if (suites.length) {
-      await sb.from("relances").insert(
-        suites.map((r: any) => ({
-          org_id,
-          operation_id: operationIds[0] ?? null,
-          entite_id: operationIds.length ? null : (entiteIds[0] ?? null),
-          cr_origine_id: crId,
-          objet: r.objet,
-          date_echeance: dateInDays(r.dans_jours),
-          auto: true,
-        })),
-      );
+      const base = suites.map((r: any) => ({
+        org_id,
+        operation_id: operationIds[0] ?? null,
+        entite_id: operationIds.length ? null : (entiteIds[0] ?? null),
+        cr_origine_id: crId,
+        objet: r.objet,
+        date_echeance: dateInDays(r.dans_jours),
+        auto: true,
+      }));
+      // La colonne « personne » peut ne pas encore exister (migration 0003) :
+      // on tente avec, et on retombe proprement sans elle en cas d'échec.
+      const { error: relErr } = await sb
+        .from("relances")
+        .insert(base.map((row: any, i: number) => ({ ...row, personne: suites[i].personne })));
+      if (relErr) await sb.from("relances").insert(base);
     }
   }
 
