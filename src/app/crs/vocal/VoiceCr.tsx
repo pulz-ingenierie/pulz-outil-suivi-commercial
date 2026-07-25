@@ -450,6 +450,20 @@ export default function VoiceCr({
 
   const canSave = transcription.trim().length > 0 && ratsNets.length > 0;
 
+  // Débrief de fin de dictée : ce qui manque pour que chaque signet soit complet.
+  // Nouvelles structures sans type précis, personnes sans fonction, opérations
+  // sans structure de rattachement.
+  const structAPreciser = rattachements
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => r.kind === "structure" && r.name.trim() && !ratEnBase(r) && (!r.type || r.type === "autre"));
+  const persAPreciser = personnes
+    .map((p, i) => ({ p, i }))
+    .filter(({ p }) => p.nom.trim() && !p.fonction.trim());
+  const opsSansStruct =
+    rattachements.some((r) => r.kind === "operation" && r.name.trim()) &&
+    !rattachements.some((r) => r.kind === "structure" && r.name.trim());
+  const aCompleter = structAPreciser.length > 0 || persAPreciser.length > 0 || opsSansStruct;
+
   // Mises à jour des blocs.
   const majRat = (i: number, patch: Partial<Rattach>) =>
     setRattachements((prev) => prev.map((x, j) => (j === i ? { ...x, ...patch } : x)));
@@ -851,6 +865,34 @@ export default function VoiceCr({
             </li>
           </ul>
         </div>
+
+        {/* Débrief — questions pour compléter les signets avant d'enregistrer. */}
+        {synthese && aCompleter && (
+          <div className="bloc apreciser">
+            <div className="encart-h">À préciser</div>
+            <p className="hint" style={{ marginTop: 0 }}>Quelques informations manquent pour des signets complets — vous pouvez répondre ici, ou enregistrer tel quel.</p>
+            {structAPreciser.map(({ r, i }) => (
+              <label className="precise-row" key={`s${i}`}>
+                <span className="precise-q">Quel type de structure est <strong>{r.name}</strong> ?</span>
+                <select value={r.type ?? "autre"} onChange={(e) => majRat(i, { type: e.target.value })}>
+                  {TYPE_STRUCTURE.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
+                </select>
+              </label>
+            ))}
+            {opsSansStruct && (
+              <div className="precise-row">
+                <span className="precise-q">Cette opération n'a pas de structure (porte d'entrée).</span>
+                <button type="button" className="btn ghost mini" onClick={() => { setRattachements((p) => [...p, { kind: "structure", name: "" }]); ouvrirCarte("rat", rattachements.length, "edit"); }}>Ajouter une structure</button>
+              </div>
+            )}
+            {persAPreciser.map(({ p, i }) => (
+              <label className="precise-row" key={`p${i}`}>
+                <span className="precise-q">Fonction de <strong>{[p.prenom, p.nom].filter(Boolean).join(" ")}</strong> ?</span>
+                <input value={p.fonction} placeholder="Ex. directeur, responsable aménagement…" onChange={(e) => majPers(i, { fonction: e.target.value })} />
+              </label>
+            ))}
+          </div>
+        )}
 
         {/* Bloc — corriger en parlant. */}
         {synthese && (

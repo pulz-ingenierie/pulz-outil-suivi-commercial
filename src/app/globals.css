@@ -392,6 +392,17 @@ a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); tran
        background: color-mix(in srgb, var(--c-pers) 13%, transparent); padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
 .rel-item-date { flex: none; font-size: 12px; font-weight: 600; color: var(--c-rel);
        background: color-mix(in srgb, var(--c-rel) 14%, transparent); padding: 3px 9px; border-radius: 999px; }
+/* Débrief « À préciser » : questions pour compléter les signets. */
+.apreciser { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+.apreciser .encart-h { color: var(--accent-ink); }
+.precise-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+       padding: 10px 0; border-top: 1px solid var(--line-2); }
+.precise-row:first-of-type { border-top: none; }
+.precise-q { font-size: 13.5px; min-width: 180px; flex: 1; }
+.precise-row select, .precise-row input { font: inherit; font-size: 14px; padding: 8px 11px; border: 1px solid var(--line);
+       border-radius: 6px; background: var(--surface); color: var(--ink); min-width: 200px; }
+.precise-row select:focus, .precise-row input:focus { outline: none; border-color: var(--accent); }
+
 /* Ligne de relance en lecture (fiche opération) : action + signets. */
 .rel-line { display: flex; flex-direction: column; gap: 8px; padding: 11px 13px;
        border: 1px solid var(--line); border-radius: 11px; background: var(--surface-2); }
