@@ -69,7 +69,7 @@ export default async function AdminUtilisateurs() {
         </div>
         {users.map((u) => (
           <div className={`utrow${u.actif ? "" : " off"}`} key={u.id}>
-            <span className="u-nom">{u.nom}{u.id === profil.id ? " (vous)" : ""}</span>
+            <span className="u-nom"><Link href={`/membres/${u.id}`}>{u.nom}</Link>{u.id === profil.id ? " (vous)" : ""}</span>
             <span className="u-mail">{u.email}</span>
             <span className="u-soc">{u.societe_label ?? "—"}</span>
             <span className="u-role">

@@ -3,7 +3,7 @@ import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
 import { createRelance, updateRelance } from "@/lib/actions";
 import { envoyerRappelsMaintenant, envoyerEmailTest } from "@/lib/admin-actions";
 import { getIdentite } from "@/lib/auth";
-import { indexerPersonnes, resoudrePersonne } from "@/lib/personnes";
+import { indexerLiens, lienPersonne } from "@/lib/personnes";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +45,7 @@ function RelanceCard({
   opStructures: Record<string, { id: string; nom: string }[]>;
 }) {
   const enRetard = r.date_echeance < today;
-  const persId = r.personne ? resoudrePersonne(personnesIdx, r.personne) : null;
+  const persHref = r.personne ? lienPersonne(personnesIdx, r.personne) : null;
   // Toutes les associations d'un rappel : l'opération, sa/ses structure(s), la
   // personne — chacune un signet cliquable vers sa carte.
   const op = r.operation_id && r.operations?.nom
@@ -66,8 +66,8 @@ function RelanceCard({
       <div className="rel-main">
         <div className="rel-obj">{r.objet}</div>
         <div className="rel-meta sig-wrap">
-          {r.personne && (persId
-            ? <Link className="sig-d pers" href={`/personnes/${persId}`}><span className="sig-lbl">{r.personne}</span></Link>
+          {r.personne && (persHref
+            ? <Link className="sig-d pers" href={persHref}><span className="sig-lbl">{r.personne}</span></Link>
             : <span className="sig-d pers"><span className="sig-lbl">{r.personne}</span></span>)}
           {structs.map((s) => (
             <Link className="sig-d struct" href={`/entites/${s.id}`} key={s.id}><span className="sig-lbl">{s.nom}</span></Link>
@@ -127,7 +127,7 @@ export default async function Relances({
     supabase.from("utilisateurs").select("id, nom").eq("actif", true).order("nom"),
     supabase.from("contacts").select("id, nom, prenom"),
   ]);
-  const personnesIdx = indexerPersonnes((contacts ?? []) as any);
+  const personnesIdx = indexerLiens((contacts ?? []) as any, (utilisateurs ?? []) as any);
 
   const today = new Date().toISOString().slice(0, 10);
   const list = (relances ?? []) as unknown as Rel[];

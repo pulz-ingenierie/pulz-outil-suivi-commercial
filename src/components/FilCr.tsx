@@ -20,7 +20,7 @@ function dateFr(d: string | null): string {
 }
 
 import Link from "next/link";
-import { resoudrePersonne } from "@/lib/personnes";
+import { lienPersonne } from "@/lib/personnes";
 
 export type CrItem = {
   id: string;
@@ -33,10 +33,10 @@ export type CrItem = {
 
 export default function FilCr({
   crs,
-  personnesIdx = {},
+  liens = {},
 }: {
   crs: CrItem[];
-  personnesIdx?: Record<string, string>;
+  liens?: Record<string, string>;
 }) {
   if (!crs.length) {
     return <div className="empty">Aucun compte rendu pour l'instant.</div>;
@@ -82,10 +82,10 @@ export default function FilCr({
             {participants.length > 0 && (
               <div className="sig-wrap fil-sigs">
                 {participants.map((p, i) => {
-                  const pid = p.moi ? null : resoudrePersonne(personnesIdx, p.nom);
-                  if (pid) {
+                  const href = p.moi ? null : lienPersonne(liens, p.nom);
+                  if (href) {
                     return (
-                      <Link className="sig-d pers" href={`/personnes/${pid}`} key={i}>
+                      <Link className="sig-d pers" href={href} key={i}>
                         <span className="sig-lbl">{p.nom}</span>
                       </Link>
                     );

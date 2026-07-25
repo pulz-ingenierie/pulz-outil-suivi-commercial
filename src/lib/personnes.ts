@@ -34,3 +34,25 @@ export function resoudrePersonne(idx: Record<string, string>, name: string | nul
   const k = normNom(name);
   return k && idx[k] ? idx[k] : null;
 }
+
+// Index nom → LIEN de carte : un contact ouvre /personnes/[id], un membre de
+// l'équipe ouvre /membres/[id]. Les contacts sont prioritaires.
+export function indexerLiens(
+  contacts: PersonneRef[],
+  membres: { id: string; nom: string }[],
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  const idxC = indexerPersonnes(contacts);
+  for (const k in idxC) out[k] = `/personnes/${idxC[k]}`;
+  for (const m of membres) {
+    const n = normNom(m.nom);
+    if (n && !(n in out)) out[n] = `/membres/${m.id}`;
+  }
+  return out;
+}
+
+// Renvoie le lien (href) de la carte d'une personne, ou null si inconnue.
+export function lienPersonne(idx: Record<string, string>, name: string | null | undefined): string | null {
+  const k = normNom(name);
+  return k && idx[k] ? idx[k] : null;
+}

@@ -585,6 +585,8 @@ a.sig-d { text-decoration: none; }
 .utrow.uthead { background: var(--surface-2); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
 .utrow.off { opacity: .55; }
 .utrow .u-nom { font-weight: 600; }
+.utrow .u-nom a { color: var(--ink); text-decoration: none; }
+.utrow .u-nom a:hover { color: var(--accent); text-decoration: underline; }
 .utrow .u-mail { color: var(--muted); word-break: break-all; }
 .utrow .u-soc { color: var(--faint); }
 .inline { display: inline-flex; align-items: center; gap: 6px; }
