@@ -78,13 +78,17 @@ function RelanceCard({
           Échéance : {dateFr(r.date_echeance)}{enRetard ? " · en retard" : ""}
         </div>
         <div className="rel-meta sig-rows">
-          {(op || structs.length > 0 || r.auto) && (
+          {(op || r.auto) && (
             <div className="sig-row">
               {op && <Link className="sig-d op" href={op.href}><span className="sig-lbl">{op.nom}</span></Link>}
+              {r.auto && <span className="sig-d ia"><span className="sig-lbl">IA</span></span>}
+            </div>
+          )}
+          {structs.length > 0 && (
+            <div className="sig-row">
               {structs.map((s) => (
                 <Link className="sig-d struct" href={`/entites/${s.id}`} key={s.id}><span className="sig-lbl">{s.nom}</span></Link>
               ))}
-              {r.auto && <span className="sig-d ia"><span className="sig-lbl">IA</span></span>}
             </div>
           )}
           {r.personne && (
@@ -98,17 +102,19 @@ function RelanceCard({
       </div>
       <div className="rel-acts">
         <Link className="btn mini" href={crHref}>🎙 Nouveau compte rendu</Link>
-        <form action={updateRelance}>
-          <input type="hidden" name="id" value={r.id} />
-          <input type="hidden" name="action" value="faite" />
-          <button className="btn ghost mini" type="submit" title="Marquer comme fait">Fait</button>
-        </form>
-        <ReporterRelance id={r.id} defaultDate={plusJours(7)} />
-        <form action={updateRelance}>
-          <input type="hidden" name="id" value={r.id} />
-          <input type="hidden" name="action" value="abandonner" />
-          <button className="btn ghost mini danger" type="submit">Abandonner</button>
-        </form>
+        <div className="rel-acts-row">
+          <form action={updateRelance}>
+            <input type="hidden" name="id" value={r.id} />
+            <input type="hidden" name="action" value="faite" />
+            <button className="btn ghost mini" type="submit" title="Marquer comme fait">Fait</button>
+          </form>
+          <ReporterRelance id={r.id} defaultDate={plusJours(7)} />
+          <form action={updateRelance}>
+            <input type="hidden" name="id" value={r.id} />
+            <input type="hidden" name="action" value="abandonner" />
+            <button className="btn ghost mini danger" type="submit">Abandonner</button>
+          </form>
+        </div>
       </div>
     </div>
   );

@@ -89,7 +89,7 @@ h1 { font-weight: 700; }
 .rel-h .tnum { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
 .rel-h.crit { color: var(--crit); } .rel-h.crit .tnum { background: color-mix(in srgb, var(--crit) 14%, transparent); color: var(--crit); }
 .rel-h.muted-h { color: var(--faint); }
-.relcard { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 13px 15px; margin-bottom: 9px; box-shadow: var(--shadow); }
+.relcard { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 13px 15px; margin-bottom: 9px; box-shadow: var(--shadow); }
 .relcard.late { border-left: 2px solid var(--crit); }
 .rel-main { min-width: 220px; flex: 1; }
 .rel-obj { font-weight: 560; font-size: 14.5px; }
@@ -97,10 +97,17 @@ h1 { font-weight: 700; }
 .rel-echeance { margin-top: 5px; font-size: 12.5px; color: var(--muted); }
 .rel-echeance.crit { color: var(--crit); font-weight: 560; }
 .rel-meta { margin-top: 8px; }
-.rel-acts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.rel-acts form { display: inline-flex; }
-.rel-report { align-items: center; gap: 6px; }
-.rel-report input[type="date"] { font: inherit; font-size: 12.5px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); }
+/* Actions d'un rappel : « Nouveau compte rendu » en tête, puis Fait / Reporter /
+   Abandonner alignés en une rangée de largeurs égales. */
+.rel-acts { display: flex; flex-direction: column; gap: 8px; align-items: stretch; min-width: 250px; }
+.rel-acts > .btn { justify-content: center; }
+.rel-acts-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.rel-acts-row > form, .rel-acts-row > button { flex: 1 1 0; min-width: 72px; }
+.rel-acts-row > form { display: flex; }
+.rel-acts-row > form .btn, .rel-acts-row > button.btn { width: 100%; justify-content: center; }
+.rel-report { flex-basis: 100%; align-items: center; gap: 6px; }
+.rel-report input[type="date"] { flex: 1; font: inherit; font-size: 12.5px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.rel-report .btn { flex: none; width: auto; }
 .btn.mini { font-size: 12.5px; padding: 7px 12px; }
 .btn.mini.danger { color: var(--crit); }
 .btn.mini.danger:hover { border-color: var(--crit); }
