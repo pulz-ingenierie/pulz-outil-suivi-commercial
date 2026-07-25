@@ -2,8 +2,8 @@
    Encre chaude sur pierre ; un seul signal cyan, gouverné (IA / focus).
    Réf. : Direction artistique MOIEA/livrables moeia/moeia-direction-artistique.md */
 :root {
-  --ground: #F6F5F2; --surface: #FFFFFF; --surface-2: #EFEDE8;
-  --ink: #221F1A; --muted: #57534E; --faint: #8F8A82; --line: #E5E2DC; --line-2: #EEECE7;
+  --ground: #FFFFFF; --surface: #FFFFFF; --surface-2: #F4F3EF;
+  --ink: #221F1A; --muted: #57534E; --faint: #8F8A82; --line: #E3E0DA; --line-2: #EEECE7;
   /* Accent fonctionnel = cyan-action (liens, focus) ; signal = cyan pur ; primaire métier = encre */
   --accent: #0273C4; --accent-ink: #01599A; --accent-soft: #E9F6FD; --accent-border: #C4E9FA;
   --signal: #04B7F9; --primary: #221F1A; --on-primary: #FFFFFF; --ia-btn: #0273C4;
