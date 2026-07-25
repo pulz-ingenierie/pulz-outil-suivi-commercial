@@ -233,7 +233,9 @@ async function materialiserCr(
     await sb.from("cr_operations").insert(operationIds.map((operation_id) => ({ cr_id: crId, operation_id })));
   }
 
-  // Contacts : structure résolue par NOM (connue ou fraîchement créée).
+  // Contacts : TOUTE personne évoquée devient une fiche (carte). La structure
+  // est résolue par NOM si elle est connue ; sinon la personne est créée sans
+  // structure (entite_id null) — voir migration 0004.
   const persons = jsonArray(fd, "contacts_json");
   if (persons.length) {
     const { data: allEnt } = await sb.from("entites").select("id, nom").eq("org_id", org_id);
@@ -248,24 +250,41 @@ async function materialiserCr(
             ? idByNom.get(p.entite.trim().toLowerCase()) ?? null
             : null,
       }))
-      .filter((p) => p.nom && p.entite_id) as {
-      nom: string; prenom: string | null; fonction: string | null; entite_id: string;
+      .filter((p) => p.nom) as {
+      nom: string; prenom: string | null; fonction: string | null; entite_id: string | null;
     }[];
     if (nets.length) {
-      const entIds = [...new Set(nets.map((p) => p.entite_id))];
-      const { data: existing } = await sb.from("contacts").select("nom, prenom, entite_id").in("entite_id", entIds);
-      const key = (eid: string, nom: string, prenom: string | null) =>
-        `${eid}|${nom.toLowerCase()}|${(prenom ?? "").toLowerCase()}`;
-      const seen = new Set((existing ?? []).map((c: any) => key(c.entite_id, c.nom ?? "", c.prenom ?? null)));
+      const key = (eid: string | null, nom: string, prenom: string | null) =>
+        `${eid ?? "∅"}|${nom.toLowerCase()}|${(prenom ?? "").toLowerCase()}`;
+      const seen = new Set<string>();
+      // Doublons éventuels : contacts existants (avec structure concernée + sans structure).
+      const entIds = [...new Set(nets.map((p) => p.entite_id).filter(Boolean))] as string[];
+      if (entIds.length) {
+        const { data: ex1 } = await sb.from("contacts").select("nom, prenom, entite_id").in("entite_id", entIds);
+        for (const c of (ex1 ?? []) as any[]) seen.add(key(c.entite_id, c.nom ?? "", c.prenom ?? null));
+      }
+      const { data: ex2 } = await sb.from("contacts").select("nom, prenom").is("entite_id", null);
+      for (const c of (ex2 ?? []) as any[]) seen.add(key(null, c.nom ?? "", c.prenom ?? null));
+
       const toInsert = nets.filter((p) => {
         const k = key(p.entite_id, p.nom, p.prenom);
         if (seen.has(k)) return false;
         seen.add(k);
         return true;
       });
-      if (toInsert.length) {
+      const avecStruct = toInsert.filter((p) => p.entite_id);
+      const sansStruct = toInsert.filter((p) => !p.entite_id);
+      if (avecStruct.length) {
         await sb.from("contacts").insert(
-          toInsert.map((p) => ({ entite_id: p.entite_id, nom: p.nom, prenom: p.prenom, fonction: p.fonction, source: "vocal" })),
+          avecStruct.map((p) => ({ entite_id: p.entite_id, nom: p.nom, prenom: p.prenom, fonction: p.fonction, source: "vocal" })),
+        );
+      }
+      // Personnes sans structure : possible seulement une fois la migration 0004
+      // appliquée (entite_id nullable). Défensif : un échec n'interrompt pas la
+      // sauvegarde du compte rendu.
+      if (sansStruct.length) {
+        await sb.from("contacts").insert(
+          sansStruct.map((p) => ({ entite_id: null, nom: p.nom, prenom: p.prenom, fonction: p.fonction, source: "vocal" })),
         );
       }
     }

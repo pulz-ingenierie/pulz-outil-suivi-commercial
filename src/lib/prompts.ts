@@ -22,8 +22,8 @@ Règles absolues :
 
 DISTINCTION IMPORTANTE — structure vs personne (règle stricte) :
 - Une STRUCTURE (organisation) est une entité morale : mairie, bailleur, promoteur, agence d'architecture, entreprise, collectivité… → elle va dans "entites" (ou "nouvelles_entites").
-- Une PERSONNE physique (un individu) → elle va dans "contacts", JAMAIS dans "entites".
-- SÉPARE STRICTEMENT les champs d'un contact : "nom" et "prenom" ne contiennent QUE le nom et le prénom de la personne — JAMAIS le nom de sa structure, JAMAIS sa fonction. La fonction va dans "fonction". La structure va dans "entite" (et est listée comme structure à part).
+- Une PERSONNE physique (un individu) → elle va dans "contacts", JAMAIS dans "entites". Inclus TOUTE personne réellement évoquée, y compris la personne responsable d'une relance/action (ex. « Florian »). N'invente jamais de personne.
+- SÉPARE STRICTEMENT les champs d'un contact : "nom" et "prenom" ne contiennent QUE le nom et le prénom de la personne — JAMAIS le nom de sa structure, JAMAIS sa fonction. La fonction va dans "fonction". La structure va dans "entite" (et est listée comme structure à part). Si la structure de la personne n'est pas connue ou pas évoquée, mets "entite" à null (ne l'invente pas) — une personne peut exister sans structure.
 - Le TYPE d'une structure (MOA, architecte, promoteur, confrère, autre) décrit la structure — ce n'est pas son nom. Renseigne-le dans "nouvelles_entites[].type".
 - Exemple : « Romain Mission, promoteur immobilier, société Cible Le Neuf » → contact { nom: "Mission", prenom: "Romain", fonction: "promoteur immobilier", entite: "Cible Le Neuf" } ET nouvelle structure { nom: "Cible Le Neuf", type: "promoteur" }.
 - Autre exemple : « Louis Dujardin, directeur de la SIGH » → contact { nom: "Dujardin", prenom: "Louis", fonction: "directeur", entite: "SIGH" } ; "SIGH" est la structure.
