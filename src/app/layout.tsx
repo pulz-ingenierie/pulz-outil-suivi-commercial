@@ -5,7 +5,6 @@ import "./globals.css";
 import { getIdentite } from "@/lib/auth";
 import { signOut } from "@/lib/auth-actions";
 import MoeiaLogo from "@/components/MoeiaLogo";
-import ObjectSheet from "@/components/ObjectSheet";
 import DeleteSheet from "@/components/DeleteSheet";
 
 // Fontes moeïa : Inter (UI), Space Grotesk (titres), JetBrains Mono (chiffres).
@@ -76,7 +75,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </header>
         )}
         {children}
-        <ObjectSheet />
         <DeleteSheet />
       </body>
     </html>

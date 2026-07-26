@@ -147,14 +147,28 @@ h1 { font-weight: 700; }
 /* Glisser-pour-supprimer : la piste (.swrow-track) coulisse et révèle le bouton
    rouge dessous. Le liseré de séparation passe sur .swrow quand il enveloppe. */
 .swrow { position: relative; overflow: hidden; background: var(--crit); }
-.vlist2 > .swrow { border-top: 1px solid var(--line-2); }
-.vlist2 > .swrow:first-child { border-top: none; }
+.vlist2 > .swrow, .vlist2 > .lx { border-top: 1px solid var(--line-2); }
+.vlist2 > .swrow:first-child, .vlist2 > .lx:first-child { border-top: none; }
 .swrow > .vrow { border-top: none; }
+
+/* Ligne dépliable (.lx) : la ligne + son contenu qui s'ouvre en dessous. */
+.lx > .swrow { background: var(--crit); }
+.lx-chev { color: var(--faint); font-size: 18px; line-height: 1; transition: transform .15s; margin-left: 2px; }
+.lx.open .lx-chev { transform: rotate(90deg); }
+.lx-body { background: var(--surface-2); padding: 4px var(--wrap-pad, 22px) 14px; display: flex; flex-direction: column; gap: 12px;
+       border-top: 1px solid var(--line-2); }
+.block .lx-body { padding-left: 16px; padding-right: 16px; }
+.lx-meta { font-size: 13px; color: var(--muted); padding-top: 8px; }
+.lx-sect { display: flex; flex-direction: column; gap: 7px; padding-top: 8px; }
+.lx-sect-h { font-size: 11.5px; font-weight: 600; color: var(--faint); letter-spacing: .01em; }
+.lx-acts { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
+.lx-acts .rel-acts-row { display: flex; gap: 8px; }
+.lx-acts .rel-acts-row > form, .lx-acts .rel-acts-row > button { flex: 1 1 0; }
 .swrow-track { position: relative; background: var(--surface); will-change: transform;
        -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: pan-y; }
 .swrow-del { position: absolute; top: 0; right: 0; height: 100%; width: 88px; border: none;
        background: var(--crit); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; letter-spacing: .01em; }
-.vrow-nom { font-weight: 560; font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vrow-nom { font-weight: 560; font-size: 14px; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vrow-meta { display: flex; align-items: center; gap: 10px; flex: none; color: var(--muted); font-size: 12px; }
 .vrow-meta .amt { font-size: 11.5px; color: var(--muted); }
 .vrow-type { letter-spacing: .01em; font-size: 12px; color: var(--faint); }

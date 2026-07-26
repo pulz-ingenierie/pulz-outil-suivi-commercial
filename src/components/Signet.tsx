@@ -1,10 +1,17 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useLongPressSuppr } from "@/lib/gestures";
 
-// Signet cliquable : ouvre le volet global (aperçu de l'objet) qui se déploie
-// depuis le bas. Un appui long (ou un swipe vers la gauche) ouvre le volet ROUGE
-// de suppression. Utilisé partout dans l'outil pour une interaction cohérente.
+// Signet cliquable : ouvre la FICHE complète de l'objet (navigation), pour rester
+// cohérent avec le principe « tout se déplie / s'ouvre en liste ». Un appui long
+// ouvre le volet rouge de suppression.
+const HREF: Record<string, (id: string) => string> = {
+  entite: (id) => `/entites/${id}`,
+  operation: (id) => `/operations/${id}`,
+  personne: (id) => `/personnes/${id}`,
+};
+
 export default function Signet({
   type,
   id,
@@ -18,6 +25,7 @@ export default function Signet({
   label: string;
   sub?: string;
 }) {
+  const router = useRouter();
   const g = useLongPressSuppr(type, id, label);
   return (
     <button
@@ -26,7 +34,8 @@ export default function Signet({
       onClick={(e) => {
         e.stopPropagation();
         if (g.consomme()) return;
-        window.dispatchEvent(new CustomEvent("moeia:apercu", { detail: { type, id } }));
+        const h = HREF[type]?.(id);
+        if (h) router.push(h);
       }}
       onTouchStart={g.onTouchStart}
       onTouchMove={g.onTouchMove}

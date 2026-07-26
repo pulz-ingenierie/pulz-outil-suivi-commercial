@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { STATUT_LABELS, STATUT_ORDRE, type OperationStatut } from "@/lib/types";
-import VoletCard from "@/components/VoletCard";
-import SwipeRow from "@/components/SwipeRow";
+import ExpandableRow from "@/components/ExpandableRow";
 import OperationRow from "@/components/OperationRow";
 
 // Couleur associée à chaque étape (variables CSS définies dans globals.css).
@@ -215,17 +214,15 @@ function VueStructures({ reseau }: { reseau: Structure[] }) {
       {list.length ? (
         <div className="vlist2">
           {list.map((s) => (
-            <SwipeRow type="entite" id={s.id} nom={s.nom} key={s.id}>
-              <VoletCard className="vrow" type="entite" id={s.id}>
-                <span className="vrow-nom">{s.nom}</span>
-                <span className="vrow-meta">
-                  {s.prochaineRelance && <span className="vrow-rel">Relance {dateCourt(s.prochaineRelance)}</span>}
-                  {s.dormant && <span className="pill dormant">sommeil</span>}
-                  {s.silencieux && s.ops.length === 0 && <span className="pill silence">à réchauffer</span>}
-                  <span className="vrow-type">{s.type}</span>
-                </span>
-              </VoletCard>
-            </SwipeRow>
+            <ExpandableRow type="entite" id={s.id} nom={s.nom} key={s.id}>
+              <span className="vrow-nom">{s.nom}</span>
+              <span className="vrow-meta">
+                {s.prochaineRelance && <span className="vrow-rel">Relance {dateCourt(s.prochaineRelance)}</span>}
+                {s.dormant && <span className="pill dormant">sommeil</span>}
+                {s.silencieux && s.ops.length === 0 && <span className="pill silence">à réchauffer</span>}
+                <span className="vrow-type">{s.type}</span>
+              </span>
+            </ExpandableRow>
           ))}
         </div>
       ) : (
@@ -262,15 +259,13 @@ function VuePersonnes({ personnes }: { personnes: PersonneListe[] }) {
           {list.map((p) => {
             const nomComplet = [p.prenom, p.nom].filter(Boolean).join(" ") || p.nom;
             return (
-              <SwipeRow type="personne" id={p.id} nom={nomComplet} key={p.id}>
-                <VoletCard className="vrow" type="personne" id={p.id}>
-                  <span className="vrow-nom">{nomComplet}</span>
-                  <span className="vrow-meta">
-                    {p.fonction && <span>{p.fonction}</span>}
-                    {p.entiteNom && <span className="vrow-type">{p.entiteNom}</span>}
-                  </span>
-                </VoletCard>
-              </SwipeRow>
+              <ExpandableRow type="personne" id={p.id} nom={nomComplet} key={p.id}>
+                <span className="vrow-nom">{nomComplet}</span>
+                <span className="vrow-meta">
+                  {p.fonction && <span>{p.fonction}</span>}
+                  {p.entiteNom && <span className="vrow-type">{p.entiteNom}</span>}
+                </span>
+              </ExpandableRow>
             );
           })}
         </div>
