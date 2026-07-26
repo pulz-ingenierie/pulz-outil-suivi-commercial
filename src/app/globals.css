@@ -588,6 +588,18 @@ a.sig-d { text-decoration: none; }
 .carte-sect-h .ic { width: 15px; height: 15px; color: var(--muted); }
 .carte-body .hint { color: var(--faint); font-size: 12.5px; margin: 2px 0 0; }
 .btn.danger { color: var(--warn); }
+
+/* Volet ROUGE de suppression (geste swipe / appui long). */
+.carte.danger { border-color: color-mix(in srgb, var(--crit) 55%, var(--line)); }
+.carte-top.danger-top { background: var(--crit-soft); border-bottom-color: color-mix(in srgb, var(--crit) 30%, var(--line)); }
+.del-eyebrow { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--crit); }
+.carte-top.danger-top .carte-nom-view { color: var(--crit); }
+.del-assoc { display: flex; flex-direction: column; gap: 8px; }
+.del-assoc-h { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.del-check { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.del-check input { width: 17px; height: 17px; flex: none; accent-color: var(--crit); }
+.btn.danger-solid { background: var(--crit); color: #fff; border-color: var(--crit); }
+.btn.danger-solid:hover { background: color-mix(in srgb, var(--crit) 85%, #000); }
 .sig-badge { font-style: normal; font-weight: 600; font-size: 9.5px; padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
 .sig-badge.base { background: var(--accent-soft); color: var(--accent-ink); }
 .sig-badge.new { background: color-mix(in srgb, var(--warn) 20%, transparent); color: var(--warn); }

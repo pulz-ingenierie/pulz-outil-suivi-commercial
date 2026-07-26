@@ -567,6 +567,60 @@ export async function supprimerCr(fd: FormData) {
   revalidatePath("/", "layout");
 }
 
+// Supprime un objet (structure, opération ou personne) après vérification de
+// l'organisation. Les rattachements partent en cascade selon le schéma :
+//  - entite  → contacts, liens entité-opération, liens CR-entité (cascade) ;
+//              les opérations partagées et les CR NE sont PAS supprimés.
+//  - operation → liens entité-opération, liens CR-opération (cascade).
+//  - personne  → la seule ligne contact.
+async function supprimerUn(
+  supabase: ReturnType<typeof getServerSupabase>,
+  org_id: string,
+  type: string,
+  id: string,
+) {
+  if (!id) return;
+  if (type === "entite") {
+    const { data } = await supabase!.from("entites").select("id, org_id").eq("id", id).maybeSingle();
+    if (!data || data.org_id !== org_id) return;
+    await supabase!.from("entites").delete().eq("id", id);
+  } else if (type === "operation") {
+    const { data } = await supabase!.from("operations").select("id, org_id").eq("id", id).maybeSingle();
+    if (!data || data.org_id !== org_id) return;
+    await supabase!.from("operations").delete().eq("id", id);
+  } else if (type === "personne") {
+    // Les contacts n'ont pas de colonne org_id : on vérifie via leur structure
+    // quand elle existe (un contact sans structure reste supprimable).
+    const { data } = await supabase!.from("contacts").select("id, entite_id, entites(org_id)").eq("id", id).maybeSingle();
+    if (!data) return;
+    const orgContact = (data as any).entites?.org_id;
+    if (orgContact && orgContact !== org_id) return;
+    await supabase!.from("contacts").delete().eq("id", id);
+  }
+}
+
+// Supprime l'objet visé + les objets associés explicitement cochés dans le volet
+// rouge de confirmation. Rien n'est supprimé qui ne soit coché : la case
+// principale est l'objet lui-même, les autres sont facultatives (décochées par
+// défaut). Utilisé par le geste de suppression (swipe / appui long).
+export async function supprimerObjet(fd: FormData) {
+  const supabase = requireSupabase();
+  const org_id = await currentOrgId(supabase);
+  const type = str(fd, "type");
+  const id = str(fd, "id");
+  if (!type || !id) throw new Error("Objet à supprimer introuvable.");
+
+  // Objets associés à supprimer aussi : liste "type:id" cochée dans le volet.
+  const aussi = fd.getAll("aussi").map((v) => String(v)).filter(Boolean);
+  for (const paire of aussi) {
+    const [t, i] = paire.split(":");
+    if (t && i && !(t === type && i === id)) await supprimerUn(supabase, org_id, t, i);
+  }
+
+  await supprimerUn(supabase, org_id, type, id);
+  revalidatePath("/", "layout");
+}
+
 // -----------------------------------------------------------------------------
 // Relances — les suites à donner (créées à la main ou par l'IA)
 // -----------------------------------------------------------------------------
