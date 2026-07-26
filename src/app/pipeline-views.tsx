@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useState } from "react";
 import { STATUT_LABELS, STATUT_ORDRE, type OperationStatut } from "@/lib/types";
-import Signet from "@/components/Signet";
 import VoletCard from "@/components/VoletCard";
 
 // Couleur associée à chaque étape (variables CSS définies dans globals.css).
@@ -83,46 +82,22 @@ function euro(n: number | null): string | null {
   return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n) + " €";
 }
 
-// L'étape du pipeline est un signet CLIQUABLE (→ toutes les affaires de l'étape).
-function EtapeChip({ statut }: { statut: OperationStatut }) {
-  return (
-    <Link className="sig-d phase" href={`/operations/phase/${statut}`} style={{ ["--cat" as string]: `var(${STATUT_VAR[statut]})` }}>
-      <span className="sig-lbl">{STATUT_LABELS[statut]}</span>
-    </Link>
-  );
-}
-
-// Carte d'une affaire (cliquable → sa fiche).
-function CarteOp({
-  op,
-  entites,
-  avecEtape,
-  avecProspects,
-}: {
-  op: Op;
-  entites: Ent[];
-  avecEtape?: boolean;
-  avecProspects?: boolean;
-}) {
+// Ligne d'affaire : nom + étape (+ montant). Clic → volet de l'opération.
+function LigneOp({ op }: { op: Op }) {
   const montant = euro(op.montant_estime);
-  const aMeta = avecEtape || (avecProspects && entites.length > 0) || montant;
   return (
-    <div className="op">
-      <Link className="onm" href={`/operations/${op.id}`}>{op.nom}</Link>
-      {aMeta && (
-        <div className="ometa">
-          {avecEtape && <EtapeChip statut={op.statut} />}
-          {avecProspects &&
-            entites.map((e) => <Signet key={e.id} type="entite" id={e.id} cat="struct" label={e.nom} />)}
-          {montant && <span className="amt">{montant}</span>}
-        </div>
-      )}
-    </div>
+    <VoletCard className="vrow" type="operation" id={op.id}>
+      <span className="vrow-nom">{op.nom}</span>
+      <span className="vrow-meta">
+        <span className="phase-tag"><span className="dot" style={{ background: `var(${STATUT_VAR[op.statut]})` }} />{STATUT_LABELS[op.statut]}</span>
+        {montant && <span className="amt tnum">{montant}</span>}
+      </span>
+    </VoletCard>
   );
 }
 
 
-export default function PipelineViews({ operations, opEntites, reseau, personnes }: Props) {
+export default function PipelineViews({ operations, reseau, personnes }: Props) {
   const [vue, setVue] = useState<Vue>("phase");
 
   return (
@@ -142,8 +117,8 @@ export default function PipelineViews({ operations, opEntites, reseau, personnes
         </button>
       </div>
 
-      {vue === "phase" && <VuePhase operations={operations} opEntites={opEntites} />}
-      {vue === "operation" && <VueOperation operations={operations} opEntites={opEntites} />}
+      {vue === "phase" && <VuePhase operations={operations} />}
+      {vue === "operation" && <VueOperation operations={operations} />}
       {vue === "structure" && <VueStructures reseau={reseau} />}
       {vue === "personne" && <VuePersonnes personnes={personnes} />}
     </>
@@ -151,7 +126,7 @@ export default function PipelineViews({ operations, opEntites, reseau, personnes
 }
 
 // --- Vue « Par phase » : chaque étape se déplie sur place (accordéon).
-function VuePhase({ operations, opEntites }: { operations: Op[]; opEntites: Record<string, Ent[]> }) {
+function VuePhase({ operations }: { operations: Op[] }) {
   const [ouverts, setOuverts] = useState<Set<string>>(new Set());
   const toggle = (s: string) =>
     setOuverts((prev) => {
@@ -181,9 +156,9 @@ function VuePhase({ operations, opEntites }: { operations: Op[]; opEntites: Reco
             </button>
             {ouvert && (
               <div className="phase-body">
-                {list.slice(0, MAX_APERCU).map((o) => (
-                  <CarteOp key={o.id} op={o} entites={opEntites[o.id] ?? []} avecProspects />
-                ))}
+                <div className="vlist2">
+                  {list.slice(0, MAX_APERCU).map((o) => <LigneOp key={o.id} op={o} />)}
+                </div>
                 {list.length > MAX_APERCU && (
                   <Link className="voir-tout" href={`/operations/phase/${statut}`}>
                     Voir les {list.length} affaires ›
@@ -200,7 +175,7 @@ function VuePhase({ operations, opEntites }: { operations: Op[]; opEntites: Reco
 
 // --- Vue « Par opération » : toutes les affaires (la plus récente en haut),
 // avec une recherche par nom pour rester lisible quand il y en a beaucoup.
-function VueOperation({ operations, opEntites }: { operations: Op[]; opEntites: Record<string, Ent[]> }) {
+function VueOperation({ operations }: { operations: Op[] }) {
   const [q, setQ] = useState("");
   const terme = q.trim().toLowerCase();
   const list = terme ? operations.filter((o) => o.nom.toLowerCase().includes(terme)) : operations;
@@ -216,10 +191,8 @@ function VueOperation({ operations, opEntites }: { operations: Op[]; opEntites: 
         aria-label="Rechercher une affaire"
       />
       {list.length ? (
-        <div className="vlist">
-          {list.map((o) => (
-            <CarteOp key={o.id} op={o} entites={opEntites[o.id] ?? []} avecEtape avecProspects />
-          ))}
+        <div className="vlist2">
+          {list.map((o) => <LigneOp key={o.id} op={o} />)}
         </div>
       ) : (
         <div className="card">
@@ -251,47 +224,16 @@ function VueStructures({ reseau }: { reseau: Structure[] }) {
         aria-label="Rechercher une structure"
       />
       {list.length ? (
-        <div className="minigrid">
+        <div className="vlist2">
           {list.map((s) => (
-            <VoletCard className="minicard" type="entite" id={s.id} key={s.id}>
-              <div className="mc-top">
-                <span className="mc-nom">{s.nom}</span>
-                <span className="sig-d type"><span className="sig-lbl">{s.type}</span></span>
-              </div>
-              {/* Signets groupés par type, ordre : relance (haut), opérations, personnes. */}
-              {(s.prochaineRelance || s.ops.length > 0 || s.contacts.length > 0) && (
-                <div className="sig-rows">
-                  {s.prochaineRelance && (
-                    <div className="sig-row">
-                      <span className="sig-d rel"><span className="sig-lbl">Relance · {dateCourt(s.prochaineRelance)}</span></span>
-                    </div>
-                  )}
-                  {s.ops.length > 0 && (
-                    <div className="sig-row">
-                      {s.ops.slice(0, 4).map((o) => (
-                        <Signet key={o.id} type="operation" id={o.id} cat="op" label={o.nom} />
-                      ))}
-                      {s.ops.length > 4 && <span className="mc-more">+{s.ops.length - 4}</span>}
-                    </div>
-                  )}
-                  {s.contacts.length > 0 && (
-                    <div className="sig-row">
-                      {s.contacts.slice(0, 4).map((c) => {
-                        const n = [c.prenom, c.nom].filter(Boolean).join(" ") || c.nom;
-                        return <Signet key={c.id} type="personne" id={c.id} cat="pers" label={n} />;
-                      })}
-                      {s.contacts.length > 4 && <span className="mc-more">+{s.contacts.length - 4}</span>}
-                    </div>
-                  )}
-                </div>
-              )}
-              {(s.ville || s.dormant || (s.silencieux && s.ops.length === 0)) && (
-                <div className="mc-meta">
-                  {s.ville && <span>{s.ville}</span>}
-                  {s.dormant && <span className="pill dormant">en sommeil</span>}
-                  {s.silencieux && s.ops.length === 0 && <span className="pill silence">à réchauffer</span>}
-                </div>
-              )}
+            <VoletCard className="vrow" type="entite" id={s.id} key={s.id}>
+              <span className="vrow-nom">{s.nom}</span>
+              <span className="vrow-meta">
+                {s.prochaineRelance && <span className="vrow-rel">Relance {dateCourt(s.prochaineRelance)}</span>}
+                {s.dormant && <span className="pill dormant">sommeil</span>}
+                {s.silencieux && s.ops.length === 0 && <span className="pill silence">à réchauffer</span>}
+                <span className="vrow-type">{s.type}</span>
+              </span>
             </VoletCard>
           ))}
         </div>
@@ -325,16 +267,16 @@ function VuePersonnes({ personnes }: { personnes: PersonneListe[] }) {
         aria-label="Rechercher une personne"
       />
       {list.length ? (
-        <div className="minigrid">
+        <div className="vlist2">
           {list.map((p) => {
             const nomComplet = [p.prenom, p.nom].filter(Boolean).join(" ") || p.nom;
             return (
-              <VoletCard className="minicard" type="personne" id={p.id} key={p.id}>
-                <div className="mc-top">
-                  <span className="mc-nom">{nomComplet}</span>
-                  {p.entiteId && p.entiteNom && <Signet type="entite" id={p.entiteId} cat="struct" label={p.entiteNom} />}
-                </div>
-                {p.fonction && <div className="mc-meta"><span>{p.fonction}</span></div>}
+              <VoletCard className="vrow" type="personne" id={p.id} key={p.id}>
+                <span className="vrow-nom">{nomComplet}</span>
+                <span className="vrow-meta">
+                  {p.fonction && <span>{p.fonction}</span>}
+                  {p.entiteNom && <span className="vrow-type">{p.entiteNom}</span>}
+                </span>
               </VoletCard>
             );
           })}
