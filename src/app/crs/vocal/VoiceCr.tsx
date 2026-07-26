@@ -37,7 +37,7 @@ function Icon({ name }: { name: "structure" | "operation" | "personne" | "relanc
   return <svg {...p}><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6" /><path d="M10 20a2 2 0 0 0 4 0" /></svg>;
 }
 type PersonneEdit = { prenom: string; nom: string; fonction: string; entite: string };
-type RelanceEdit = { objet: string; date: string; personne: string };
+type RelanceEdit = { objet: string; date: string; personne: string; operation?: string; entite?: string };
 
 const TYPES_RDV = [
   { v: "dejeuner", l: "Déjeuner" },
@@ -158,9 +158,10 @@ export default function VoiceCr({
   const [rattachements, setRattachements] = useState<Rattach[]>(initRattach);
   const [personnes, setPersonnes] = useState<PersonneEdit[]>([]);
   const [relances, setRelances] = useState<RelanceEdit[]>([]);
-  // Si l'utilisateur répond « pas nécessaire » à la proposition de relance, on
-  // ne l'ennuie plus avec cette question pour ce compte rendu.
-  const [relanceIgnoree, setRelanceIgnoree] = useState(false);
+  // Affaires (ou cas général) pour lesquelles l'utilisateur a répondu « pas
+  // nécessaire » à la proposition de relance — pour ne plus l'ennuyer.
+  const [relancesIgnorees, setRelancesIgnorees] = useState<Set<string>>(new Set());
+  const ignorerRelance = (cle: string) => setRelancesIgnorees((s) => new Set(s).add(cle));
   // Carte ouverte au clic sur un signet (overlay). S'ouvre en AFFICHAGE ;
   // on passe en édition via le bouton « Modifier ».
   const [openCard, setOpenCard] = useState<{ cat: "rat" | "pers" | "rel" | "reperes"; i: number } | null>(null);
@@ -300,7 +301,7 @@ export default function VoiceCr({
           entite: c.entite ?? "",
         })),
     );
-    setRelances((s.relances ?? []).map((r) => ({ objet: r.objet, date: addDays(today, r.dans_jours), personne: r.personne ?? "" })));
+    setRelances((s.relances ?? []).map((r) => ({ objet: r.objet, date: addDays(today, r.dans_jours), personne: r.personne ?? "", operation: (r as any).operation ?? undefined, entite: (r as any).entite ?? undefined })));
   }
 
   async function doSynth(text: string): Promise<void> {
@@ -462,7 +463,7 @@ export default function VoiceCr({
     }));
   const relancesPayload = relances
     .filter((r) => r.objet.trim())
-    .map((r) => ({ objet: r.objet.trim(), dans_jours: diffDays(today, r.date), personne: r.personne.trim() || null }));
+    .map((r) => ({ objet: r.objet.trim(), dans_jours: diffDays(today, r.date), personne: r.personne.trim() || null, operation: r.operation?.trim() || null, entite: r.entite?.trim() || null }));
   // Liens affaire ↔ structure proposés par l'IA, restreints à ce qui figure
   // encore dans le compte rendu (noms non renommés) — sert au rattachement précis.
   const liensPayload = (((synthese as any)?.liens ?? []) as { operation: string; entite: string }[])
@@ -490,18 +491,32 @@ export default function VoiceCr({
     !rattachements.some((r) => r.kind === "structure" && r.name.trim());
   // Une relance doit toujours être assortie d'une personne responsable.
   const relSansPersonne = relances.map((r, i) => ({ r, i })).filter(({ r }) => r.objet.trim() && !r.personne.trim());
-  // Un compte rendu doit toujours définir une suite à donner : si aucune relance
-  // n'est prévue, on propose d'en programmer une (la prochaine étape).
-  const pasDeRelance = relances.every((r) => !r.objet.trim()) && !relanceIgnoree;
-  const sujetRelance =
-    rattachements.find((r) => r.kind === "structure" && r.name.trim())?.name.trim() ||
-    rattachements.find((r) => r.kind === "operation" && r.name.trim())?.name.trim() ||
-    (personnes[0] ? [personnes[0].prenom, personnes[0].nom].filter(Boolean).join(" ").trim() : "") ||
-    "";
-  const ajouterRelanceRapide = (jours: number) => {
-    const objet = sujetRelance ? `Recontacter ${sujetRelance}` : "Recontacter";
-    const pers = personnes[0] ? [personnes[0].prenom, personnes[0].nom].filter(Boolean).join(" ").trim() : "";
-    setRelances((rr) => [...rr, { objet, date: addDays(today, jours), personne: pers }]);
+  // Exhaustivité des suites à donner : CHAQUE affaire du compte rendu doit avoir
+  // une relance. On liste les opérations sans relance qui la concerne (par le
+  // champ operation ou par mention dans l'objet), non déjà « ignorées ».
+  const persDefaut = personnes[0] ? [personnes[0].prenom, personnes[0].nom].filter(Boolean).join(" ").trim() : "";
+  const opsNets = Array.from(
+    new Map(
+      rattachements.filter((r) => r.kind === "operation" && r.name.trim()).map((r) => [r.name.trim().toLowerCase(), r.name.trim()]),
+    ).values(),
+  );
+  const relanceCouvre = (opName: string) => {
+    const on = opName.toLowerCase();
+    return relances.some((rel) => (rel.operation && rel.operation.trim().toLowerCase() === on) || rel.objet.toLowerCase().includes(on));
+  };
+  const opsSansRelance = opsNets.filter((nom) => !relanceCouvre(nom) && !relancesIgnorees.has(nom.toLowerCase()));
+  const ajouterRelancePourOp = (opName: string, jours: number) => {
+    setRelances((rr) => [...rr, { objet: `Relancer ${opName}`, date: addDays(today, jours), personne: persDefaut, operation: opName }]);
+  };
+  // Cas sans aucune opération : proposition générique (une seule fois).
+  const sujetGenerique =
+    rattachements.find((r) => r.kind === "structure" && r.name.trim())?.name.trim() || persDefaut || "";
+  const pasDeRelanceGenerique =
+    opsNets.length === 0 && relances.every((r) => !r.objet.trim()) && !relancesIgnorees.has("__generique__");
+  const ajouterRelanceGenerique = (jours: number) => {
+    const objet = sujetGenerique ? `Recontacter ${sujetGenerique}` : "Recontacter";
+    const ent = rattachements.find((r) => r.kind === "structure" && r.name.trim())?.name.trim();
+    setRelances((rr) => [...rr, { objet, date: addDays(today, jours), personne: persDefaut, entite: ent }]);
   };
   // Personnes à proposer : celles du compte rendu + l'équipe (Administration).
   const candidatsPersonne = Array.from(
@@ -512,7 +527,7 @@ export default function VoiceCr({
       ].filter(Boolean),
     ),
   );
-  const aCompleter = structAPreciser.length > 0 || persAPreciser.length > 0 || opsSansStruct || relSansPersonne.length > 0 || pasDeRelance;
+  const aCompleter = structAPreciser.length > 0 || persAPreciser.length > 0 || opsSansStruct || relSansPersonne.length > 0 || opsSansRelance.length > 0 || pasDeRelanceGenerique;
 
   // Mises à jour des blocs.
   const majRat = (i: number, patch: Partial<Rattach>) =>
@@ -923,15 +938,27 @@ export default function VoiceCr({
           <div className="bloc apreciser">
             <div className="encart-h">À préciser</div>
             <p className="hint" style={{ marginTop: 0 }}>Quelques informations manquent pour des signets complets — vous pouvez répondre ici, ou enregistrer tel quel.</p>
-            {pasDeRelance && (
-              <div className="precise-row">
-                <span className="precise-q">Aucune suite à donner. Quand faut-il recontacter{sujetRelance ? <> <strong>{sujetRelance}</strong></> : null} ?</span>
+            {opsSansRelance.map((nom) => (
+              <div className="precise-row" key={` or-${nom}`}>
+                <span className="precise-q">Quelle suite pour <strong>{nom}</strong> ? (chaque affaire doit avoir une relance)</span>
                 <div className="precise-answer">
-                  <button type="button" className="sig-d rel" onClick={() => ajouterRelanceRapide(7)}><span className="sig-lbl">Dans 1 semaine</span></button>
-                  <button type="button" className="sig-d rel" onClick={() => ajouterRelanceRapide(15)}><span className="sig-lbl">Dans 15 jours</span></button>
-                  <button type="button" className="sig-d rel" onClick={() => ajouterRelanceRapide(30)}><span className="sig-lbl">Dans 1 mois</span></button>
-                  <button type="button" className="sig-d rel" onClick={() => ajouterRelanceRapide(90)}><span className="sig-lbl">Dans 3 mois</span></button>
-                  <button type="button" className="btn ghost mini" onClick={() => setRelanceIgnoree(true)}>Pas nécessaire</button>
+                  <button type="button" className="sig-d rel" onClick={() => ajouterRelancePourOp(nom, 7)}><span className="sig-lbl">Dans 1 semaine</span></button>
+                  <button type="button" className="sig-d rel" onClick={() => ajouterRelancePourOp(nom, 15)}><span className="sig-lbl">Dans 15 jours</span></button>
+                  <button type="button" className="sig-d rel" onClick={() => ajouterRelancePourOp(nom, 30)}><span className="sig-lbl">Dans 1 mois</span></button>
+                  <button type="button" className="sig-d rel" onClick={() => ajouterRelancePourOp(nom, 90)}><span className="sig-lbl">Dans 3 mois</span></button>
+                  <button type="button" className="btn ghost mini" onClick={() => ignorerRelance(nom.toLowerCase())}>Pas nécessaire</button>
+                </div>
+              </div>
+            ))}
+            {pasDeRelanceGenerique && (
+              <div className="precise-row">
+                <span className="precise-q">Aucune suite à donner. Quand faut-il recontacter{sujetGenerique ? <> <strong>{sujetGenerique}</strong></> : null} ?</span>
+                <div className="precise-answer">
+                  <button type="button" className="sig-d rel" onClick={() => ajouterRelanceGenerique(7)}><span className="sig-lbl">Dans 1 semaine</span></button>
+                  <button type="button" className="sig-d rel" onClick={() => ajouterRelanceGenerique(15)}><span className="sig-lbl">Dans 15 jours</span></button>
+                  <button type="button" className="sig-d rel" onClick={() => ajouterRelanceGenerique(30)}><span className="sig-lbl">Dans 1 mois</span></button>
+                  <button type="button" className="sig-d rel" onClick={() => ajouterRelanceGenerique(90)}><span className="sig-lbl">Dans 3 mois</span></button>
+                  <button type="button" className="btn ghost mini" onClick={() => ignorerRelance("__generique__")}>Pas nécessaire</button>
                 </div>
               </div>
             )}

@@ -58,6 +58,8 @@ RATTACHEMENT opération ↔ structure (TRÈS IMPORTANT) : pour CHAQUE opération
 
 RELANCES (suites à donner) — règle stricte : le champ "objet" décrit UNIQUEMENT l'action à réaliser, à l'impératif, SANS le nom de la personne. N'écris JAMAIS « Florian doit relancer Vilogia » ni « rappeler Romain » ; écris « Relancer Vilogia pour le parking silo ». Mets la personne RESPONSABLE de l'action ou concernée (celui qui doit la réaliser, OU la personne à recontacter) à part dans "personne" — même si seul son prénom est cité (ex. « Florian »). Si AUCUNE personne n'est explicitement responsable/concernée, mets "personne" à null (surtout n'invente personne).
 
+EXHAUSTIVITÉ des relances (TRÈS IMPORTANT quand le compte rendu couvre PLUSIEURS affaires) : prévois une suite à donner PAR affaire qui en nécessite une. Ne regroupe pas plusieurs affaires dans une seule relance. Pour CHAQUE relance, renseigne l'affaire qu'elle concerne dans "operation" (nom exact de l'opération, connue ou nouvelle) et/ou la structure dans "entite". Exemples de suites à prévoir : une affaire remportée → préparer/rendre l'offre ou lancer les études ; une affaire perdue → en tirer le bilan / rester en veille ; une nouvelle sollicitation → répondre / chiffrer. Chaque affaire active du compte rendu doit avoir au moins une suite si le texte l'appelle.
+
 Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, de la forme :
 {
   "type_rdv": "dejeuner" | "appel" | "visite" | "salon" | "autre",
@@ -70,7 +72,7 @@ Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, de la forme :
   "nouvelles_operations": [{ "nom": "affaire/projet évoqué mais absent des connues" }],
   "liens": [{ "operation": "nom exact d'une opération (connue ou nouvelle)", "entite": "nom exact de la structure qui la porte (connue ou nouvelle)" }],
   "contacts": [{ "nom": "nom de famille", "prenom": "prénom ou null", "fonction": "fonction ou null", "entite": "libellé de sa structure (connue ou nouvelle) ou null" }],
-  "relances": [{ "objet": "action de suivi à faire, à l'impératif, SANS nom de personne", "personne": "personne concernée (nom ou « Prénom Nom ») ou null", "dans_jours": 14 }]
+  "relances": [{ "objet": "action de suivi à faire, à l'impératif, SANS nom de personne", "personne": "personne concernée (nom ou « Prénom Nom ») ou null", "operation": "nom de l'affaire concernée (connue ou nouvelle) ou null", "entite": "nom de la structure concernée ou null", "dans_jours": 14 }]
 }`;
 }
 
@@ -119,6 +121,6 @@ Réponds UNIQUEMENT par l'objet JSON complet et corrigé, sans texte autour, de 
   "nouvelles_operations": [{ "nom": "affaire nouvelle" }],
   "liens": [{ "operation": "nom exact d'une opération (connue ou nouvelle)", "entite": "nom exact de la structure qui la porte" }],
   "contacts": [{ "nom": "…", "prenom": "… ou null", "fonction": "… ou null", "entite": "structure ou null" }],
-  "relances": [{ "objet": "action à l'impératif, SANS nom de personne", "personne": "personne concernée ou null", "dans_jours": 14 }]
+  "relances": [{ "objet": "action à l'impératif, SANS nom de personne", "personne": "personne concernée ou null", "operation": "nom de l'affaire concernée ou null", "entite": "nom de la structure concernée ou null", "dans_jours": 14 }]
 }`;
 }

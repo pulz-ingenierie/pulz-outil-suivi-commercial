@@ -306,6 +306,15 @@ async function materialiserCr(
     await sb.from("cr_operations").insert(operationIds.map((operation_id) => ({ cr_id: crId, operation_id })));
   }
 
+  // Index nom → identifiant (structures et opérations de l'organisation), après
+  // création des nouvelles. Sert au rattachement précis des liens ET des relances.
+  const [{ data: allEnt }, { data: allOps }] = await Promise.all([
+    sb.from("entites").select("id, nom").eq("org_id", org_id),
+    sb.from("operations").select("id, nom").eq("org_id", org_id),
+  ]);
+  const entByNom = new Map((allEnt ?? []).map((e: any) => [String(e.nom).trim().toLowerCase(), e.id]));
+  const opByNom = new Map((allOps ?? []).map((o: any) => [String(o.nom).trim().toLowerCase(), o.id]));
+
   // Lien structure ⇄ opération. On rattache chaque opération à SA/SES structure(s)
   // d'après les liens proposés par l'IA (fiables au nom : « telle affaire est
   // portée par telle structure »), au lieu de tout croiser. Une opération sans
@@ -318,12 +327,6 @@ async function materialiserCr(
     const paires = new Set<string>(); // "entite_id|operation_id"
     const liens = jsonArray(fd, "liens_json");
     if (liens.length) {
-      const [{ data: allEnt }, { data: allOps }] = await Promise.all([
-        sb.from("entites").select("id, nom").eq("org_id", org_id),
-        sb.from("operations").select("id, nom").eq("org_id", org_id),
-      ]);
-      const entByNom = new Map((allEnt ?? []).map((e: any) => [String(e.nom).trim().toLowerCase(), e.id]));
-      const opByNom = new Map((allOps ?? []).map((o: any) => [String(o.nom).trim().toLowerCase(), o.id]));
       const opCouverte = new Set<string>();
       for (const l of liens) {
         const opId = opByNom.get(String(l?.operation ?? "").trim().toLowerCase());
@@ -427,18 +430,36 @@ async function materialiserCr(
         objet: typeof r?.objet === "string" ? r.objet.trim() : "",
         dans_jours: Number.isFinite(r?.dans_jours) ? Math.max(1, Math.round(r.dans_jours)) : 14,
         personne: typeof r?.personne === "string" && r.personne.trim() ? r.personne.trim() : null,
+        operation: typeof r?.operation === "string" && r.operation.trim() ? r.operation.trim() : null,
+        entite: typeof r?.entite === "string" && r.entite.trim() ? r.entite.trim() : null,
       }))
       .filter((r: any) => r.objet.length > 0);
     if (suites.length) {
-      const base = suites.map((r: any) => ({
-        org_id,
-        operation_id: operationIds[0] ?? null,
-        entite_id: operationIds.length ? null : (entiteIds[0] ?? null),
-        cr_origine_id: crId,
-        objet: r.objet,
-        date_echeance: dateInDays(r.dans_jours),
-        auto: true,
-      }));
+      const opSet = new Set(operationIds);
+      const entSet = new Set(entiteIds);
+      const uneSeuleOp = operationIds.length === 1 ? operationIds[0] : null;
+      const base = suites.map((r: any) => {
+        // Rattache la relance à l'affaire qu'elle concerne (par nom) ; à défaut,
+        // à l'unique opération du CR ; sinon à la structure nommée / unique.
+        let opId = r.operation ? opByNom.get(r.operation.toLowerCase()) ?? null : null;
+        if (opId && !opSet.has(opId)) opId = null;
+        if (!opId && !r.operation) opId = uneSeuleOp;
+        let entId: string | null = null;
+        if (!opId) {
+          entId = r.entite ? entByNom.get(r.entite.toLowerCase()) ?? null : null;
+          if (entId && !entSet.has(entId)) entId = null;
+          if (!entId && !r.entite && !operationIds.length) entId = entiteIds[0] ?? null;
+        }
+        return {
+          org_id,
+          operation_id: opId,
+          entite_id: entId,
+          cr_origine_id: crId,
+          objet: r.objet,
+          date_echeance: dateInDays(r.dans_jours),
+          auto: true,
+        };
+      });
       // Personne du rappel : celle extraite par l'IA si explicite, sinon
       // l'auteur (il n'apparaît que si l'action n'est attribuée à personne).
       // La colonne « personne » peut ne pas encore exister (migration 0003) :

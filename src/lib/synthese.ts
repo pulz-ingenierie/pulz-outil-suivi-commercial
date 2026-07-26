@@ -28,7 +28,9 @@ export interface Synthese {
   nouvelles_operations: { nom: string }[];
   liens: { operation: string; entite: string }[]; // rattachement affaire ↔ structure (par nom)
   contacts: ContactExtrait[];
-  relances: { objet: string; dans_jours: number; personne: string | null }[];
+  // Chaque relance précise l'affaire / la structure qu'elle concerne (par nom),
+  // pour être rattachée à la bonne opération (et non à la première du CR).
+  relances: { objet: string; dans_jours: number; personne: string | null; operation: string | null; entite: string | null }[];
 }
 
 const ENTITE_TYPES = ["MOA", "archi", "promoteur", "bet", "confrere", "autre"];
@@ -82,6 +84,8 @@ export function validateSynthese(
           objet: typeof r.objet === "string" ? r.objet.trim() : "",
           dans_jours: Number.isFinite(r.dans_jours as number) ? Math.max(1, Math.round(r.dans_jours as number)) : 14,
           personne: typeof r.personne === "string" && r.personne.trim() ? r.personne.trim() : null,
+          operation: typeof r.operation === "string" && r.operation.trim() ? r.operation.trim() : null,
+          entite: typeof r.entite === "string" && r.entite.trim() ? r.entite.trim() : null,
         }))
         .filter((r) => r.objet.length > 0)
     : [];
