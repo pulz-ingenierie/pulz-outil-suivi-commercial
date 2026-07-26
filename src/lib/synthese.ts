@@ -25,7 +25,7 @@ export interface Synthese {
   entites: string[];
   operations: string[];
   nouvelles_entites: NouvelleEntite[];
-  nouvelles_operations: { nom: string }[];
+  nouvelles_operations: { nom: string; entite: string | null }[];
   liens: { operation: string; entite: string }[]; // rattachement affaire ↔ structure (par nom)
   contacts: ContactExtrait[];
   // Chaque relance précise l'affaire / la structure qu'elle concerne (par nom),
@@ -121,7 +121,10 @@ export function validateSynthese(
   const vusOp = new Set<string>();
   const nouvelles_operations = (Array.isArray(o.nouvelles_operations) ? o.nouvelles_operations : [])
     .map((op) => (op ?? {}) as Record<string, unknown>)
-    .map((op) => ({ nom: typeof op.nom === "string" ? op.nom.trim() : "" }))
+    .map((op) => ({
+      nom: typeof op.nom === "string" ? op.nom.trim() : "",
+      entite: typeof op.entite === "string" && op.entite.trim() ? op.entite.trim() : null,
+    }))
     .filter((op) => {
       const k = op.nom.toLowerCase();
       if (!op.nom || knownOpLower.has(k) || vusOp.has(k)) return false;

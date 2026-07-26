@@ -45,6 +45,17 @@ function str(fd: FormData, key: string): string {
   return String(fd.get(key) ?? "").trim();
 }
 
+// Normalise un libellé pour l'appariement par nom : minuscules, sans accents,
+// espaces compactés. Rend le rattachement robuste aux petites variations.
+function normNom(s: unknown): string {
+  return String(s ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\s+/g, " ");
+}
+
 function strOrNull(fd: FormData, key: string): string | null {
   const v = str(fd, key);
   return v.length ? v : null;
@@ -283,7 +294,10 @@ async function materialiserCr(
     const { data } = await sb.from("entites").insert({ org_id, nom, type }).select("id").single();
     if (data?.id) entiteIds.push(data.id);
   }
-  // Nouvelles opérations (statut de départ : contact ; référent = auteur du CR).
+  // Nouvelles opérations (statut de départ : piste ; référent = auteur du CR).
+  // On mémorise la structure portée par chaque nouvelle opération (rattachement
+  // direct, le plus fiable — pas de correspondance de noms à deviner).
+  const opEntiteNames: { opId: string; entite: string }[] = [];
   for (const o of jsonArray(fd, "nouvelles_operations_json")) {
     const nom = typeof o?.nom === "string" ? o.nom.trim() : "";
     if (!nom) continue;
@@ -292,7 +306,11 @@ async function materialiserCr(
       .insert({ org_id, nom, statut: "piste", referent_id: auteurId })
       .select("id")
       .single();
-    if (data?.id) operationIds.push(data.id);
+    if (data?.id) {
+      operationIds.push(data.id);
+      const en = typeof o?.entite === "string" && o.entite.trim() ? o.entite.trim() : "";
+      if (en) opEntiteNames.push({ opId: data.id, entite: en });
+    }
   }
   // Chaque opération du CR sans référent hérite de l'auteur (référent obligatoire).
   if (auteurId && operationIds.length) {
@@ -312,39 +330,44 @@ async function materialiserCr(
     sb.from("entites").select("id, nom").eq("org_id", org_id),
     sb.from("operations").select("id, nom").eq("org_id", org_id),
   ]);
-  const entByNom = new Map((allEnt ?? []).map((e: any) => [String(e.nom).trim().toLowerCase(), e.id]));
-  const opByNom = new Map((allOps ?? []).map((o: any) => [String(o.nom).trim().toLowerCase(), o.id]));
+  const entByNom = new Map((allEnt ?? []).map((e: any) => [normNom(e.nom), e.id]));
+  const opByNom = new Map((allOps ?? []).map((o: any) => [normNom(o.nom), o.id]));
 
-  // Lien structure ⇄ opération. On rattache chaque opération à SA/SES structure(s)
-  // d'après les liens proposés par l'IA (fiables au nom : « telle affaire est
-  // portée par telle structure »), au lieu de tout croiser. Une opération sans
-  // lien explicite retombe sur l'ancien comportement (rattachée à toutes les
-  // structures du CR) pour ne rien perdre. C'est ce lien qui fait apparaître les
-  // opérations sur la fiche structure, et les structures sur la fiche opération.
-  if (entiteIds.length && operationIds.length) {
+  // Lien structure ⇄ opération. Chaque affaire est rattachée à SA structure — via
+  // le rattachement direct porté par la nouvelle opération, puis via les liens de
+  // l'IA. On NE croise PLUS toutes les structures avec toutes les opérations :
+  // c'est ce qui faisait « baver » les promoteurs sur toutes les affaires. Une
+  // opération non couverte n'est rattachée à toutes les structures QUE s'il n'y a
+  // qu'UNE seule structure dans le compte rendu (sinon on ne devine pas).
+  if (operationIds.length) {
     const entiteSet = new Set(entiteIds);
     const opSet = new Set(operationIds);
     const paires = new Set<string>(); // "entite_id|operation_id"
-    const liens = jsonArray(fd, "liens_json");
-    if (liens.length) {
-      const opCouverte = new Set<string>();
-      for (const l of liens) {
-        const opId = opByNom.get(String(l?.operation ?? "").trim().toLowerCase());
-        const enId = entByNom.get(String(l?.entite ?? "").trim().toLowerCase());
-        // On ne relie que des objets réellement présents dans CE compte rendu.
-        if (opId && enId && opSet.has(opId) && entiteSet.has(enId)) {
-          paires.add(`${enId}|${opId}`);
-          opCouverte.add(opId);
-        }
+    const opCouverte = new Set<string>();
+
+    // (a) Rattachement direct porté par chaque nouvelle opération.
+    for (const { opId, entite } of opEntiteNames) {
+      const enId = entByNom.get(normNom(entite));
+      if (enId && opSet.has(opId) && entiteSet.has(enId)) {
+        paires.add(`${enId}|${opId}`);
+        opCouverte.add(opId);
       }
-      // Repli pour les opérations sans lien explicite : toutes les structures du CR.
-      for (const operation_id of opSet) {
-        if (opCouverte.has(operation_id)) continue;
-        for (const entite_id of entiteSet) paires.add(`${entite_id}|${operation_id}`);
-      }
-    } else {
-      for (const entite_id of entiteSet) for (const operation_id of opSet) paires.add(`${entite_id}|${operation_id}`);
     }
+    // (b) Liens proposés par l'IA (couvre aussi les opérations connues).
+    for (const l of jsonArray(fd, "liens_json")) {
+      const opId = opByNom.get(normNom(l?.operation));
+      const enId = entByNom.get(normNom(l?.entite));
+      if (opId && enId && opSet.has(opId) && entiteSet.has(enId)) {
+        paires.add(`${enId}|${opId}`);
+        opCouverte.add(opId);
+      }
+    }
+    // (c) Repli prudent : uniquement si une SEULE structure dans le CR.
+    if (entiteSet.size === 1) {
+      const seule = [...entiteSet][0];
+      for (const operation_id of opSet) if (!opCouverte.has(operation_id)) paires.add(`${seule}|${operation_id}`);
+    }
+
     const rows = [...paires].map((k) => {
       const [entite_id, operation_id] = k.split("|");
       return { entite_id, operation_id };
@@ -441,12 +464,12 @@ async function materialiserCr(
       const base = suites.map((r: any) => {
         // Rattache la relance à l'affaire qu'elle concerne (par nom) ; à défaut,
         // à l'unique opération du CR ; sinon à la structure nommée / unique.
-        let opId = r.operation ? opByNom.get(r.operation.toLowerCase()) ?? null : null;
+        let opId = r.operation ? opByNom.get(normNom(r.operation)) ?? null : null;
         if (opId && !opSet.has(opId)) opId = null;
         if (!opId && !r.operation) opId = uneSeuleOp;
         let entId: string | null = null;
         if (!opId) {
-          entId = r.entite ? entByNom.get(r.entite.toLowerCase()) ?? null : null;
+          entId = r.entite ? entByNom.get(normNom(r.entite)) ?? null : null;
           if (entId && !entSet.has(entId)) entId = null;
           if (!entId && !r.entite && !operationIds.length) entId = entiteIds[0] ?? null;
         }
@@ -460,14 +483,37 @@ async function materialiserCr(
           auto: true,
         };
       });
-      // Personne du rappel : celle extraite par l'IA si explicite, sinon
-      // l'auteur (il n'apparaît que si l'action n'est attribuée à personne).
-      // La colonne « personne » peut ne pas encore exister (migration 0003) :
-      // on tente avec, et on retombe proprement sans elle en cas d'échec.
-      const { error: relErr } = await sb
-        .from("relances")
-        .insert(base.map((row: any, i: number) => ({ ...row, personne: suites[i].personne || authorNom || null })));
-      if (relErr) await sb.from("relances").insert(base);
+
+      // Anti-doublon : ne pas recréer une relance déjà en cours pour la même
+      // affaire (cas d'une mise à jour de fiche). On compare par opération (ou
+      // structure) + objet normalisé.
+      const opIdsBase = [...new Set(base.map((b: any) => b.operation_id).filter(Boolean))] as string[];
+      const entIdsBase = [...new Set(base.map((b: any) => b.entite_id).filter(Boolean))] as string[];
+      const dejaExistant = new Set<string>();
+      if (opIdsBase.length || entIdsBase.length) {
+        const { data: enCours } = await sb.from("relances").select("operation_id, entite_id, objet").eq("statut", "a_faire");
+        for (const r of (enCours ?? []) as any[]) {
+          if (r.operation_id) dejaExistant.add(`op:${r.operation_id}|${normNom(r.objet)}`);
+          if (r.entite_id) dejaExistant.add(`ent:${r.entite_id}|${normNom(r.objet)}`);
+        }
+      }
+      const baseFiltre = base.filter((b: any) => {
+        if (b.operation_id && dejaExistant.has(`op:${b.operation_id}|${normNom(b.objet)}`)) return false;
+        if (!b.operation_id && b.entite_id && dejaExistant.has(`ent:${b.entite_id}|${normNom(b.objet)}`)) return false;
+        return true;
+      });
+      const suitesFiltre = suites.filter((_: any, i: number) => baseFiltre.includes(base[i]));
+
+      if (baseFiltre.length) {
+        // Personne du rappel : celle extraite par l'IA si explicite, sinon
+        // l'auteur (il n'apparaît que si l'action n'est attribuée à personne).
+        // La colonne « personne » peut ne pas encore exister (migration 0003) :
+        // on tente avec, et on retombe proprement sans elle en cas d'échec.
+        const { error: relErr } = await sb
+          .from("relances")
+          .insert(baseFiltre.map((row: any, i: number) => ({ ...row, personne: suitesFiltre[i].personne || authorNom || null })));
+        if (relErr) await sb.from("relances").insert(baseFiltre);
+      }
     }
   }
 

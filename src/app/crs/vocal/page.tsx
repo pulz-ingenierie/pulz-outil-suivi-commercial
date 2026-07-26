@@ -21,13 +21,20 @@ export default async function VocalPage({
   }
 
   const supabase = getServerSupabase()!;
-  const [{ data: entites }, { data: operations }, { data: contactsBase }, { data: membresRows }] = await Promise.all([
+  const [{ data: entites }, { data: operations }, { data: contactsBase }, { data: membresRows }, { data: relancesEnCours }] = await Promise.all([
     supabase.from("entites").select("id, nom, type").order("nom"),
     supabase.from("operations").select("id, nom").order("created_at", { ascending: false }),
     supabase.from("contacts").select("nom, prenom"),
     supabase.from("utilisateurs").select("nom").eq("actif", true),
+    supabase.from("relances").select("operation_id").eq("statut", "a_faire"),
   ]);
   const membres = (membresRows ?? []).map((m: any) => String(m.nom ?? "").trim()).filter(Boolean);
+  // Opérations qui ont DÉJÀ une relance en cours : on ne re-proposera pas de
+  // suite pour elles (évite les doublons quand on met à jour une fiche).
+  const opNomById = new Map((operations ?? []).map((o: any) => [o.id, o.nom as string]));
+  const opsAvecRelance = Array.from(
+    new Set((relancesEnCours ?? []).map((r: any) => r.operation_id).filter(Boolean).map((id: string) => opNomById.get(id)).filter(Boolean)),
+  ) as string[];
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -59,6 +66,7 @@ export default async function VocalPage({
         operations={operations ?? []}
         contactsBase={contactsBase ?? []}
         membres={membres}
+        opsAvecRelance={opsAvecRelance}
         today={today}
         prefillEntite={entPre}
         prefillOperation={opPre}

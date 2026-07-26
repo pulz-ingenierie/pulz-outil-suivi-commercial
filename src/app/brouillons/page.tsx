@@ -43,6 +43,11 @@ export default async function Brouillons({
     supabase.from("utilisateurs").select("nom").eq("actif", true),
   ]);
   const membres = (membresRows ?? []).map((m: any) => String(m.nom ?? "").trim()).filter(Boolean);
+  const { data: relancesEnCours } = await supabase.from("relances").select("operation_id").eq("statut", "a_faire");
+  const opNomById = new Map((operations ?? []).map((o: any) => [o.id, o.nom as string]));
+  const opsAvecRelance = Array.from(
+    new Set((relancesEnCours ?? []).map((r: any) => r.operation_id).filter(Boolean).map((id: string) => opNomById.get(id)).filter(Boolean)),
+  ) as string[];
 
   const list = (drafts ?? []) as { id: string; transcription: string | null; synthese: any }[];
   const today = new Date().toISOString().slice(0, 10);
@@ -106,6 +111,7 @@ export default async function Brouillons({
         operations={operations ?? []}
         contactsBase={contactsBase ?? []}
         membres={membres}
+        opsAvecRelance={opsAvecRelance}
         today={today}
         draftId={current.id}
         initialTranscription={current.transcription ?? ""}

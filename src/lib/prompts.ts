@@ -54,7 +54,13 @@ TITRE d'une opération — format COHÉRENT et STABLE : « [nombre] [nature] à 
 - Pas de parenthèses, pas de mention du donneur d'ordre, pas de guillemets. Même forme pour toutes les opérations.
 - Si la commune n'est pas connue, garde « [nombre] [nature] » sans lieu, mais reste sur le même schéma.
 
-RATTACHEMENT opération ↔ structure (TRÈS IMPORTANT) : pour CHAQUE opération citée (connue ou nouvelle), indique dans "liens" la ou les structures qui la portent (donneur d'ordre, porte d'entrée). Chaque affaire est en général portée par UNE structure précise — ne rattache pas toutes les structures à toutes les opérations. Une même structure peut porter plusieurs opérations ; une opération peut avoir plusieurs structures. N'associe QUE ce que le texte dit explicitement. Exemple : « Nacarat nous prend sur 40 logements à la Chapelle et un concours de 200 logements à Roncq ; Spirit nous sollicite sur 80 lots » → liens = [{operation:"40 logements à la Chapelle d'Armentières", entite:"Nacarat"}, {operation:"200 logements à Roncq", entite:"Nacarat"}, {operation:"80 lots", entite:"Spirit"}].
+RATTACHEMENT opération ↔ structure (TRÈS IMPORTANT — source d'erreurs) : chaque affaire est portée par UNE structure précise (son promoteur / donneur d'ordre). NE rattache JAMAIS toutes les structures à toutes les opérations.
+- Pour chaque NOUVELLE opération, renseigne sa structure dans "nouvelles_operations[].entite" (le nom EXACT de la structure, connue ou nouvelle).
+- Renseigne AUSSI "liens" pour toutes les opérations (connues ou nouvelles), en reprenant EXACTEMENT le même libellé d'opération que dans "operations"/"nouvelles_operations" et le même libellé de structure que dans "entites"/"nouvelles_entites".
+- Exemple : « Nacarat nous prend sur 40 logements à la Chapelle et un concours de 200 logements à Roncq ; Spirit nous sollicite sur 80 lots » →
+  nouvelles_operations = [{nom:"40 logements à La Chapelle-d'Armentières", entite:"Nacarat"}, {nom:"200 logements à Roncq", entite:"Nacarat"}, {nom:"80 lots", entite:"Spirit"}] ;
+  liens = [{operation:"40 logements à La Chapelle-d'Armentières", entite:"Nacarat"}, {operation:"200 logements à Roncq", entite:"Nacarat"}, {operation:"80 lots", entite:"Spirit"}].
+  → Nacarat NE doit PAS apparaître sur « 80 lots », et Spirit NE doit PAS apparaître sur les 2 affaires de Nacarat.
 
 RELANCES (suites à donner) — règle stricte : le champ "objet" décrit UNIQUEMENT l'action à réaliser, à l'impératif, SANS le nom de la personne. N'écris JAMAIS « Florian doit relancer Vilogia » ni « rappeler Romain » ; écris « Relancer Vilogia pour le parking silo ». Mets la personne RESPONSABLE de l'action ou concernée (celui qui doit la réaliser, OU la personne à recontacter) à part dans "personne" — même si seul son prénom est cité (ex. « Florian »). Si AUCUNE personne n'est explicitement responsable/concernée, mets "personne" à null (surtout n'invente personne).
 
@@ -69,7 +75,7 @@ Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, de la forme :
   "entites": ["libellé exact d'une STRUCTURE connue évoquée"],
   "operations": ["libellé exact d'une opération connue évoquée"],
   "nouvelles_entites": [{ "nom": "structure évoquée mais absente des connues", "type": "MOA|archi|promoteur|bet|confrere|autre (bet = bureau d'études techniques)" }],
-  "nouvelles_operations": [{ "nom": "affaire/projet évoqué mais absent des connues" }],
+  "nouvelles_operations": [{ "nom": "affaire/projet évoqué mais absent des connues", "entite": "nom exact de la structure qui porte cette affaire (connue ou nouvelle) ou null" }],
   "liens": [{ "operation": "nom exact d'une opération (connue ou nouvelle)", "entite": "nom exact de la structure qui la porte (connue ou nouvelle)" }],
   "contacts": [{ "nom": "nom de famille", "prenom": "prénom ou null", "fonction": "fonction ou null", "entite": "libellé de sa structure (connue ou nouvelle) ou null" }],
   "relances": [{ "objet": "action de suivi à faire, à l'impératif, SANS nom de personne", "personne": "personne concernée (nom ou « Prénom Nom ») ou null", "operation": "nom de l'affaire concernée (connue ou nouvelle) ou null", "entite": "nom de la structure concernée ou null", "dans_jours": 14 }]
@@ -93,6 +99,7 @@ Ta mission : appliquer UNIQUEMENT la correction demandée, et renvoyer la fiche 
 
 Règles absolues :
 - Ne change QUE ce que la consigne demande. Conserve tout le reste à l'identique.
+- Une correction d'ORTHOGRAPHE ou de NOM (lieu, structure, personne, opération) s'applique à TOUTES ses occurrences : le résumé, les points clés, les titres d'opérations, les libellés de structures/personnes ET les relances. Exemple : « c'est Villeneuve-d'Ascq, pas Villeneuve d'Asquay » → remplace partout, y compris dans "resume". Ne laisse aucune ancienne graphie.
 - N'invente RIEN. N'ajoute aucun fait, chiffre, date ou nom non fourni.
 - N'infère jamais de montant.
 - Nous sommes le ${today} (AAAA-MM-JJ) : résous les dates relatives (« hier », « mardi dernier »).
@@ -118,7 +125,7 @@ Réponds UNIQUEMENT par l'objet JSON complet et corrigé, sans texte autour, de 
   "entites": ["libellé exact d'une STRUCTURE connue"],
   "operations": ["libellé exact d'une opération connue"],
   "nouvelles_entites": [{ "nom": "structure nouvelle", "type": "MOA|archi|promoteur|bet|confrere|autre (bet = bureau d'études techniques)" }],
-  "nouvelles_operations": [{ "nom": "affaire nouvelle" }],
+  "nouvelles_operations": [{ "nom": "affaire nouvelle", "entite": "structure qui la porte ou null" }],
   "liens": [{ "operation": "nom exact d'une opération (connue ou nouvelle)", "entite": "nom exact de la structure qui la porte" }],
   "contacts": [{ "nom": "…", "prenom": "… ou null", "fonction": "… ou null", "entite": "structure ou null" }],
   "relances": [{ "objet": "action à l'impératif, SANS nom de personne", "personne": "personne concernée ou null", "operation": "nom de l'affaire concernée ou null", "entite": "nom de la structure concernée ou null", "dans_jours": 14 }]

@@ -13,7 +13,7 @@ type ContactBase = { nom: string; prenom: string | null };
 // Rattachement unifié : une structure OU une opération (bascule possible).
 // `type` = type de structure (MOA/archi/promoteur/confrere/autre), pour une
 // nouvelle structure à créer.
-type Rattach = { kind: "structure" | "operation"; name: string; type?: string };
+type Rattach = { kind: "structure" | "operation"; name: string; type?: string; entite?: string };
 
 const TYPE_STRUCTURE = [
   { v: "MOA", l: "MOA" },
@@ -112,6 +112,7 @@ export default function VoiceCr({
   today,
   contactsBase = [],
   membres = [],
+  opsAvecRelance = [],
   prefillEntite,
   prefillOperation,
   relanceId,
@@ -124,6 +125,7 @@ export default function VoiceCr({
   today: string;
   contactsBase?: ContactBase[];
   membres?: string[];
+  opsAvecRelance?: string[];
   prefillEntite?: string;
   prefillOperation?: string;
   relanceId?: string;
@@ -278,7 +280,7 @@ export default function VoiceCr({
       ...(s.entites ?? []).map((n) => ({ kind: "structure" as const, name: n })),
       ...(s.operations ?? []).map((n) => ({ kind: "operation" as const, name: n })),
       ...(s.nouvelles_entites ?? []).map((e) => ({ kind: "structure" as const, name: e.nom, type: e.type })),
-      ...(s.nouvelles_operations ?? []).map((o) => ({ kind: "operation" as const, name: o.nom })),
+      ...(s.nouvelles_operations ?? []).map((o) => ({ kind: "operation" as const, name: o.nom, entite: (o as any).entite ?? undefined })),
     ];
     setRattachements((prev) => dedupRattach(authoritative ? rats : [...prev, ...rats]));
     // Filet de sécurité : ne jamais proposer un membre de l'équipe (Administration)
@@ -301,7 +303,14 @@ export default function VoiceCr({
           entite: c.entite ?? "",
         })),
     );
-    setRelances((s.relances ?? []).map((r) => ({ objet: r.objet, date: addDays(today, r.dans_jours), personne: r.personne ?? "", operation: (r as any).operation ?? undefined, entite: (r as any).entite ?? undefined })));
+    // On ignore une suite proposée par l'IA si l'affaire concernée a DÉJÀ une
+    // relance en cours (mise à jour d'une fiche → pas de doublon).
+    const dejaRelance = new Set(opsAvecRelance.map((n) => n.trim().toLowerCase()));
+    setRelances(
+      (s.relances ?? [])
+        .filter((r) => !((r as any).operation && dejaRelance.has(String((r as any).operation).trim().toLowerCase())))
+        .map((r) => ({ objet: r.objet, date: addDays(today, r.dans_jours), personne: r.personne ?? "", operation: (r as any).operation ?? undefined, entite: (r as any).entite ?? undefined })),
+    );
   }
 
   async function doSynth(text: string): Promise<void> {
@@ -452,7 +461,7 @@ export default function VoiceCr({
     .map((r) => ({ nom: r.name.trim(), type: r.type ?? "autre" }));
   const nouvellesOperations = ratsNets
     .filter((r) => r.kind === "operation" && !opNameSet.has(r.name.trim().toLowerCase()))
-    .map((r) => ({ nom: r.name.trim() }));
+    .map((r) => ({ nom: r.name.trim(), entite: r.entite?.trim() || null }));
   const contactsPayload = personnes
     .filter((p) => p.nom.trim())
     .map((p) => ({
@@ -464,15 +473,17 @@ export default function VoiceCr({
   const relancesPayload = relances
     .filter((r) => r.objet.trim())
     .map((r) => ({ objet: r.objet.trim(), dans_jours: diffDays(today, r.date), personne: r.personne.trim() || null, operation: r.operation?.trim() || null, entite: r.entite?.trim() || null }));
-  // Liens affaire ↔ structure proposés par l'IA, restreints à ce qui figure
-  // encore dans le compte rendu (noms non renommés) — sert au rattachement précis.
-  const liensPayload = (((synthese as any)?.liens ?? []) as { operation: string; entite: string }[])
+  // Liens affaire ↔ structure : ceux portés directement par chaque opération
+  // (entite du rattachement, le plus fiable) + ceux proposés par l'IA. On ne
+  // filtre PAS par nom ici : materialiserCr revalide chaque lien contre les
+  // objets réellement présents dans le CR (rien perdu pour un nom un peu différent).
+  const liensDesOps = ratsNets
+    .filter((r) => r.kind === "operation" && r.name.trim() && r.entite?.trim())
+    .map((r) => ({ operation: r.name.trim(), entite: r.entite!.trim() }));
+  const liensIA = (((synthese as any)?.liens ?? []) as { operation: string; entite: string }[])
     .filter((l) => l?.operation?.trim() && l?.entite?.trim())
-    .filter(
-      (l) =>
-        ratsNets.some((r) => r.kind === "operation" && r.name.trim().toLowerCase() === l.operation.trim().toLowerCase()) &&
-        ratsNets.some((r) => r.kind === "structure" && r.name.trim().toLowerCase() === l.entite.trim().toLowerCase()),
-    );
+    .map((l) => ({ operation: l.operation.trim(), entite: l.entite.trim() }));
+  const liensPayload = [...liensDesOps, ...liensIA];
   const syntheseOut = { ...(synthese ?? {}), relances: relancesPayload };
 
   const canSave = transcription.trim().length > 0 && ratsNets.length > 0;
@@ -504,7 +515,10 @@ export default function VoiceCr({
     const on = opName.toLowerCase();
     return relances.some((rel) => (rel.operation && rel.operation.trim().toLowerCase() === on) || rel.objet.toLowerCase().includes(on));
   };
-  const opsSansRelance = opsNets.filter((nom) => !relanceCouvre(nom) && !relancesIgnorees.has(nom.toLowerCase()));
+  const dejaRelanceSet = new Set(opsAvecRelance.map((n) => n.trim().toLowerCase()));
+  const opsSansRelance = opsNets.filter(
+    (nom) => !relanceCouvre(nom) && !relancesIgnorees.has(nom.toLowerCase()) && !dejaRelanceSet.has(nom.trim().toLowerCase()),
+  );
   const ajouterRelancePourOp = (opName: string, jours: number) => {
     setRelances((rr) => [...rr, { objet: `Relancer ${opName}`, date: addDays(today, jours), personne: persDefaut, operation: opName }]);
   };
