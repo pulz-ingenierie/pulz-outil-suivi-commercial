@@ -17,6 +17,7 @@ interface Body {
   entites?: string[];
   operations?: string[];
   contacts?: string[];
+  membres?: string[];
   today?: string;
 }
 
@@ -48,7 +49,8 @@ export async function POST(req: Request) {
 
   const knownEntites = asStringArray(body.entites);
   const knownOps = asStringArray(body.operations);
-  const knownPersonnes = asStringArray(body.contacts);
+  const knownMembres = asStringArray(body.membres);
+  const knownPersonnes = Array.from(new Set([...asStringArray(body.contacts), ...knownMembres]));
   const today = isIsoDate(body.today) ? body.today : new Date().toISOString().slice(0, 10);
   const client = new Anthropic({ apiKey });
 
@@ -56,7 +58,7 @@ export async function POST(req: Request) {
     const response = await client.messages.create({
       model: MODEL,
       max_tokens: 2000,
-      system: syntheseSystemPrompt(knownEntites, knownOps, knownPersonnes, today),
+      system: syntheseSystemPrompt(knownEntites, knownOps, knownPersonnes, today, knownMembres),
       messages: [{ role: "user", content: SYNTHESE_USER_PREFIX + transcription }],
     });
 

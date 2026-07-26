@@ -280,13 +280,25 @@ export default function VoiceCr({
       ...(s.nouvelles_operations ?? []).map((o) => ({ kind: "operation" as const, name: o.nom })),
     ];
     setRattachements((prev) => dedupRattach(authoritative ? rats : [...prev, ...rats]));
+    // Filet de sécurité : ne jamais proposer un membre de l'équipe (Administration)
+    // comme contact à créer — il est reconnu, mais géré côté utilisateurs.
+    const membreSet = new Set(membres.map((m) => m.trim().toLowerCase()));
+    const estMembre = (prenom: string, nom: string) => {
+      const full = [prenom, nom].filter(Boolean).join(" ").trim().toLowerCase();
+      if (full && membreSet.has(full)) return true;
+      const p = prenom.trim().toLowerCase();
+      const n = nom.trim().toLowerCase();
+      return membres.some((m) => { const mn = m.toLowerCase(); return p && n && mn.includes(p) && mn.includes(n); });
+    };
     setPersonnes(
-      (s.contacts ?? []).map((c) => ({
-        prenom: c.prenom ?? "",
-        nom: c.nom,
-        fonction: c.fonction ?? "",
-        entite: c.entite ?? "",
-      })),
+      (s.contacts ?? [])
+        .filter((c) => !estMembre(c.prenom ?? "", c.nom))
+        .map((c) => ({
+          prenom: c.prenom ?? "",
+          nom: c.nom,
+          fonction: c.fonction ?? "",
+          entite: c.entite ?? "",
+        })),
     );
     setRelances((s.relances ?? []).map((r) => ({ objet: r.objet, date: addDays(today, r.dans_jours), personne: r.personne ?? "" })));
   }
@@ -301,6 +313,7 @@ export default function VoiceCr({
           entites: entites.map((e) => e.nom),
           operations: operations.map((o) => o.nom),
           contacts: contactsConnus,
+          membres,
           today,
         }),
       });

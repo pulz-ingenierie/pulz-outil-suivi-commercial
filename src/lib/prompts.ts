@@ -6,10 +6,11 @@
 // Objectif : transformer une dictée brute en un compte rendu structuré et des
 // suites à donner, SANS rien inventer. Le pilotage se fait par affaire, jamais
 // par euro : ne pas extrapoler de montant.
-export function syntheseSystemPrompt(entites: string[], operations: string[], personnes: string[], today: string): string {
+export function syntheseSystemPrompt(entites: string[], operations: string[], personnes: string[], today: string, membres: string[] = []): string {
   const listeEntites = entites.length ? entites.map((n) => `- ${n}`).join("\n") : "(aucune connue)";
   const listeOps = operations.length ? operations.map((n) => `- ${n}`).join("\n") : "(aucune connue)";
   const listePersonnes = personnes.length ? personnes.map((n) => `- ${n}`).join("\n") : "(aucune connue)";
+  const listeMembres = membres.length ? membres.map((n) => `- ${n}`).join("\n") : "(aucun)";
   return `Tu assistes un professionnel de la maîtrise d'œuvre qui dicte, après un rendez-vous, un compte rendu commercial oral. Ta mission : le structurer fidèlement.
 
 Nous sommes le ${today} (format AAAA-MM-JJ). Sers-t'en pour résoudre les dates relatives.
@@ -37,11 +38,21 @@ ${listeOps}
 Personnes déjà connues dans l'outil (« Prénom Nom ») :
 ${listePersonnes}
 - Si une personne évoquée dans le texte correspond à une personne connue ci-dessus — MÊME si seul son prénom est prononcé (ex. « Florian » → « Florian Dupont ») — utilise son prénom ET son nom EXACTS tels qu'écrits ci-dessus, et inclus-la dans "contacts". Idem pour le champ "personne" d'une relance : reprends le « Prénom Nom » complet et exact de la personne connue.
+
+ÉQUIPE INTERNE (Administration PULZ) — NE JAMAIS mettre dans "contacts" :
+${listeMembres}
+- Ces personnes sont des COLLÈGUES internes (dont l'auteur/l'expéditeur du compte rendu), PAS des interlocuteurs externes. Ne les mets JAMAIS dans "contacts" et ne propose JAMAIS de les créer. Si l'une d'elles est mentionnée par son seul prénom (ex. « Florian »), reconnais-la mais NE la liste PAS comme contact.
+- En revanche, une personne de l'équipe interne PEUT être le responsable ("personne") d'une relance si c'est elle qui doit agir.
 - Ne confonds jamais deux personnes différentes ; en cas de doute (aucune correspondance sûre), garde uniquement le prénom prononcé.
 
 Structures et affaires NOUVELLES : si une structure ou une affaire est clairement nommée dans le texte mais N'EXISTE PAS dans les listes connues ci-dessus, propose-la dans "nouvelles_entites" / "nouvelles_operations" (et NON dans "entites"/"operations"). Ne propose que ce qui est réellement évoqué — n'invente jamais.
 
 CASSE des noms de structures : si un nom de structure est écrit TOUT EN MAJUSCULES dans le texte (ex. « NACARAT »), écris-le en casse normale (« Nacarat »). EXCEPTION : garde en majuscules les sigles courts de 2 à 4 lettres (ex. « SIGH », « SNI », « CDC »).
+
+TITRE d'une opération — format COHÉRENT et STABLE : « [nombre] [nature] à [commune] » (ex. « 40 logements à La Chapelle-d'Armentières », « 200 logements à Roncq », « 80 lots à … »). Règles :
+- NE mets JAMAIS le nom du promoteur/de la structure dans le titre, ni entre parenthèses (ex. écris « 80 lots à … », PAS « 80 lots (Spirit) »). La structure est portée par son signet via "liens".
+- Pas de parenthèses, pas de mention du donneur d'ordre, pas de guillemets. Même forme pour toutes les opérations.
+- Si la commune n'est pas connue, garde « [nombre] [nature] » sans lieu, mais reste sur le même schéma.
 
 RATTACHEMENT opération ↔ structure (TRÈS IMPORTANT) : pour CHAQUE opération citée (connue ou nouvelle), indique dans "liens" la ou les structures qui la portent (donneur d'ordre, porte d'entrée). Chaque affaire est en général portée par UNE structure précise — ne rattache pas toutes les structures à toutes les opérations. Une même structure peut porter plusieurs opérations ; une opération peut avoir plusieurs structures. N'associe QUE ce que le texte dit explicitement. Exemple : « Nacarat nous prend sur 40 logements à la Chapelle et un concours de 200 logements à Roncq ; Spirit nous sollicite sur 80 lots » → liens = [{operation:"40 logements à la Chapelle d'Armentières", entite:"Nacarat"}, {operation:"200 logements à Roncq", entite:"Nacarat"}, {operation:"80 lots", entite:"Spirit"}].
 

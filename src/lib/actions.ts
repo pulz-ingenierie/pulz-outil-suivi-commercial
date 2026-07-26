@@ -269,6 +269,11 @@ async function materialiserCr(
   const entiteIds = fd.getAll("entite_ids").map(String).filter(Boolean);
   const operationIds = fd.getAll("operation_ids").map(String).filter(Boolean);
 
+  // Auteur du compte rendu (l'expéditeur pour un e-mail) : il devient le référent
+  // par défaut de chaque opération du CR — chaque affaire doit avoir un référent.
+  const { data: crRow } = await sb.from("crs").select("auteur_id").eq("id", crId).maybeSingle();
+  const auteurId = (crRow as any)?.auteur_id ?? null;
+
   // Nouvelles structures.
   for (const e of jsonArray(fd, "nouvelles_entites_json")) {
     const nom = typeof e?.nom === "string" ? e.nom.trim() : "";
@@ -278,12 +283,20 @@ async function materialiserCr(
     const { data } = await sb.from("entites").insert({ org_id, nom, type }).select("id").single();
     if (data?.id) entiteIds.push(data.id);
   }
-  // Nouvelles opérations (statut de départ : contact).
+  // Nouvelles opérations (statut de départ : contact ; référent = auteur du CR).
   for (const o of jsonArray(fd, "nouvelles_operations_json")) {
     const nom = typeof o?.nom === "string" ? o.nom.trim() : "";
     if (!nom) continue;
-    const { data } = await sb.from("operations").insert({ org_id, nom, statut: "contact" }).select("id").single();
+    const { data } = await sb
+      .from("operations")
+      .insert({ org_id, nom, statut: "contact", referent_id: auteurId })
+      .select("id")
+      .single();
     if (data?.id) operationIds.push(data.id);
+  }
+  // Chaque opération du CR sans référent hérite de l'auteur (référent obligatoire).
+  if (auteurId && operationIds.length) {
+    await sb.from("operations").update({ referent_id: auteurId }).in("id", operationIds).is("referent_id", null);
   }
 
   if (entiteIds.length) {

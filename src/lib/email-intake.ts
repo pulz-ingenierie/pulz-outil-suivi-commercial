@@ -47,11 +47,14 @@ export async function releverEmails(): Promise<IntakeResult> {
   );
   const knownEntites = (entites ?? []).map((e: any) => e.nom as string);
   const knownOps = (operations ?? []).map((o: any) => o.nom as string);
+  const knownMembres = Array.from(
+    new Set((users ?? []).map((u: any) => String(u.nom ?? "").trim()).filter(Boolean)),
+  ) as string[];
   const knownPersonnes = Array.from(
     new Set(
       [
         ...(contacts ?? []).map((c: any) => [c.prenom, c.nom].filter(Boolean).join(" ").trim()),
-        ...(users ?? []).map((u: any) => String(u.nom ?? "").trim()),
+        ...knownMembres,
       ].filter(Boolean),
     ),
   ) as string[];
@@ -117,7 +120,7 @@ export async function releverEmails(): Promise<IntakeResult> {
 
           let synth = null;
           try {
-            synth = await analyseCompteRendu(texte, knownEntites, knownOps, today, pieces, knownPersonnes);
+            synth = await analyseCompteRendu(texte, knownEntites, knownOps, today, pieces, knownPersonnes, knownMembres);
           } catch {
             synth = null; // l'analyse a échoué : on crée quand même le brouillon brut
           }
