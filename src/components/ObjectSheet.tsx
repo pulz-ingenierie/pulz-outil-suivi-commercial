@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import Signet from "@/components/Signet";
+import { demanderSuppression } from "@/lib/gestures";
 
 // Volet global qui se déploie depuis le bas au clic sur un signet, partout dans
 // l'outil. Charge l'aperçu de l'objet (/api/apercu), affiche ses signets
@@ -26,10 +27,12 @@ const CAT_ICON: Record<string, string> = { struct: "structure", op: "operation",
 export default function ObjectSheet() {
   const [data, setData] = useState<Apercu | null>(null);
   const [loading, setLoading] = useState(false);
+  const [cible, setCible] = useState<{ type: string; id: string } | null>(null);
 
   const open = useCallback(async (type: string, id: string) => {
     setLoading(true);
     setData(null);
+    setCible({ type, id });
     try {
       const res = await fetch(`/api/apercu?type=${encodeURIComponent(type)}&id=${encodeURIComponent(id)}`);
       if (res.ok) setData(await res.json());
@@ -54,7 +57,14 @@ export default function ObjectSheet() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const close = () => { setData(null); setLoading(false); };
+  const close = () => { setData(null); setLoading(false); setCible(null); };
+
+  const supprimer = () => {
+    if (!cible) return;
+    const nom = data?.nom;
+    close();
+    demanderSuppression(cible.type, cible.id, nom);
+  };
 
   if (!data && !loading) return null;
 
@@ -85,6 +95,7 @@ export default function ObjectSheet() {
               )}
               <div className="carte-foot">
                 <Link className="btn" href={data.href} onClick={close}>Ouvrir la fiche complète</Link>
+                <button type="button" className="btn ghost danger" onClick={supprimer}>Supprimer</button>
               </div>
             </div>
           </>
