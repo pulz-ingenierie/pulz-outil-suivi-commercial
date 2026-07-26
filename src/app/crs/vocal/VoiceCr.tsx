@@ -500,8 +500,11 @@ export default function VoiceCr({
   const opsSansStruct =
     rattachements.some((r) => r.kind === "operation" && r.name.trim()) &&
     !rattachements.some((r) => r.kind === "structure" && r.name.trim());
-  // Une relance doit toujours être assortie d'une personne responsable.
+  // Une relance doit toujours être assortie d'une (ou plusieurs) personne(s).
   const relSansPersonne = relances.map((r, i) => ({ r, i })).filter(({ r }) => r.objet.trim() && !r.personne.trim());
+  // Toutes les relances nommées : on affiche le choix des personnes (multiple)
+  // dans le débrief tant qu'il est ouvert, pour pouvoir en attribuer plusieurs.
+  const relancesAvecObjet = relances.map((r, i) => ({ r, i })).filter(({ r }) => r.objet.trim());
   // Exhaustivité des suites à donner : CHAQUE affaire du compte rendu doit avoir
   // une relance. On liste les opérations sans relance qui la concerne (par le
   // champ operation ou par mention dans l'objet), non déjà « ignorées ».
@@ -550,6 +553,22 @@ export default function VoiceCr({
     setPersonnes((prev) => prev.map((x, j) => (j === i ? { ...x, ...patch } : x)));
   const majRel = (i: number, patch: Partial<RelanceEdit>) =>
     setRelances((prev) => prev.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+
+  // Une relance peut concerner PLUSIEURS personnes : le champ « personne » est une
+  // liste de noms séparés par des virgules.
+  const listePersonnes = (v: string) => v.split(",").map((s) => s.trim()).filter(Boolean);
+  const aPersonne = (v: string, name: string) => listePersonnes(v).some((x) => x.toLowerCase() === name.trim().toLowerCase());
+  const basculerPersonne = (i: number, name: string) =>
+    setRelances((prev) => prev.map((r, j) => {
+      if (j !== i) return r;
+      const list = listePersonnes(r.personne);
+      const k = list.findIndex((x) => x.toLowerCase() === name.trim().toLowerCase());
+      if (k >= 0) list.splice(k, 1);
+      else if (name.trim()) list.push(name.trim());
+      return { ...r, personne: list.join(", ") };
+    }));
+  const retirerPersonne = (i: number, name: string) =>
+    setRelances((prev) => prev.map((r, j) => (j === i ? { ...r, personne: listePersonnes(r.personne).filter((x) => x.toLowerCase() !== name.trim().toLowerCase()).join(", ") } : r)));
 
   // Petit signet cliquable, réutilisé dans les cartes pour les éléments associés.
   const opsRat = rattachements.map((r, idx) => ({ r, idx })).filter((x) => x.r.kind === "operation");
@@ -752,16 +771,16 @@ export default function VoiceCr({
         return (
           <>{head}
             <div className="carte-body">
-              {r.personne.trim() && (() => {
-                const pi = personnes.findIndex((p) => [p.prenom, p.nom].filter(Boolean).join(" ").trim().toLowerCase() === r.personne.trim().toLowerCase());
-                return (
-                  <SectionAssoc titre="Personne concernée" icon="personne">
-                    {pi >= 0
-                      ? <AssocSignet kind="pers" label={r.personne} onClick={() => ouvrirCarte("pers", pi)} />
-                      : <span className="sig-d pers" style={{ cursor: "default" }}><span className="sig-lbl">{r.personne}</span></span>}
-                  </SectionAssoc>
-                );
-              })()}
+              {r.personne.trim() && (
+                <SectionAssoc titre={listePersonnes(r.personne).length > 1 ? "Personnes concernées" : "Personne concernée"} icon="personne">
+                  {listePersonnes(r.personne).map((nom) => {
+                    const pi = personnes.findIndex((p) => [p.prenom, p.nom].filter(Boolean).join(" ").trim().toLowerCase() === nom.toLowerCase());
+                    return pi >= 0
+                      ? <AssocSignet key={nom} kind="pers" label={nom} onClick={() => ouvrirCarte("pers", pi)} />
+                      : <span key={nom} className="sig-d pers" style={{ cursor: "default" }}><span className="sig-lbl">{nom}</span></span>;
+                  })}
+                </SectionAssoc>
+              )}
               {(() => {
                 // La relance n'affiche QUE l'affaire (et sa structure) qu'elle
                 // concerne — pas toutes les opérations du compte rendu.
@@ -799,8 +818,24 @@ export default function VoiceCr({
           <div className="carte-body">
             <label className="field"><span className="lab">Action de suivi (sans le nom de la personne)</span>
               <input value={r.objet} placeholder="Ex. Rappeler pour la remise de l'offre" onChange={(e) => majRel(i, { objet: e.target.value })} /></label>
-            <label className="field"><span className="lab">Personne concernée</span>
-              <input list="dl-personnes" value={r.personne} placeholder="Ex. Romain Mission" onChange={(e) => majRel(i, { personne: e.target.value })} /></label>
+            <div className="field"><span className="lab">Personnes concernées</span>
+              {listePersonnes(r.personne).length > 0 && (
+                <div className="pers-chips">
+                  {listePersonnes(r.personne).map((n) => (
+                    <button type="button" className="sig-d pers on" key={n} onClick={() => retirerPersonne(i, n)}>
+                      <span className="sig-lbl">{n} ✕</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <select
+                value=""
+                onChange={(e) => { const v = e.target.value; if (v && !aPersonne(r.personne, v)) basculerPersonne(i, v); }}
+              >
+                <option value="">＋ Ajouter une personne…</option>
+                {candidatsPersonne.filter((n) => !aPersonne(r.personne, n)).map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
             <label className="field"><span className="lab">Échéance</span>
               <input type="date" value={r.date} onChange={(e) => majRel(i, { date: e.target.value })} /></label>
             <div className="carte-foot"><button type="button" className="btn" onClick={() => setCardMode("view")}>OK</button></div>
@@ -1033,16 +1068,33 @@ export default function VoiceCr({
                 <button type="button" className="btn ghost mini" onClick={() => { setRattachements((p) => [...p, { kind: "structure", name: "" }]); ouvrirCarte("rat", rattachements.length, "edit"); }}>Ajouter une structure</button>
               </div>
             )}
-            {relSansPersonne.map(({ r, i }) => (
+            {relancesAvecObjet.map(({ r, i }) => (
               <div className="precise-row" key={`r${i}`}>
-                <span className="precise-q">Qui doit s'occuper de <strong>{r.objet || "cette relance"}</strong> ?</span>
+                <span className="precise-q">Qui doit s'occuper de <strong>{r.objet || "cette relance"}</strong> ? <em className="precise-hint">(plusieurs possibles)</em></span>
                 <div className="precise-answer">
-                  {candidatsPersonne.slice(0, 4).map((n) => (
-                    <button type="button" className="sig-d pers" key={n} onClick={() => majRel(i, { personne: n })}>
+                  {candidatsPersonne.slice(0, 6).map((n) => (
+                    <button type="button" className={`sig-d pers${aPersonne(r.personne, n) ? " on" : ""}`} key={n} onClick={() => basculerPersonne(i, n)}>
                       <span className="sig-lbl">{n}</span>
                     </button>
                   ))}
-                  <input list="dl-personnes" value={r.personne} placeholder="ou saisir un nom…" onChange={(e) => majRel(i, { personne: e.target.value })} />
+                  {listePersonnes(r.personne)
+                    .filter((n) => !candidatsPersonne.some((c) => c.toLowerCase() === n.toLowerCase()))
+                    .map((n) => (
+                      <button type="button" className="sig-d pers on" key={n} onClick={() => retirerPersonne(i, n)}>
+                        <span className="sig-lbl">{n} ✕</span>
+                      </button>
+                    ))}
+                  <input
+                    list="dl-personnes"
+                    placeholder="ajouter un nom…"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const v = (e.target as HTMLInputElement).value.trim();
+                        if (v) { if (!aPersonne(r.personne, v)) basculerPersonne(i, v); (e.target as HTMLInputElement).value = ""; }
+                      }
+                    }}
+                  />
                 </div>
               </div>
             ))}

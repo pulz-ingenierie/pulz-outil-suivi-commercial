@@ -590,6 +590,12 @@ a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); tran
 /* Sous-mentions internes d'un signet : pas de majuscule forcée, jamais coupées. */
 .sig-d .sig-sub, .sig-d .sig-badge, .sig-d .mini-sig { text-transform: none; letter-spacing: 0; flex: none; }
 .sig-d:hover { background: color-mix(in srgb, var(--cat) 22%, var(--surface)); }
+/* Signet « sélectionné » (choix multiple de personnes sur une relance). */
+.sig-d.on { background: color-mix(in srgb, var(--cat) 26%, var(--surface));
+       color: color-mix(in srgb, var(--cat) 78%, var(--ink)); font-weight: 650;
+       box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--cat) 50%, transparent); }
+.pers-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.precise-hint { font-style: normal; font-weight: 400; color: var(--faint); font-size: 12px; }
 .sig-d.struct { --cat: var(--c-struct); } .sig-d.op { --cat: var(--c-op); }
 .sig-d.pers { --cat: var(--c-pers); } .sig-d.rel { --cat: var(--c-rel); }
 .sig-d.date { --cat: var(--faint); } .sig-d.type { --cat: var(--c-type); }
