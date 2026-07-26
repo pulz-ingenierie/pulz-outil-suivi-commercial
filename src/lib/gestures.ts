@@ -2,16 +2,20 @@
 
 import { useRef } from "react";
 
-// Ouvre le volet rouge de suppression pour un objet. `nom` facultatif : utilisé
-// quand l'objet n'a pas d'aperçu à charger (ex. une relance).
-export function demanderSuppression(type: string, id: string, nom?: string) {
-  window.dispatchEvent(new CustomEvent("moeia:supprimer", { detail: { type, id, nom } }));
+export type Parent = { type: string; id: string; nom?: string };
+
+// Ouvre le volet de suppression / détachement pour un objet. `nom` facultatif :
+// utilisé quand l'objet n'a pas d'aperçu à charger (ex. une relance). `parent` :
+// la fiche/ligne d'où provient le signet — permet de proposer « détacher » (au
+// lieu de « supprimer de l'outil »).
+export function demanderSuppression(type: string, id: string, nom?: string, parent?: Parent) {
+  window.dispatchEvent(new CustomEvent("moeia:supprimer", { detail: { type, id, nom, parent } }));
 }
 
 // Appui long (~550 ms) pour ouvrir la suppression — utilisé sur les signets, qui
 // ne peuvent pas révéler de bouton par glissement. Renvoie les gestionnaires à
 // étaler sur l'élément + `consomme()` (pour ignorer le clic qui suit le geste).
-export function useLongPressSuppr(type: string, id: string, nom?: string) {
+export function useLongPressSuppr(type: string, id: string, nom?: string, parent?: Parent) {
   const geste = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const start = useRef<{ x: number; y: number } | null>(null);
@@ -20,7 +24,7 @@ export function useLongPressSuppr(type: string, id: string, nom?: string) {
   const arm = () => {
     geste.current = false;
     clear();
-    timer.current = setTimeout(() => { geste.current = true; demanderSuppression(type, id, nom); }, 550);
+    timer.current = setTimeout(() => { geste.current = true; demanderSuppression(type, id, nom, parent); }, 550);
   };
 
   const onTouchStart = (e: React.TouchEvent) => { const t = e.touches[0]; start.current = { x: t.clientX, y: t.clientY }; arm(); };

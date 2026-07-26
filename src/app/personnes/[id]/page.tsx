@@ -108,7 +108,7 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
         <div className="block">
           <div className="block-h">
             <div className="eyebrow">Repères</div>
-            {struct && <Signet type="entite" id={struct.id} cat="struct" label={struct.nom} />}
+            {struct && <Signet type="entite" id={struct.id} cat="struct" label={struct.nom} parent={{ type: "personne", id: contact.id, nom: nomComplet }} />}
           </div>
           <div className="kv"><span className="k">Fonction</span><span>{contact.fonction || "—"}</span></div>
           {contact.tel && <div className="kv"><span className="k">Téléphone</span><span>{contact.tel}</span></div>}

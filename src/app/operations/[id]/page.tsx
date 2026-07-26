@@ -109,7 +109,8 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
           {entites.length ? (
             <div className="sig-wrap">{entites.map((e: any) => (
               <Signet key={e.id} type="entite" id={e.id} cat="struct" label={e.nom}
-                sub={(e.role || e.type) ? `${e.role || e.type}${e.ville ? ` · ${e.ville}` : ""}` : undefined} />
+                sub={(e.role || e.type) ? `${e.role || e.type}${e.ville ? ` · ${e.ville}` : ""}` : undefined}
+                parent={{ type: "operation", id: operation.id, nom: operation.nom }} />
             ))}</div>
           ) : <div className="empty">Aucune structure rattachée.</div>}
         </div>

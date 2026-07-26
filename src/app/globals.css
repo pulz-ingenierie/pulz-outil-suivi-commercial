@@ -646,6 +646,11 @@ a.sig-d { text-decoration: none; }
 .carte-top.danger-top { background: var(--crit-soft); border-bottom-color: color-mix(in srgb, var(--crit) 30%, var(--line)); }
 .del-eyebrow { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--crit); }
 .carte-top.danger-top .carte-nom-view { color: var(--crit); }
+/* Option « détacher de la fiche » (non destructive) dans le volet de suppression. */
+.del-detach { display: flex; flex-direction: column; gap: 4px; padding-bottom: 12px; margin-bottom: 4px;
+       border-bottom: 1px solid var(--line); }
+.del-detach-btn { align-self: flex-start; }
+.del-detach-note { font-size: 12px; color: var(--muted); }
 .del-assoc { display: flex; flex-direction: column; gap: 8px; }
 .del-assoc-h { font-size: 12.5px; font-weight: 600; color: var(--muted); }
 .del-check { display: flex; align-items: center; gap: 10px; cursor: pointer; }

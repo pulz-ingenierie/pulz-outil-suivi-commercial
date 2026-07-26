@@ -656,6 +656,47 @@ export async function supprimerObjet(fd: FormData) {
   revalidatePath("/", "layout");
 }
 
+// Détache un objet d'une fiche SANS le supprimer : retire le lien entre le
+// parent (la fiche) et l'enfant (le signet). L'objet reste dans l'outil.
+//  - structure ⇄ opération : on retire le lien entite_operation.
+//  - structure ⇄ personne  : on détache le contact de sa structure (entite_id → null).
+export async function detacherSignet(fd: FormData) {
+  const supabase = requireSupabase();
+  const org_id = await currentOrgId(supabase);
+  const sb = supabase;
+  const pType = str(fd, "parent_type");
+  const pId = str(fd, "parent_id");
+  const cType = str(fd, "type");
+  const cId = str(fd, "id");
+  if (!pType || !pId || !cType || !cId) throw new Error("Détachement impossible : contexte manquant.");
+
+  const paire = new Set([pType, cType]);
+  const idOf = (t: string) => (t === pType ? pId : cId);
+
+  if (paire.has("entite") && paire.has("operation")) {
+    const entite_id = idOf("entite");
+    const operation_id = idOf("operation");
+    // Vérifie que les deux appartiennent bien à l'organisation.
+    const [{ data: e }, { data: o }] = await Promise.all([
+      sb.from("entites").select("id").eq("id", entite_id).eq("org_id", org_id).maybeSingle(),
+      sb.from("operations").select("id").eq("id", operation_id).eq("org_id", org_id).maybeSingle(),
+    ]);
+    if (e && o) {
+      await sb.from("entite_operation").delete().eq("entite_id", entite_id).eq("operation_id", operation_id);
+    }
+  } else if (paire.has("entite") && paire.has("personne")) {
+    const entite_id = idOf("entite");
+    const contact_id = idOf("personne");
+    const { data: e } = await sb.from("entites").select("id").eq("id", entite_id).eq("org_id", org_id).maybeSingle();
+    if (e) {
+      await sb.from("contacts").update({ entite_id: null }).eq("id", contact_id).eq("entite_id", entite_id);
+    }
+  }
+  // Autres paires (opération ⇄ personne, etc.) : pas de lien direct à retirer.
+
+  revalidatePath("/", "layout");
+}
+
 // -----------------------------------------------------------------------------
 // Relances — les suites à donner (créées à la main ou par l'IA)
 // -----------------------------------------------------------------------------

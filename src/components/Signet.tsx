@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useLongPressSuppr } from "@/lib/gestures";
+import { useLongPressSuppr, type Parent } from "@/lib/gestures";
 
 // Signet cliquable : ouvre la FICHE complète de l'objet (navigation), pour rester
 // cohérent avec le principe « tout se déplie / s'ouvre en liste ». Un appui long
@@ -18,15 +18,17 @@ export default function Signet({
   cat,
   label,
   sub,
+  parent,
 }: {
   type: "entite" | "operation" | "personne";
   id: string;
   cat: string;
   label: string;
   sub?: string;
+  parent?: Parent;
 }) {
   const router = useRouter();
-  const g = useLongPressSuppr(type, id, label);
+  const g = useLongPressSuppr(type, id, label, parent);
   return (
     <button
       type="button"

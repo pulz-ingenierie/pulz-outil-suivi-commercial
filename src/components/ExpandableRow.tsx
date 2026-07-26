@@ -71,7 +71,7 @@ export default function ExpandableRow({
                 <div className="lx-sect" key={i}>
                   <div className="lx-sect-h">{s.titre}</div>
                   <div className="sig-wrap">
-                    {s.items.map((it) => <Signet key={`${it.type}-${it.id}`} type={it.type} id={it.id} cat={it.cat} label={it.label} />)}
+                    {s.items.map((it) => <Signet key={`${it.type}-${it.id}`} type={it.type} id={it.id} cat={it.cat} label={it.label} parent={{ type, id, nom: data?.nom ?? nom }} />)}
                   </div>
                 </div>
               ))}

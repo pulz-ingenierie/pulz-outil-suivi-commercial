@@ -123,7 +123,7 @@ export default async function FicheStructure({ params }: { params: Promise<{ id:
             <div className="sig-wrap">
               {personnes.map((c: any) => {
                 const nomComplet = [c.prenom, c.nom].filter(Boolean).join(" ") || c.nom;
-                return <Signet key={c.id} type="personne" id={c.id} cat="pers" label={nomComplet} />;
+                return <Signet key={c.id} type="personne" id={c.id} cat="pers" label={nomComplet} parent={{ type: "entite", id: entite.id, nom: entite.nom }} />;
               })}
             </div>
           ) : (
