@@ -8,9 +8,10 @@ import OperationRow from "@/components/OperationRow";
 
 // Couleur associée à chaque étape (variables CSS définies dans globals.css).
 const STATUT_VAR: Record<string, string> = {
-  contact: "--s-contact",
+  piste: "--s-piste",
   qualifie: "--s-qualifie",
-  ao_attente: "--s-ao",
+  concours: "--s-concours",
+  a_chiffrer: "--s-chiffrer",
   offre_remise: "--s-offre",
   nego: "--s-nego",
   gagne: "--s-gagne",

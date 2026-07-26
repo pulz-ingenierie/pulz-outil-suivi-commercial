@@ -11,8 +11,8 @@
   --warn: #855900; --warn-soft: #F8F0DC;
   --crit: #B3352B; --crit-soft: #F9EAE8;
   --shadow: 0 1px 2px rgba(34,31,26,.05);
-  /* Phases : progression en encre (clair → foncé) + statuts sourds pour gagné/perdu/AO */
-  --s-contact: #8F8A82; --s-qualifie: #6E6961; --s-ao: #855900;
+  /* Phases : progression en encre (clair → foncé) + concours (bleu) et à chiffrer (ambre) */
+  --s-piste: #8F8A82; --s-qualifie: #6E6961; --s-concours: #476C8C; --s-chiffrer: #855900;
   --s-offre: #57534E; --s-nego: #221F1A; --s-gagne: #3E7A4E; --s-perdu: #B3352B;
 }
 @media (prefers-color-scheme: dark) {
@@ -25,7 +25,7 @@
     --warn: #D3A24E; --warn-soft: #2E2716;
     --crit: #E07A6F; --crit-soft: #331B18;
     --shadow: 0 1px 2px rgba(0,0,0,.4);
-    --s-contact: #8F8A82; --s-qualifie: #A7A199; --s-ao: #D3A24E;
+    --s-piste: #8F8A82; --s-qualifie: #A7A199; --s-concours: #7BA6C9; --s-chiffrer: #D3A24E;
     --s-offre: #C6C0B6; --s-nego: #E9E7E3; --s-gagne: #74B07C; --s-perdu: #E07A6F;
   }
 }

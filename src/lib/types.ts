@@ -2,9 +2,10 @@
 // Vocabulaire neutre.
 
 export type OperationStatut =
-  | "contact"
+  | "piste"
   | "qualifie"
-  | "ao_attente"
+  | "concours"
+  | "a_chiffrer"
   | "offre_remise"
   | "nego"
   | "gagne"
@@ -46,11 +47,12 @@ export interface Relance {
   statut: RelanceStatut;
 }
 
-// Libellés d'affichage des 7 étapes (voir docs/suivi-commercial-statuts.md).
+// Libellés d'affichage des 8 étapes (voir docs/suivi-commercial-statuts.md).
 export const STATUT_LABELS: Record<OperationStatut, string> = {
-  contact: "Contact",
+  piste: "Piste",
   qualifie: "Qualifié",
-  ao_attente: "AO en attente",
+  concours: "Concours",
+  a_chiffrer: "À chiffrer",
   offre_remise: "Offre remise",
   nego: "Négociation",
   gagne: "Gagné",
@@ -58,9 +60,10 @@ export const STATUT_LABELS: Record<OperationStatut, string> = {
 };
 
 export const STATUT_ORDRE: OperationStatut[] = [
-  "contact",
+  "piste",
   "qualifie",
-  "ao_attente",
+  "concours",
+  "a_chiffrer",
   "offre_remise",
   "nego",
   "gagne",

@@ -5,9 +5,10 @@ import { changerPhase } from "@/lib/actions";
 import { STATUT_LABELS, STATUT_ORDRE, type OperationStatut } from "@/lib/types";
 
 const STATUT_VAR: Record<string, string> = {
-  contact: "--s-contact",
+  piste: "--s-piste",
   qualifie: "--s-qualifie",
-  ao_attente: "--s-ao",
+  concours: "--s-concours",
+  a_chiffrer: "--s-chiffrer",
   offre_remise: "--s-offre",
   nego: "--s-nego",
   gagne: "--s-gagne",

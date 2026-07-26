@@ -289,7 +289,7 @@ async function materialiserCr(
     if (!nom) continue;
     const { data } = await sb
       .from("operations")
-      .insert({ org_id, nom, statut: "contact", referent_id: auteurId })
+      .insert({ org_id, nom, statut: "piste", referent_id: auteurId })
       .select("id")
       .single();
     if (data?.id) operationIds.push(data.id);

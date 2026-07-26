@@ -4,8 +4,14 @@ import ExpandableRow from "@/components/ExpandableRow";
 import { STATUT_LABELS, type OperationStatut } from "@/lib/types";
 
 const STATUT_VAR: Record<string, string> = {
-  contact: "--s-contact", qualifie: "--s-qualifie", ao_attente: "--s-ao",
-  offre_remise: "--s-offre", nego: "--s-nego", gagne: "--s-gagne", perdu: "--s-perdu",
+  piste: "--s-piste",
+  qualifie: "--s-qualifie",
+  concours: "--s-concours",
+  a_chiffrer: "--s-chiffrer",
+  offre_remise: "--s-offre",
+  nego: "--s-nego",
+  gagne: "--s-gagne",
+  perdu: "--s-perdu",
 };
 
 // Ligne d'affaire dans une liste : nom + étape (+ montant). Tap → se déplie.

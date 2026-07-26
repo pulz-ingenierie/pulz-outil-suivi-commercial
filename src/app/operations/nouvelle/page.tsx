@@ -40,7 +40,7 @@ export default async function NouvelleOperation() {
         <div className="row2">
           <label className="field">
             <span className="lab">Étape</span>
-            <select name="statut" defaultValue="contact">
+            <select name="statut" defaultValue="piste">
               {STATUT_ORDRE.map((s) => (
                 <option key={s} value={s}>{STATUT_LABELS[s]}</option>
               ))}

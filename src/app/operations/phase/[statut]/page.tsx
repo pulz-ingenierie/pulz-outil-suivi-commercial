@@ -12,9 +12,10 @@ import Signet from "@/components/Signet";
 export const dynamic = "force-dynamic";
 
 const STATUT_VAR: Record<string, string> = {
-  contact: "--s-contact",
+  piste: "--s-piste",
   qualifie: "--s-qualifie",
-  ao_attente: "--s-ao",
+  concours: "--s-concours",
+  a_chiffrer: "--s-chiffrer",
   offre_remise: "--s-offre",
   nego: "--s-nego",
   gagne: "--s-gagne",
