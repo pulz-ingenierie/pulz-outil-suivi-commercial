@@ -1,12 +1,29 @@
 import "server-only";
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
+import sharp from "sharp";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { analyseCompteRendu, type PieceJointeIA } from "@/lib/ia-synthese";
 
-const TYPES_IMAGE = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const MAX_PIECES = 5;
-const MAX_PIECE_OCTETS = 15 * 1024 * 1024; // 15 Mo par pièce
+const MAX_PIECE_OCTETS = 25 * 1024 * 1024; // garde-fou mémoire (photo brute)
+
+// Normalise une image jointe pour l'IA : décode (y compris HEIC/HEIF d'iPhone),
+// corrige l'orientation EXIF, réduit à 1568 px max et ré-encode en JPEG léger —
+// pour rester sous les limites de l'API (sinon l'analyse échouait en silence sur
+// les photos trop lourdes ou au format HEIC).
+async function imageEnJpegPourIA(buf: Buffer): Promise<PieceJointeIA | null> {
+  try {
+    const jpeg = await sharp(buf)
+      .rotate()
+      .resize({ width: 1568, height: 1568, fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: 80 })
+      .toBuffer();
+    return { kind: "image", mediaType: "image/jpeg", base64: jpeg.toString("base64") };
+  } catch {
+    return null;
+  }
+}
 
 // Relevé de la boîte mail dédiée (Gmail, IMAP). Pour chaque nouveau message :
 //  - on identifie l'expéditeur ; s'il n'est pas un MEMBRE connu → on ignore ;
@@ -105,16 +122,24 @@ export async function releverEmails(): Promise<IntakeResult> {
           const corps = (parsed.text ?? htmlTexte ?? "").trim();
           const texte = `Objet : ${sujet}\n\n${corps}`.slice(0, 8000);
 
-          // Pièces jointes lisibles par l'IA : PDF et images.
+          // Pièces jointes lisibles par l'IA : PDF et images (photos comprises).
           const pieces: PieceJointeIA[] = [];
           for (const att of parsed.attachments ?? []) {
             if (pieces.length >= MAX_PIECES) break;
             const ct = String(att.contentType ?? "").toLowerCase();
+            const nom = String(att.filename ?? "").toLowerCase();
             if (!att.content || (att.size && att.size > MAX_PIECE_OCTETS)) continue;
-            if (ct === "application/pdf") {
-              pieces.push({ kind: "pdf", mediaType: ct, base64: att.content.toString("base64") });
-            } else if (TYPES_IMAGE.has(ct)) {
-              pieces.push({ kind: "image", mediaType: ct, base64: att.content.toString("base64") });
+            if (ct === "application/pdf" || nom.endsWith(".pdf")) {
+              pieces.push({ kind: "pdf", mediaType: "application/pdf", base64: att.content.toString("base64") });
+              continue;
+            }
+            // Toute image (jpeg/png/webp/gif ET heic/heif d'iPhone) passe par sharp :
+            // décodage + réduction + JPEG, pour être lisible par l'IA à coup sûr.
+            const estImage =
+              ct.startsWith("image/") || /\.(jpe?g|png|webp|gif|heic|heif)$/.test(nom);
+            if (estImage) {
+              const piece = await imageEnJpegPourIA(att.content as Buffer);
+              if (piece) pieces.push(piece);
             }
           }
 
