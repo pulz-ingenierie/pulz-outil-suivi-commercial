@@ -125,13 +125,13 @@ function VuePhase({ operations }: { operations: Op[] }) {
     });
 
   return (
-    <div className="vlist">
+    <div className="vlist2 phases">
       {STATUT_ORDRE.map((statut) => {
         const list = operations.filter((o) => o.statut === statut);
         const ouvert = ouverts.has(statut);
         const vide = list.length === 0;
         return (
-          <div key={statut}>
+          <div className="phase-item" key={statut}>
             <button
               className={`phase-row${vide ? " vide" : ""}${ouvert ? " open" : ""}`}
               onClick={() => !vide && toggle(statut)}
