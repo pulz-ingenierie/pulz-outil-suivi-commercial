@@ -77,7 +77,7 @@ export default function ExpandableRow({
               ))}
               {data.sections.length === 0 && <p className="hint" style={{ margin: 0 }}>Aucun élément associé pour l'instant.</p>}
               <div className="lx-acts">
-                <Link className="btn mini" href={data.href}>Ouvrir la fiche complète</Link>
+                <Link className="btn mini" href={data.href}>Ouvrir la fiche</Link>
                 <button type="button" className="btn ghost mini danger" onClick={() => demanderSuppression(type, id, data?.nom ?? nom)}>Supprimer</button>
               </div>
             </>
