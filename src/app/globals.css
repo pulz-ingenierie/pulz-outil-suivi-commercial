@@ -70,7 +70,7 @@ h1 { font-weight: 700; }
 .brand small { font-weight: 500; color: var(--faint); font-size: 12px; }
 
 .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 22px 60px; }
-.eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .01em; color: var(--faint); }
 
 /* KPI discrets : rangée fine, sobre — pas de grosses cartes. */
 .kpis { display: flex; flex-wrap: wrap; gap: 10px 26px; margin: 2px 0 22px; padding-bottom: 18px;
@@ -84,8 +84,8 @@ h1 { font-weight: 700; }
 
 /* Relances */
 .rel-group { margin: 22px 0 4px; }
-.rel-h { font-size: 11px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase;
-       display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: var(--faint); }
+.rel-h { font-size: 13px; font-weight: 650; letter-spacing: .01em;
+       display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: var(--muted); }
 .rel-h .tnum { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
 .rel-h.crit { color: var(--crit); } .rel-h.crit .tnum { background: color-mix(in srgb, var(--crit) 14%, transparent); color: var(--crit); }
 .rel-h.muted-h { color: var(--faint); }
@@ -140,8 +140,11 @@ h1 { font-weight: 700; }
 .vrow-nom { font-weight: 560; font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vrow-meta { display: flex; align-items: center; gap: 10px; flex: none; color: var(--muted); font-size: 12px; }
 .vrow-meta .amt { font-size: 11.5px; color: var(--muted); }
-.vrow-type { text-transform: uppercase; letter-spacing: .04em; font-size: 10.5px; color: var(--faint); }
+.vrow-type { letter-spacing: .01em; font-size: 12px; color: var(--faint); }
 .vrow-rel { color: var(--c-rel); font-weight: 560; }
+.vrow-rel.crit { color: var(--crit); }
+.vrow.late { box-shadow: inset 3px 0 0 var(--crit); }
+.carte-meta.crit { color: var(--crit); font-weight: 600; }
 .phase-tag { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .phase-tag .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
 
@@ -576,12 +579,12 @@ a.sig-d { text-decoration: none; }
 .carte-foot { display: flex; justify-content: space-between; gap: 10px; margin-top: 4px; }
 /* En-tête de carte en AFFICHAGE (lecture seule, épuré). */
 .carte-top .carte-nom-view { width: 100%; margin: 10px 0 0; font-size: 21px; font-weight: 600; line-height: 1.2;
-       text-transform: uppercase; letter-spacing: .01em; }
+       letter-spacing: -.01em; }
 .carte-meta { margin-top: 5px; font-size: 13.5px; color: var(--muted); font-weight: 500; }
 /* Section de signets associés dans une carte. */
 .carte-sect { display: flex; flex-direction: column; gap: 9px; }
-.carte-sect-h { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600;
-       letter-spacing: .03em; text-transform: uppercase; color: var(--muted); }
+.carte-sect-h { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600;
+       letter-spacing: .01em; color: var(--muted); }
 .carte-sect-h .ic { width: 15px; height: 15px; color: var(--muted); }
 .carte-body .hint { color: var(--faint); font-size: 12.5px; margin: 2px 0 0; }
 .btn.danger { color: var(--warn); }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { STATUT_LABELS, STATUT_ORDRE, type OperationStatut } from "@/lib/types";
 import VoletCard from "@/components/VoletCard";
+import OperationRow from "@/components/OperationRow";
 
 // Couleur associée à chaque étape (variables CSS définies dans globals.css).
 const STATUT_VAR: Record<string, string> = {
@@ -82,19 +83,6 @@ function euro(n: number | null): string | null {
   return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n) + " €";
 }
 
-// Ligne d'affaire : nom + étape (+ montant). Clic → volet de l'opération.
-function LigneOp({ op }: { op: Op }) {
-  const montant = euro(op.montant_estime);
-  return (
-    <VoletCard className="vrow" type="operation" id={op.id}>
-      <span className="vrow-nom">{op.nom}</span>
-      <span className="vrow-meta">
-        <span className="phase-tag"><span className="dot" style={{ background: `var(${STATUT_VAR[op.statut]})` }} />{STATUT_LABELS[op.statut]}</span>
-        {montant && <span className="amt tnum">{montant}</span>}
-      </span>
-    </VoletCard>
-  );
-}
 
 
 export default function PipelineViews({ operations, reseau, personnes }: Props) {
@@ -157,7 +145,7 @@ function VuePhase({ operations }: { operations: Op[] }) {
             {ouvert && (
               <div className="phase-body">
                 <div className="vlist2">
-                  {list.slice(0, MAX_APERCU).map((o) => <LigneOp key={o.id} op={o} />)}
+                  {list.slice(0, MAX_APERCU).map((o) => <OperationRow key={o.id} id={o.id} nom={o.nom} statut={o.statut} montant={o.montant_estime} />)}
                 </div>
                 {list.length > MAX_APERCU && (
                   <Link className="voir-tout" href={`/operations/phase/${statut}`}>
@@ -192,7 +180,7 @@ function VueOperation({ operations }: { operations: Op[] }) {
       />
       {list.length ? (
         <div className="vlist2">
-          {list.map((o) => <LigneOp key={o.id} op={o} />)}
+          {list.map((o) => <OperationRow key={o.id} id={o.id} nom={o.nom} statut={o.statut} montant={o.montant_estime} />)}
         </div>
       ) : (
         <div className="card">

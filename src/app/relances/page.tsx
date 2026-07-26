@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
-import { createRelance, updateRelance } from "@/lib/actions";
+import { createRelance } from "@/lib/actions";
 import { envoyerRappelsMaintenant, envoyerEmailTest } from "@/lib/admin-actions";
 import { getIdentite } from "@/lib/auth";
 import { indexerLiens, lienPersonne } from "@/lib/personnes";
-import ReporterRelance from "@/components/ReporterRelance";
-import Signet from "@/components/Signet";
+import RelancesListe, { type RelRow } from "@/components/RelancesListe";
 
 export const dynamic = "force-dynamic";
 
@@ -35,23 +34,16 @@ type Rel = {
   entites: { nom: string } | null;
 };
 
-function RelanceCard({
-  r,
-  today,
-  personnesIdx,
-  opStructures,
-}: {
-  r: Rel;
-  today: string;
-  personnesIdx: Record<string, string>;
-  opStructures: Record<string, { id: string; nom: string }[]>;
-}) {
-  const enRetard = r.date_echeance < today;
+// Transforme une relance en ligne sérialisable pour la liste cliente.
+function versRow(
+  r: Rel,
+  today: string,
+  personnesIdx: Record<string, string>,
+  opStructures: Record<string, { id: string; nom: string }[]>,
+): RelRow {
   const persHref = r.personne ? lienPersonne(personnesIdx, r.personne) : null;
-  // Toutes les associations d'un rappel : l'opération, sa/ses structure(s), la
-  // personne — chacune un signet cliquable vers sa carte.
   const op = r.operation_id && r.operations?.nom
-    ? { id: r.operation_id, nom: r.operations.nom, href: `/operations/${r.operation_id}` }
+    ? { id: r.operation_id, nom: r.operations.nom }
     : null;
   const structsBrut = r.operation_id
     ? (opStructures[r.operation_id] ?? [])
@@ -65,59 +57,24 @@ function RelanceCard({
     return true;
   });
   // « Traiter » une relance = raconter le recontact dans un nouveau compte rendu,
-  // pré-rattaché à l'opération/entité de la relance (qui sera close à l'enregistrement).
+  // pré-rattaché à l'opération/entité de la relance (close à l'enregistrement).
   const crHref = r.operation_id
     ? `/crs/vocal?operation=${r.operation_id}&relance=${r.id}`
     : r.entite_id
       ? `/crs/vocal?entite=${r.entite_id}&relance=${r.id}`
       : `/crs/vocal?relance=${r.id}`;
-  return (
-    <div className={`relcard${enRetard ? " late" : ""}`}>
-      <div className="rel-main">
-        <div className="rel-obj">{r.objet}</div>
-        <div className={`rel-echeance${enRetard ? " crit" : ""}`}>
-          Échéance : {dateFr(r.date_echeance)}{enRetard ? " · en retard" : ""}
-        </div>
-        <div className="rel-meta sig-rows">
-          {op && (
-            <div className="sig-row">
-              <Signet type="operation" id={op.id} cat="op" label={op.nom} />
-            </div>
-          )}
-          {structs.length > 0 && (
-            <div className="sig-row">
-              {structs.map((s) => (
-                <Signet key={s.id} type="entite" id={s.id} cat="struct" label={s.nom} />
-              ))}
-            </div>
-          )}
-          {r.personne && (
-            <div className="sig-row">
-              {persHref
-                ? <Link className="sig-d pers" href={persHref}><span className="sig-lbl">{r.personne}</span></Link>
-                : <span className="sig-d pers"><span className="sig-lbl">{r.personne}</span></span>}
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="rel-acts">
-        <Link className="btn mini" href={crHref}>🎙 Nouveau compte rendu</Link>
-        <div className="rel-acts-row">
-          <form action={updateRelance}>
-            <input type="hidden" name="id" value={r.id} />
-            <input type="hidden" name="action" value="faite" />
-            <button className="btn ghost mini" type="submit" title="Marquer comme fait">Fait</button>
-          </form>
-          <ReporterRelance id={r.id} defaultDate={plusJours(7)} />
-          <form action={updateRelance}>
-            <input type="hidden" name="id" value={r.id} />
-            <input type="hidden" name="action" value="abandonner" />
-            <button className="btn ghost mini danger" type="submit">Abandonner</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
+  return {
+    id: r.id,
+    objet: r.objet,
+    echeance: dateFr(r.date_echeance),
+    enRetard: r.date_echeance < today,
+    op,
+    structs,
+    personne: r.personne,
+    persHref,
+    crHref,
+    reporterDefault: plusJours(7),
+  };
 }
 
 export default async function Relances({
@@ -225,24 +182,13 @@ export default async function Relances({
         <div className="card"><span className="empty">Aucune relance en attente. Tout est à jour.</span></div>
       )}
 
-      {enRetard.length > 0 && (
-        <section className="rel-group">
-          <h2 className="rel-h crit">En retard <span className="tnum">{enRetard.length}</span></h2>
-          {enRetard.map((r) => <RelanceCard key={r.id} r={r} today={today} personnesIdx={personnesIdx} opStructures={opStructures} />)}
-        </section>
-      )}
-      {aujourdhui.length > 0 && (
-        <section className="rel-group">
-          <h2 className="rel-h">Pour aujourd'hui <span className="tnum">{aujourdhui.length}</span></h2>
-          {aujourdhui.map((r) => <RelanceCard key={r.id} r={r} today={today} personnesIdx={personnesIdx} opStructures={opStructures} />)}
-        </section>
-      )}
-      {aVenir.length > 0 && (
-        <section className="rel-group">
-          <h2 className="rel-h muted-h">À venir <span className="tnum">{aVenir.length}</span></h2>
-          {aVenir.map((r) => <RelanceCard key={r.id} r={r} today={today} personnesIdx={personnesIdx} opStructures={opStructures} />)}
-        </section>
-      )}
+      <RelancesListe
+        groupes={[
+          { titre: "En retard", classe: "crit", items: enRetard.map((r) => versRow(r, today, personnesIdx, opStructures)) },
+          { titre: "Pour aujourd'hui", classe: "", items: aujourdhui.map((r) => versRow(r, today, personnesIdx, opStructures)) },
+          { titre: "À venir", classe: "muted-h", items: aVenir.map((r) => versRow(r, today, personnesIdx, opStructures)) },
+        ]}
+      />
 
       {/* Créer une relance à la main */}
       <section className="rel-group">

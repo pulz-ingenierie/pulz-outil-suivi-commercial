@@ -1,26 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
-import { STATUT_LABELS, type OperationStatut } from "@/lib/types";
+import { type OperationStatut } from "@/lib/types";
 import { normNom } from "@/lib/personnes";
 import BackButton from "@/components/BackButton";
+import OperationRow from "@/components/OperationRow";
 
 export const dynamic = "force-dynamic";
-
-const STATUT_VAR: Record<string, string> = {
-  contact: "--s-contact",
-  qualifie: "--s-qualifie",
-  ao_attente: "--s-ao",
-  offre_remise: "--s-offre",
-  nego: "--s-nego",
-  gagne: "--s-gagne",
-  perdu: "--s-perdu",
-};
-
-function euro(n: number | null): string | null {
-  if (n == null) return null;
-  return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n) + " €";
-}
 
 function dateFr(d: string | null): string {
   if (!d) return "—";
@@ -108,22 +94,10 @@ export default async function FicheMembre({ params }: { params: Promise<{ id: st
         <div className="block">
           <div className="eyebrow">Affaires dont il est référent</div>
           {operations.length ? (
-            <div className="vlist">
-              {operations.map((o: any) => {
-                const montant = euro(o.montant_estime);
-                const st = o.statut as OperationStatut;
-                return (
-                  <div className="op" key={o.id}>
-                    <Link className="onm" href={`/operations/${o.id}`}>{o.nom}</Link>
-                    <div className="ometa">
-                      <Link className="sig-d phase" href={`/operations/phase/${st}`} style={{ ["--cat" as string]: `var(${STATUT_VAR[st]})` }}>
-                        <span className="sig-lbl">{STATUT_LABELS[st] ?? st}</span>
-                      </Link>
-                      {montant && <span className="amt">{montant}</span>}
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="vlist2">
+              {operations.map((o: any) => (
+                <OperationRow key={o.id} id={o.id} nom={o.nom} statut={o.statut as OperationStatut} montant={o.montant_estime} />
+              ))}
             </div>
           ) : (
             <div className="empty">Aucune affaire dont il est référent.</div>
