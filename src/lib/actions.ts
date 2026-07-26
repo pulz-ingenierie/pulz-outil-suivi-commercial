@@ -293,16 +293,47 @@ async function materialiserCr(
     await sb.from("cr_operations").insert(operationIds.map((operation_id) => ({ cr_id: crId, operation_id })));
   }
 
-  // Lien structure ⇄ opération : toute structure évoquée dans ce compte rendu est
-  // rattachée à toute opération du même compte rendu (porte d'entrée). C'est ce
-  // lien qui fait apparaître les opérations sur la fiche structure, et les
-  // structures sur la fiche opération. On ignore les doublons (clé primaire).
+  // Lien structure ⇄ opération. On rattache chaque opération à SA/SES structure(s)
+  // d'après les liens proposés par l'IA (fiables au nom : « telle affaire est
+  // portée par telle structure »), au lieu de tout croiser. Une opération sans
+  // lien explicite retombe sur l'ancien comportement (rattachée à toutes les
+  // structures du CR) pour ne rien perdre. C'est ce lien qui fait apparaître les
+  // opérations sur la fiche structure, et les structures sur la fiche opération.
   if (entiteIds.length && operationIds.length) {
-    const paires: { entite_id: string; operation_id: string }[] = [];
-    for (const entite_id of new Set(entiteIds)) {
-      for (const operation_id of new Set(operationIds)) paires.push({ entite_id, operation_id });
+    const entiteSet = new Set(entiteIds);
+    const opSet = new Set(operationIds);
+    const paires = new Set<string>(); // "entite_id|operation_id"
+    const liens = jsonArray(fd, "liens_json");
+    if (liens.length) {
+      const [{ data: allEnt }, { data: allOps }] = await Promise.all([
+        sb.from("entites").select("id, nom").eq("org_id", org_id),
+        sb.from("operations").select("id, nom").eq("org_id", org_id),
+      ]);
+      const entByNom = new Map((allEnt ?? []).map((e: any) => [String(e.nom).trim().toLowerCase(), e.id]));
+      const opByNom = new Map((allOps ?? []).map((o: any) => [String(o.nom).trim().toLowerCase(), o.id]));
+      const opCouverte = new Set<string>();
+      for (const l of liens) {
+        const opId = opByNom.get(String(l?.operation ?? "").trim().toLowerCase());
+        const enId = entByNom.get(String(l?.entite ?? "").trim().toLowerCase());
+        // On ne relie que des objets réellement présents dans CE compte rendu.
+        if (opId && enId && opSet.has(opId) && entiteSet.has(enId)) {
+          paires.add(`${enId}|${opId}`);
+          opCouverte.add(opId);
+        }
+      }
+      // Repli pour les opérations sans lien explicite : toutes les structures du CR.
+      for (const operation_id of opSet) {
+        if (opCouverte.has(operation_id)) continue;
+        for (const entite_id of entiteSet) paires.add(`${entite_id}|${operation_id}`);
+      }
+    } else {
+      for (const entite_id of entiteSet) for (const operation_id of opSet) paires.add(`${entite_id}|${operation_id}`);
     }
-    await sb.from("entite_operation").upsert(paires, { onConflict: "entite_id,operation_id", ignoreDuplicates: true });
+    const rows = [...paires].map((k) => {
+      const [entite_id, operation_id] = k.split("|");
+      return { entite_id, operation_id };
+    });
+    if (rows.length) await sb.from("entite_operation").upsert(rows, { onConflict: "entite_id,operation_id", ignoreDuplicates: true });
   }
 
   // Contacts : TOUTE personne évoquée devient une fiche (carte). La structure

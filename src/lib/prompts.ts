@@ -41,6 +41,10 @@ ${listePersonnes}
 
 Structures et affaires NOUVELLES : si une structure ou une affaire est clairement nommée dans le texte mais N'EXISTE PAS dans les listes connues ci-dessus, propose-la dans "nouvelles_entites" / "nouvelles_operations" (et NON dans "entites"/"operations"). Ne propose que ce qui est réellement évoqué — n'invente jamais.
 
+CASSE des noms de structures : si un nom de structure est écrit TOUT EN MAJUSCULES dans le texte (ex. « NACARAT »), écris-le en casse normale (« Nacarat »). EXCEPTION : garde en majuscules les sigles courts de 2 à 4 lettres (ex. « SIGH », « SNI », « CDC »).
+
+RATTACHEMENT opération ↔ structure (TRÈS IMPORTANT) : pour CHAQUE opération citée (connue ou nouvelle), indique dans "liens" la ou les structures qui la portent (donneur d'ordre, porte d'entrée). Chaque affaire est en général portée par UNE structure précise — ne rattache pas toutes les structures à toutes les opérations. Une même structure peut porter plusieurs opérations ; une opération peut avoir plusieurs structures. N'associe QUE ce que le texte dit explicitement. Exemple : « Nacarat nous prend sur 40 logements à la Chapelle et un concours de 200 logements à Roncq ; Spirit nous sollicite sur 80 lots » → liens = [{operation:"40 logements à la Chapelle d'Armentières", entite:"Nacarat"}, {operation:"200 logements à Roncq", entite:"Nacarat"}, {operation:"80 lots", entite:"Spirit"}].
+
 RELANCES (suites à donner) — règle stricte : le champ "objet" décrit UNIQUEMENT l'action à réaliser, à l'impératif, SANS le nom de la personne. N'écris JAMAIS « Florian doit relancer Vilogia » ni « rappeler Romain » ; écris « Relancer Vilogia pour le parking silo ». Mets la personne RESPONSABLE de l'action ou concernée (celui qui doit la réaliser, OU la personne à recontacter) à part dans "personne" — même si seul son prénom est cité (ex. « Florian »). Si AUCUNE personne n'est explicitement responsable/concernée, mets "personne" à null (surtout n'invente personne).
 
 Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, de la forme :
@@ -53,6 +57,7 @@ Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, de la forme :
   "operations": ["libellé exact d'une opération connue évoquée"],
   "nouvelles_entites": [{ "nom": "structure évoquée mais absente des connues", "type": "MOA|archi|promoteur|bet|confrere|autre (bet = bureau d'études techniques)" }],
   "nouvelles_operations": [{ "nom": "affaire/projet évoqué mais absent des connues" }],
+  "liens": [{ "operation": "nom exact d'une opération (connue ou nouvelle)", "entite": "nom exact de la structure qui la porte (connue ou nouvelle)" }],
   "contacts": [{ "nom": "nom de famille", "prenom": "prénom ou null", "fonction": "fonction ou null", "entite": "libellé de sa structure (connue ou nouvelle) ou null" }],
   "relances": [{ "objet": "action de suivi à faire, à l'impératif, SANS nom de personne", "personne": "personne concernée (nom ou « Prénom Nom ») ou null", "dans_jours": 14 }]
 }`;
@@ -101,6 +106,7 @@ Réponds UNIQUEMENT par l'objet JSON complet et corrigé, sans texte autour, de 
   "operations": ["libellé exact d'une opération connue"],
   "nouvelles_entites": [{ "nom": "structure nouvelle", "type": "MOA|archi|promoteur|bet|confrere|autre (bet = bureau d'études techniques)" }],
   "nouvelles_operations": [{ "nom": "affaire nouvelle" }],
+  "liens": [{ "operation": "nom exact d'une opération (connue ou nouvelle)", "entite": "nom exact de la structure qui la porte" }],
   "contacts": [{ "nom": "…", "prenom": "… ou null", "fonction": "… ou null", "entite": "structure ou null" }],
   "relances": [{ "objet": "action à l'impératif, SANS nom de personne", "personne": "personne concernée ou null", "dans_jours": 14 }]
 }`;

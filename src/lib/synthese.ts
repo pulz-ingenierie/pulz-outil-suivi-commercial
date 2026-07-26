@@ -26,6 +26,7 @@ export interface Synthese {
   operations: string[];
   nouvelles_entites: NouvelleEntite[];
   nouvelles_operations: { nom: string }[];
+  liens: { operation: string; entite: string }[]; // rattachement affaire ↔ structure (par nom)
   contacts: ContactExtrait[];
   relances: { objet: string; dans_jours: number; personne: string | null }[];
 }
@@ -124,6 +125,18 @@ export function validateSynthese(
       return true;
     });
 
+  // Liens affaire ↔ structure (par nom). On garde les paires bien formées ;
+  // la résolution nom → identifiant (et le repli) se fait à la consolidation.
+  const liens = Array.isArray(o.liens)
+    ? o.liens
+        .map((l) => (l ?? {}) as Record<string, unknown>)
+        .map((l) => ({
+          operation: typeof l.operation === "string" ? l.operation.trim() : "",
+          entite: typeof l.entite === "string" ? l.entite.trim() : "",
+        }))
+        .filter((l) => l.operation && l.entite)
+    : [];
+
   return {
     type_rdv,
     date_rdv,
@@ -133,6 +146,7 @@ export function validateSynthese(
     operations: keepKnown(asStringArray(o.operations), knownOps),
     nouvelles_entites,
     nouvelles_operations,
+    liens,
     contacts,
     relances,
   };

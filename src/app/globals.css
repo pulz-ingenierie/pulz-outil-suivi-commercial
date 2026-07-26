@@ -577,7 +577,7 @@ a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); tran
        border: none;
        background: color-mix(in srgb, var(--cat) 11%, var(--surface));
        color: color-mix(in srgb, var(--cat) 60%, var(--ink));
-       text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; }
+       letter-spacing: .01em; white-space: nowrap; }
 /* Un signet ne dépasse JAMAIS une ligne : le libellé se tronque à l'ellipse. */
 .sig-d .sig-lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 /* Sous-mentions internes d'un signet : pas de majuscule forcée, jamais coupées. */

@@ -450,6 +450,15 @@ export default function VoiceCr({
   const relancesPayload = relances
     .filter((r) => r.objet.trim())
     .map((r) => ({ objet: r.objet.trim(), dans_jours: diffDays(today, r.date), personne: r.personne.trim() || null }));
+  // Liens affaire ↔ structure proposés par l'IA, restreints à ce qui figure
+  // encore dans le compte rendu (noms non renommés) — sert au rattachement précis.
+  const liensPayload = (((synthese as any)?.liens ?? []) as { operation: string; entite: string }[])
+    .filter((l) => l?.operation?.trim() && l?.entite?.trim())
+    .filter(
+      (l) =>
+        ratsNets.some((r) => r.kind === "operation" && r.name.trim().toLowerCase() === l.operation.trim().toLowerCase()) &&
+        ratsNets.some((r) => r.kind === "structure" && r.name.trim().toLowerCase() === l.entite.trim().toLowerCase()),
+    );
   const syntheseOut = { ...(synthese ?? {}), relances: relancesPayload };
 
   const canSave = transcription.trim().length > 0 && ratsNets.length > 0;
@@ -780,6 +789,7 @@ export default function VoiceCr({
         {operationIds.map((id) => <input key={`o${id}`} type="hidden" name="operation_ids" value={id} />)}
         <input type="hidden" name="nouvelles_entites_json" value={JSON.stringify(nouvellesEntites)} />
         <input type="hidden" name="nouvelles_operations_json" value={JSON.stringify(nouvellesOperations)} />
+        <input type="hidden" name="liens_json" value={JSON.stringify(liensPayload)} />
         <input type="hidden" name="contacts_json" value={JSON.stringify(contactsPayload)} />
         <input type="hidden" name="synthese_json" value={JSON.stringify(syntheseOut)} />
 
