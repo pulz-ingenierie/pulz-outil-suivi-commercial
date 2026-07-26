@@ -462,15 +462,22 @@ a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); tran
 .bloc textarea::placeholder { color: var(--faint); }
 /* Suites à donner (relances) : une liste d'actions, pas des signets. */
 .rel-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.rel-item { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px;
-       font: inherit; font-size: 14px; text-align: left; padding: 11px 13px; cursor: pointer;
-       border: 1px solid var(--line); border-radius: 11px; background: var(--surface-2); color: var(--ink); }
+.rel-item { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+       padding: 6px 8px 6px 13px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-2); }
 .rel-item:hover { border-color: color-mix(in srgb, var(--c-rel) 45%, var(--line)); }
+.rel-item-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; font: inherit; font-size: 14px;
+       text-align: left; background: transparent; border: none; color: var(--ink); cursor: pointer; padding: 5px 0; }
 .rel-item-obj { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rel-item-pers { flex: none; font-size: 11.5px; font-weight: 560; color: var(--c-pers);
        background: color-mix(in srgb, var(--c-pers) 13%, transparent); padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
-.rel-item-date { flex: none; font-size: 12px; font-weight: 600; color: var(--c-rel);
-       background: color-mix(in srgb, var(--c-rel) 14%, transparent); padding: 3px 9px; border-radius: 999px; }
+/* Date de relance : pastille cliquable qui ouvre le calendrier natif. */
+.rel-item-date { flex: none; position: relative; display: inline-flex; align-items: center; gap: 5px; cursor: pointer;
+       font-size: 12px; font-weight: 600; color: var(--c-rel); white-space: nowrap;
+       background: color-mix(in srgb, var(--c-rel) 14%, transparent); padding: 5px 10px; border-radius: 999px; }
+.rel-item-date:hover { background: color-mix(in srgb, var(--c-rel) 22%, transparent); }
+.rel-item-date::after { content: "▾"; font-size: 10px; opacity: .7; }
+.rel-item-date input[type="date"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0;
+       margin: 0; padding: 0; border: none; background: none; cursor: pointer; -webkit-appearance: none; appearance: none; }
 /* Débrief « À préciser » : questions pour compléter les signets. */
 .apreciser { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
 .apreciser .encart-h { color: var(--accent-ink); }

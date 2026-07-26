@@ -933,12 +933,16 @@ export default function VoiceCr({
           <div className="encart-h rel"><Icon name="relance" /> Suites à donner</div>
           <ul className="rel-list">
             {relances.map((r, i) => (
-              <li key={i}>
-                <button type="button" className="rel-item" onClick={() => ouvrirCarte("rel", i)}>
+              <li key={i} className="rel-item">
+                <button type="button" className="rel-item-main" onClick={() => ouvrirCarte("rel", i)}>
                   <span className="rel-item-obj">{r.objet.trim() || "(à préciser)"}</span>
                   {r.personne.trim() && <span className="rel-item-pers">{r.personne}</span>}
-                  <span className="rel-item-date">{dateCourt(r.date)}</span>
                 </button>
+                {/* Date cliquable : ouvre le calendrier natif pour la modifier. */}
+                <label className="rel-item-date" title="Modifier la date de la relance">
+                  <span className="rel-item-date-lbl">{dateCourt(r.date)}</span>
+                  <input type="date" value={r.date} onChange={(e) => majRel(i, { date: e.target.value })} />
+                </label>
               </li>
             ))}
             <li>
