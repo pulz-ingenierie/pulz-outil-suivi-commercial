@@ -8,9 +8,9 @@ import { supprimerObjet } from "@/lib/actions";
 // Il prévient (action irréversible) et laisse cocher les objets associés à
 // supprimer aussi. Rien n'est coché par défaut à part l'objet lui-même.
 
-type Item = { type: "entite" | "operation" | "personne"; id: string; cat: string; label: string };
+type Item = { type: string; id: string; cat: string; label: string };
 type Section = { titre: string; items: Item[] };
-type Apercu = { cat: string; catLabel: string; nom: string; sections: Section[] };
+type Apercu = { cat: string; catLabel: string; nom: string; sections: Section[]; aSupprimer?: Item[] };
 
 const CAT_LABEL: Record<string, string> = { struct: "cette structure", op: "cette opération", pers: "cette personne", rel: "cette relance" };
 const TYPE_QUOI: Record<string, string> = { entite: "cette structure", operation: "cette opération", personne: "cette personne", relance: "cette relance" };
@@ -54,10 +54,9 @@ export default function DeleteSheet() {
 
   if (!cible) return null;
 
-  // Tous les objets associés proposés à la suppression (jamais cochés d'office).
-  const assoc: Item[] = data
-    ? data.sections.flatMap((s) => s.items).filter((it) => !(it.type === cible.type && it.id === cible.id))
-    : [];
+  // Objets associés proposés à la suppression — les relances en cours (jamais
+  // cochés d'office). On n'y met PAS les structures/opérations partagées.
+  const assoc: Item[] = data?.aSupprimer ?? [];
   const nom = data?.nom ?? cible.nom ?? "cet élément";
   const quoi = data ? (CAT_LABEL[data.cat] ?? "cet élément") : (TYPE_QUOI[cible.type] ?? "cet élément");
 
@@ -78,7 +77,7 @@ export default function DeleteSheet() {
 
           {!loading && assoc.length > 0 && (
             <div className="del-assoc">
-              <div className="del-assoc-h">Supprimer aussi ? (décoché = conservé)</div>
+              <div className="del-assoc-h">Relances liées — supprimer aussi ? (décoché = conservée)</div>
               {assoc.map((it) => (
                 <label className="del-check" key={`${it.type}-${it.id}`}>
                   <input type="checkbox" name="aussi" value={`${it.type}:${it.id}`} />

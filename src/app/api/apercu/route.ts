@@ -34,10 +34,13 @@ export async function GET(req: Request) {
         { titre: "Opérations", icon: "operation", items: ops.map((o: any) => ({ type: "operation", id: o.id, cat: "op", label: o.nom })) },
         { titre: "Personnes à joindre", icon: "personne", items: (contacts ?? []).map((c: any) => ({ type: "personne", id: c.id, cat: "pers", label: [c.prenom, c.nom].filter(Boolean).join(" ") || c.nom })) },
       ].filter((s) => s.items.length);
+      // Relances en cours rattachées à la structure : proposées à la suppression.
+      const { data: rel } = await sb.from("relances").select("id, objet").eq("entite_id", id).eq("statut", "a_faire");
+      const aSupprimer = (rel ?? []).map((r: any) => ({ type: "relance", id: r.id, cat: "rel", label: r.objet }));
       return NextResponse.json({
         cat: "struct", catLabel: "Structure", nom: (e as any).nom,
         meta: [TYPE_ENTITE[(e as any).type] ?? (e as any).type, (e as any).ville].filter(Boolean).join(" · "),
-        href: `/entites/${id}`, sections,
+        href: `/entites/${id}`, sections, aSupprimer,
       });
     }
 
@@ -49,10 +52,13 @@ export async function GET(req: Request) {
       const sections = [
         { titre: "Structures", icon: "structure", items: structs.map((s: any) => ({ type: "entite", id: s.id, cat: "struct", label: s.nom })) },
       ].filter((s) => s.items.length);
+      // Relances en cours rattachées à l'opération : proposées à la suppression.
+      const { data: rel } = await sb.from("relances").select("id, objet").eq("operation_id", id).eq("statut", "a_faire");
+      const aSupprimer = (rel ?? []).map((r: any) => ({ type: "relance", id: r.id, cat: "rel", label: r.objet }));
       return NextResponse.json({
         cat: "op", catLabel: "Opération", nom: (o as any).nom,
         meta: STATUT_LABELS[(o as any).statut as keyof typeof STATUT_LABELS] ?? (o as any).statut,
-        href: `/operations/${id}`, sections,
+        href: `/operations/${id}`, sections, aSupprimer,
       });
     }
 
