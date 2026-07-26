@@ -49,7 +49,7 @@ export default async function Dashboard() {
   ] = await Promise.all([
     supabase.from("operations").select("*").order("created_at", { ascending: false }),
     supabase.from("relances").select("*").eq("statut", "a_faire"),
-    supabase.from("entites").select("id, nom, type, ville, statut_vie"),
+    supabase.from("entites").select("id, nom, type, ville, statut_vie, created_at"),
     supabase.from("entite_operation").select("entite_id, operation_id, entites(nom)"),
     supabase.from("cr_entites").select("entite_id, crs(date_rdv)"),
     supabase.from("contacts").select("id, nom, prenom, fonction, tel, email, entite_id"),
@@ -105,9 +105,13 @@ export default async function Dashboard() {
   }
 
   const seuilSilence = new Date(Date.now() - JOURS_SILENCE * 86400000).toISOString().slice(0, 10);
-  const estSilencieux = (id: string) => {
-    const d = dernierContact.get(id);
-    return !d || d < seuilSilence;
+  // « À réchauffer » = structure qu'on n'a pas touchée depuis > JOURS_SILENCE.
+  // Pour une structure jamais contactée, on se réfère à sa date de création : une
+  // structure qu'on vient d'ajouter n'est PAS « à réchauffer » (c'est un prospect
+  // récent, pas un contact négligé).
+  const estSilencieux = (id: string, createdAt?: string | null) => {
+    const ref = dernierContact.get(id) ?? (createdAt ? createdAt.slice(0, 10) : null);
+    return !ref || ref < seuilSilence;
   };
 
   // Version allégée d'une affaire (juste ce dont les vues ont besoin).
@@ -147,7 +151,7 @@ export default async function Dashboard() {
     arr.sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
   }
 
-  type Ent = { id: string; nom: string; type: string; ville: string | null; statut_vie: string | null };
+  type Ent = { id: string; nom: string; type: string; ville: string | null; statut_vie: string | null; created_at: string | null };
   const toutesEntites = (entites ?? []) as Ent[];
 
   // Vue « Réseau » : toutes les structures, avec leurs affaires, leurs personnes
@@ -159,7 +163,7 @@ export default async function Dashboard() {
       type: TYPE_ENTITE[e.type] ?? e.type,
       ville: e.ville,
       dernierContact: dernierContact.get(e.id) ?? null,
-      silencieux: estSilencieux(e.id),
+      silencieux: estSilencieux(e.id, e.created_at),
       dormant: e.statut_vie === "dormant",
       ops: entiteOps[e.id] ?? [],
       contacts: entiteContacts[e.id] ?? [],
