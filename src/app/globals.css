@@ -69,7 +69,7 @@ h1 { font-weight: 700; }
 .brand-word { font-family: var(--font-display, 'Space Grotesk', sans-serif); font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
 .brand small { font-weight: 500; color: var(--faint); font-size: 12px; }
 
-.wrap { max-width: 1280px; margin: 0 auto; padding: 24px 22px 60px; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 24px 22px 60px; --wrap-pad: 22px; }
 .eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .01em; color: var(--faint); }
 
 /* KPI discrets : rangée fine, sobre — pas de grosses cartes. */
@@ -132,11 +132,17 @@ h1 { font-weight: 700; }
 .vlist { display: flex; flex-direction: column; gap: 12px; }
 
 /* Liste épurée : un objet par ligne, séparé par un filet ; clic → volet. */
-.vlist2 { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
-.vrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 14px;
-        border-top: 1px solid var(--line-2); }
+/* Liste « boîte de réception » : pleine largeur écran, à plat, séparateurs fins.
+   Elle déborde le rembourrage latéral de .wrap pour toucher les bords. */
+.vlist2 { background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+        margin-inline: calc(-1 * var(--wrap-pad, 22px)); }
+.vrow { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        padding: 13px var(--wrap-pad, 22px); border-top: 1px solid var(--line-2); }
 .vrow:first-child { border-top: none; }
 .vrow:hover { background: var(--surface-2); }
+/* Dans une fiche (section .block), la liste reste dans sa carte (pas de débord). */
+.block .vlist2 { margin-inline: 0; }
+.block .vrow { padding-left: 14px; padding-right: 14px; }
 
 /* Glisser-pour-supprimer : la piste (.swrow-track) coulisse et révèle le bouton
    rouge dessous. Le liseré de séparation passe sur .swrow quand il enveloppe. */
@@ -531,13 +537,13 @@ a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); tran
 .encart-h.rel .ic { color: var(--c-rel); }
 
 /* Signet Format D (contour coloré). --cat porté par la catégorie. */
-.sig-d { --cat: var(--c-struct); display: inline-flex; align-items: center; gap: 7px; font: inherit; font-size: 11.5px;
+.sig-d { --cat: var(--c-struct); display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: 10.5px;
        -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
-       font-weight: 600; padding: 5px 10px; border-radius: 6px; cursor: pointer; max-width: 100%;
-       border: 1px solid color-mix(in srgb, var(--cat) 45%, var(--line));
-       background: color-mix(in srgb, var(--cat) 12%, var(--surface));
-       color: color-mix(in srgb, var(--cat) 60%, var(--ink));
-       text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+       font-weight: 600; padding: 2px 7px; border-radius: 5px; cursor: pointer; max-width: 100%;
+       border: 1px solid color-mix(in srgb, var(--cat) 28%, var(--line));
+       background: color-mix(in srgb, var(--cat) 7%, var(--surface));
+       color: color-mix(in srgb, var(--cat) 55%, var(--ink));
+       text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; }
 /* Un signet ne dépasse JAMAIS une ligne : le libellé se tronque à l'ellipse. */
 .sig-d .sig-lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 /* Sous-mentions internes d'un signet : pas de majuscule forcée, jamais coupées. */
