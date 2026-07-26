@@ -158,6 +158,9 @@ export default function VoiceCr({
   const [rattachements, setRattachements] = useState<Rattach[]>(initRattach);
   const [personnes, setPersonnes] = useState<PersonneEdit[]>([]);
   const [relances, setRelances] = useState<RelanceEdit[]>([]);
+  // Si l'utilisateur répond « pas nécessaire » à la proposition de relance, on
+  // ne l'ennuie plus avec cette question pour ce compte rendu.
+  const [relanceIgnoree, setRelanceIgnoree] = useState(false);
   // Carte ouverte au clic sur un signet (overlay). S'ouvre en AFFICHAGE ;
   // on passe en édition via le bouton « Modifier ».
   const [openCard, setOpenCard] = useState<{ cat: "rat" | "pers" | "rel" | "reperes"; i: number } | null>(null);
@@ -465,6 +468,19 @@ export default function VoiceCr({
     !rattachements.some((r) => r.kind === "structure" && r.name.trim());
   // Une relance doit toujours être assortie d'une personne responsable.
   const relSansPersonne = relances.map((r, i) => ({ r, i })).filter(({ r }) => r.objet.trim() && !r.personne.trim());
+  // Un compte rendu doit toujours définir une suite à donner : si aucune relance
+  // n'est prévue, on propose d'en programmer une (la prochaine étape).
+  const pasDeRelance = relances.every((r) => !r.objet.trim()) && !relanceIgnoree;
+  const sujetRelance =
+    rattachements.find((r) => r.kind === "structure" && r.name.trim())?.name.trim() ||
+    rattachements.find((r) => r.kind === "operation" && r.name.trim())?.name.trim() ||
+    (personnes[0] ? [personnes[0].prenom, personnes[0].nom].filter(Boolean).join(" ").trim() : "") ||
+    "";
+  const ajouterRelanceRapide = (jours: number) => {
+    const objet = sujetRelance ? `Recontacter ${sujetRelance}` : "Recontacter";
+    const pers = personnes[0] ? [personnes[0].prenom, personnes[0].nom].filter(Boolean).join(" ").trim() : "";
+    setRelances((rr) => [...rr, { objet, date: addDays(today, jours), personne: pers }]);
+  };
   // Personnes à proposer : celles du compte rendu + l'équipe (Administration).
   const candidatsPersonne = Array.from(
     new Set(
@@ -474,7 +490,7 @@ export default function VoiceCr({
       ].filter(Boolean),
     ),
   );
-  const aCompleter = structAPreciser.length > 0 || persAPreciser.length > 0 || opsSansStruct || relSansPersonne.length > 0;
+  const aCompleter = structAPreciser.length > 0 || persAPreciser.length > 0 || opsSansStruct || relSansPersonne.length > 0 || pasDeRelance;
 
   // Mises à jour des blocs.
   const majRat = (i: number, patch: Partial<Rattach>) =>
@@ -884,6 +900,18 @@ export default function VoiceCr({
           <div className="bloc apreciser">
             <div className="encart-h">À préciser</div>
             <p className="hint" style={{ marginTop: 0 }}>Quelques informations manquent pour des signets complets — vous pouvez répondre ici, ou enregistrer tel quel.</p>
+            {pasDeRelance && (
+              <div className="precise-row">
+                <span className="precise-q">Aucune suite à donner. Quand faut-il recontacter{sujetRelance ? <> <strong>{sujetRelance}</strong></> : null} ?</span>
+                <div className="precise-answer">
+                  <button type="button" className="sig-d rel" onClick={() => ajouterRelanceRapide(7)}><span className="sig-lbl">Dans 1 semaine</span></button>
+                  <button type="button" className="sig-d rel" onClick={() => ajouterRelanceRapide(15)}><span className="sig-lbl">Dans 15 jours</span></button>
+                  <button type="button" className="sig-d rel" onClick={() => ajouterRelanceRapide(30)}><span className="sig-lbl">Dans 1 mois</span></button>
+                  <button type="button" className="sig-d rel" onClick={() => ajouterRelanceRapide(90)}><span className="sig-lbl">Dans 3 mois</span></button>
+                  <button type="button" className="btn ghost mini" onClick={() => setRelanceIgnoree(true)}>Pas nécessaire</button>
+                </div>
+              </div>
+            )}
             {structAPreciser.map(({ r, i }) => (
               <label className="precise-row" key={`s${i}`}>
                 <span className="precise-q">Quel type de structure est <strong>{r.name}</strong> ?</span>
