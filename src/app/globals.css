@@ -742,3 +742,7 @@ a.sig-d { text-decoration: none; }
 .notice { border-left: 3px solid var(--warn); }
 .notice code { background: var(--surface-2); padding: 1px 6px; border-radius: 5px; font-size: 13px; }
 .muted { color: var(--muted); }
+
+/* Marqueur de version (discret) : permet de confirmer le déploiement en cours. */
+.build-tag { position: fixed; bottom: 4px; right: 6px; font-size: 9px; color: var(--faint);
+       opacity: .5; font-family: var(--font-mono, monospace); pointer-events: none; z-index: 5; }

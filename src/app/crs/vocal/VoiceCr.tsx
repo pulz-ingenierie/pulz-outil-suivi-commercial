@@ -554,6 +554,31 @@ export default function VoiceCr({
   // Petit signet cliquable, réutilisé dans les cartes pour les éléments associés.
   const opsRat = rattachements.map((r, idx) => ({ r, idx })).filter((x) => x.r.kind === "operation");
   const structRat = rattachements.map((r, idx) => ({ r, idx })).filter((x) => x.r.kind === "structure");
+  // Rattachement affaire ↔ structure pour l'AFFICHAGE : chaque opération n'affiche
+  // QUE sa/ses structure(s) (via l'entite du rattachement + les liens de l'IA), au
+  // lieu de toutes. Miroir de la logique d'enregistrement (fini les 2 promoteurs).
+  const normLbl = (s: string) => s.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ");
+  const opStructNames = new Map<string, Set<string>>();
+  const addAssoc = (op?: string, ent?: string) => {
+    if (!op?.trim() || !ent?.trim()) return;
+    const k = normLbl(op);
+    if (!opStructNames.has(k)) opStructNames.set(k, new Set());
+    opStructNames.get(k)!.add(ent.trim());
+  };
+  rattachements.filter((r) => r.kind === "operation" && r.entite).forEach((r) => addAssoc(r.name, r.entite));
+  (((synthese as any)?.liens ?? []) as { operation: string; entite: string }[]).forEach((l) => addAssoc(l?.operation, l?.entite));
+  const structsDeLop = (opName: string) => {
+    const names = opStructNames.get(normLbl(opName));
+    if (names && names.size) return structRat.filter((s) => [...names].some((n) => normLbl(n) === normLbl(s.r.name)));
+    return structRat.length === 1 ? structRat : [];
+  };
+  const opsDeLaStruct = (structName: string) => {
+    const matched = opsRat.filter((o) => {
+      const names = opStructNames.get(normLbl(o.r.name));
+      return names && [...names].some((n) => normLbl(n) === normLbl(structName));
+    });
+    return matched.length ? matched : structRat.length === 1 ? opsRat : [];
+  };
   function AssocSignet({ label, kind, onClick }: { label: string; kind: string; onClick: () => void }) {
     return <button type="button" className={`sig-d ${kind}`} onClick={onClick}><span className="sig-lbl">{label || "—"}</span></button>;
   }
@@ -619,14 +644,14 @@ export default function VoiceCr({
                   ))}
                 </SectionAssoc>
               )}
-              {structure && opsRat.length > 0 && (
-                <SectionAssoc titre="Opérations évoquées" icon="operation">
-                  {opsRat.map(({ r: o, idx }) => <AssocSignet key={idx} kind="op" label={o.name} onClick={() => ouvrirCarte("rat", idx)} />)}
+              {structure && opsDeLaStruct(r.name).length > 0 && (
+                <SectionAssoc titre="Opérations" icon="operation">
+                  {opsDeLaStruct(r.name).map(({ r: o, idx }) => <AssocSignet key={idx} kind="op" label={o.name} onClick={() => ouvrirCarte("rat", idx)} />)}
                 </SectionAssoc>
               )}
-              {!structure && structRat.length > 0 && (
-                <SectionAssoc titre="Structures" icon="structure">
-                  {structRat.map(({ r: s, idx }) => <AssocSignet key={idx} kind="struct" label={s.name} onClick={() => ouvrirCarte("rat", idx)} />)}
+              {!structure && structsDeLop(r.name).length > 0 && (
+                <SectionAssoc titre="Structure" icon="structure">
+                  {structsDeLop(r.name).map(({ r: s, idx }) => <AssocSignet key={idx} kind="struct" label={s.name} onClick={() => ouvrirCarte("rat", idx)} />)}
                 </SectionAssoc>
               )}
               <p className="hint">L'historique complet de cette fiche (toutes ses opérations) apparaîtra dans le Réseau / Pipeline.</p>
@@ -737,16 +762,30 @@ export default function VoiceCr({
                   </SectionAssoc>
                 );
               })()}
-              {structRat.length > 0 && (
-                <SectionAssoc titre="Structures" icon="structure">
-                  {structRat.map(({ r: s, idx }) => <AssocSignet key={idx} kind="struct" label={s.name} onClick={() => ouvrirCarte("rat", idx)} />)}
-                </SectionAssoc>
-              )}
-              {opsRat.length > 0 && (
-                <SectionAssoc titre="Opérations" icon="operation">
-                  {opsRat.map(({ r: o, idx }) => <AssocSignet key={idx} kind="op" label={o.name} onClick={() => ouvrirCarte("rat", idx)} />)}
-                </SectionAssoc>
-              )}
+              {(() => {
+                // La relance n'affiche QUE l'affaire (et sa structure) qu'elle
+                // concerne — pas toutes les opérations du compte rendu.
+                const relOps = r.operation?.trim() ? opsRat.filter((o) => normLbl(o.r.name) === normLbl(r.operation!)) : [];
+                const relStructs = relOps.length
+                  ? structsDeLop(r.operation!)
+                  : r.entite?.trim()
+                    ? structRat.filter((s) => normLbl(s.r.name) === normLbl(r.entite!))
+                    : [];
+                return (
+                  <>
+                    {relStructs.length > 0 && (
+                      <SectionAssoc titre="Structure" icon="structure">
+                        {relStructs.map(({ r: s, idx }) => <AssocSignet key={idx} kind="struct" label={s.name} onClick={() => ouvrirCarte("rat", idx)} />)}
+                      </SectionAssoc>
+                    )}
+                    {relOps.length > 0 && (
+                      <SectionAssoc titre="Opération" icon="operation">
+                        {relOps.map(({ r: o, idx }) => <AssocSignet key={idx} kind="op" label={o.name} onClick={() => ouvrirCarte("rat", idx)} />)}
+                      </SectionAssoc>
+                    )}
+                  </>
+                );
+              })()}
               <div className="carte-foot">
                 <button type="button" className="btn ghost mini danger" onClick={() => { setRelances((rr) => rr.filter((_, j) => j !== i)); fermerCarte(); }}>Supprimer</button>
                 <button type="button" className="btn" onClick={() => setCardMode("edit")}>Modifier</button>

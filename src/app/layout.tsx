@@ -76,6 +76,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         )}
         {children}
         <DeleteSheet />
+        <div className="build-tag">v{(process.env.VERCEL_GIT_COMMIT_SHA ?? "local").slice(0, 7)}</div>
       </body>
     </html>
   );
