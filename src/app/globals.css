@@ -163,20 +163,21 @@ h1 { font-weight: 700; }
 .lx-meta { font-size: 13px; color: var(--muted); }
 .lx-sect { display: flex; flex-direction: column; gap: 7px; }
 .lx-sect-h { font-size: 11.5px; font-weight: 600; color: var(--faint); letter-spacing: .01em; }
-.lx-acts { display: flex; flex-direction: column; gap: 8px; padding-top: 2px; }
-.lx-acts .rel-acts-row { display: flex; gap: 8px; }
-.lx-acts .rel-acts-row > form, .lx-acts .rel-acts-row > button { flex: 1 1 0; }
+/* Actions d'une fiche dépliée : boutons côte à côte, largeurs égales. */
+.lx-acts { display: flex; flex-direction: row; gap: 8px; flex-wrap: wrap; padding-top: 2px; }
+.lx-acts > .btn { flex: 1 1 0; }
 
-/* Boutons dans un panneau déplié : de VRAIS boutons (relief + gras), pas des
-   champs. Les actions destructrices passent en rouge. */
-.lx-body .btn { font-weight: 650; border-radius: 8px; }
-.lx-body .btn.ghost { background: var(--ground); border: 1px solid var(--line);
-       box-shadow: 0 1px 2px rgba(0,0,0,.07); color: var(--ink); }
-.lx-body .btn.ghost:hover { background: var(--surface-2); filter: none; }
-.lx-body .btn.danger, .lx-body .btn.ghost.danger { background: var(--crit-soft); color: var(--crit);
-       border-color: transparent; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+/* Boutons dans un panneau déplié : de VRAIS boutons pleins (jamais l'aspect
+   « champ à remplir »). Neutres = chip gris, destructif = chip rouge, principal
+   = plein foncé. Tous bien tappables. */
+.lx-body .btn { font-weight: 650; border-radius: 9px; min-height: 42px; justify-content: center; padding: 9px 14px; }
+.lx-body .btn.ghost { background: color-mix(in srgb, var(--ink) 8%, var(--surface)); border-color: transparent;
+       color: var(--ink); box-shadow: none; }
+.lx-body .btn.ghost:hover { background: color-mix(in srgb, var(--ink) 14%, var(--surface)); border-color: transparent; filter: none; }
+.lx-body .btn.danger, .lx-body .btn.ghost.danger { background: color-mix(in srgb, var(--crit) 13%, var(--surface));
+       color: var(--crit); border-color: transparent; box-shadow: none; }
 .lx-body .btn.danger:hover, .lx-body .btn.ghost.danger:hover {
-       background: color-mix(in srgb, var(--crit) 16%, var(--surface)); border-color: transparent; filter: none; }
+       background: color-mix(in srgb, var(--crit) 20%, var(--surface)); border-color: transparent; filter: none; }
 .swrow-track { position: relative; background: var(--surface); will-change: transform;
        -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: pan-y; }
 .swrow-del { position: absolute; top: 0; right: 0; height: 100%; width: 88px; border: none;
