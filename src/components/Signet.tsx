@@ -1,6 +1,6 @@
 "use client";
 
-import { useSuppression } from "@/lib/gestures";
+import { useLongPressSuppr } from "@/lib/gestures";
 
 // Signet cliquable : ouvre le volet global (aperçu de l'objet) qui se déploie
 // depuis le bas. Un appui long (ou un swipe vers la gauche) ouvre le volet ROUGE
@@ -18,7 +18,7 @@ export default function Signet({
   label: string;
   sub?: string;
 }) {
-  const g = useSuppression(type, id);
+  const g = useLongPressSuppr(type, id, label);
   return (
     <button
       type="button"

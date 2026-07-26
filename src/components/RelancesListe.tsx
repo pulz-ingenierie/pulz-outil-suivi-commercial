@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { updateRelance } from "@/lib/actions";
 import ReporterRelance from "@/components/ReporterRelance";
 import Signet from "@/components/Signet";
+import SwipeRow from "@/components/SwipeRow";
 
 // Une relance sous forme de ligne épurée. Au clic, un volet se déploie depuis le
 // bas (même langage que le reste de l'outil) avec les signets associés et les
@@ -51,24 +52,25 @@ export default function RelancesListe({ groupes }: { groupes: Groupe[] }) {
             <h2 className={`rel-h ${g.classe}`}>{g.titre} <span className="tnum">{g.items.length}</span></h2>
             <div className="vlist2">
               {g.items.map((r) => (
-                <div
-                  key={r.id}
-                  className={`vrow${r.enRetard ? " late" : ""}`}
-                  role="button"
-                  tabIndex={0}
-                  style={{ cursor: "pointer" }}
-                  onClick={() => setSel(r)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSel(r); }
-                  }}
-                >
-                  <span className="vrow-nom">{r.objet}</span>
-                  <span className="vrow-meta">
-                    <span className={`vrow-rel${r.enRetard ? " crit" : ""}`}>
-                      {r.echeance}{r.enRetard ? " · en retard" : ""}
+                <SwipeRow type="relance" id={r.id} nom={r.objet} key={r.id}>
+                  <div
+                    className={`vrow${r.enRetard ? " late" : ""}`}
+                    role="button"
+                    tabIndex={0}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => setSel(r)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSel(r); }
+                    }}
+                  >
+                    <span className="vrow-nom">{r.objet}</span>
+                    <span className="vrow-meta">
+                      <span className={`vrow-rel${r.enRetard ? " crit" : ""}`}>
+                        {r.echeance}{r.enRetard ? " · en retard" : ""}
+                      </span>
                     </span>
-                  </span>
-                </div>
+                  </div>
+                </SwipeRow>
               ))}
             </div>
           </section>

@@ -1,11 +1,8 @@
 "use client";
 
-import { useSuppression } from "@/lib/gestures";
-
 // Carte/ligne cliquable qui ouvre le volet global de son objet. Les signets
 // internes (composant Signet) ouvrent leur propre volet (ils arrêtent la
-// propagation). Un swipe vers la gauche ou un appui long ouvre le volet ROUGE
-// de suppression.
+// propagation). La suppression par glissement est gérée par SwipeRow autour.
 export default function VoletCard({
   type,
   id,
@@ -17,7 +14,6 @@ export default function VoletCard({
   className?: string;
   children: React.ReactNode;
 }) {
-  const g = useSuppression(type, id);
   const ouvrir = () => window.dispatchEvent(new CustomEvent("moeia:apercu", { detail: { type, id } }));
   return (
     <div
@@ -25,19 +21,10 @@ export default function VoletCard({
       role="button"
       tabIndex={0}
       style={{ cursor: "pointer" }}
-      onClick={() => { if (!g.consomme()) ouvrir(); }}
+      onClick={ouvrir}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          ouvrir();
-        }
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ouvrir(); }
       }}
-      onTouchStart={g.onTouchStart}
-      onTouchMove={g.onTouchMove}
-      onTouchEnd={g.onTouchEnd}
-      onMouseDown={g.onMouseDown}
-      onMouseUp={g.onMouseUp}
-      onMouseLeave={g.onMouseLeave}
     >
       {children}
     </div>

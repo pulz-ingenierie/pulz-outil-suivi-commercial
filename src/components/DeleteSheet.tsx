@@ -13,15 +13,18 @@ type Section = { titre: string; items: Item[] };
 type Apercu = { cat: string; catLabel: string; nom: string; sections: Section[] };
 
 const CAT_LABEL: Record<string, string> = { struct: "cette structure", op: "cette opération", pers: "cette personne", rel: "cette relance" };
+const TYPE_QUOI: Record<string, string> = { entite: "cette structure", operation: "cette opération", personne: "cette personne", relance: "cette relance" };
 
 export default function DeleteSheet() {
-  const [cible, setCible] = useState<{ type: string; id: string } | null>(null);
+  const [cible, setCible] = useState<{ type: string; id: string; nom?: string } | null>(null);
   const [data, setData] = useState<Apercu | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const open = useCallback(async (type: string, id: string) => {
-    setCible({ type, id });
+  const open = useCallback(async (type: string, id: string, nom?: string) => {
+    setCible({ type, id, nom });
     setData(null);
+    // Une relance n'a pas d'aperçu ni d'objets associés : confirmation directe.
+    if (type === "relance") { setLoading(false); return; }
     setLoading(true);
     try {
       const res = await fetch(`/api/apercu?type=${encodeURIComponent(type)}&id=${encodeURIComponent(id)}`);
@@ -35,7 +38,7 @@ export default function DeleteSheet() {
   useEffect(() => {
     const h = (e: Event) => {
       const d = (e as CustomEvent).detail;
-      if (d?.type && d?.id) open(d.type, d.id);
+      if (d?.type && d?.id) open(d.type, d.id, d.nom);
     };
     window.addEventListener("moeia:supprimer", h);
     return () => window.removeEventListener("moeia:supprimer", h);
@@ -55,8 +58,8 @@ export default function DeleteSheet() {
   const assoc: Item[] = data
     ? data.sections.flatMap((s) => s.items).filter((it) => !(it.type === cible.type && it.id === cible.id))
     : [];
-  const nom = data?.nom ?? "cet élément";
-  const quoi = data ? (CAT_LABEL[data.cat] ?? "cet élément") : "cet élément";
+  const nom = data?.nom ?? cible.nom ?? "cet élément";
+  const quoi = data ? (CAT_LABEL[data.cat] ?? "cet élément") : (TYPE_QUOI[cible.type] ?? "cet élément");
 
   return (
     <div className="cardovl" onClick={close}>

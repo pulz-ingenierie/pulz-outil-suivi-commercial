@@ -596,6 +596,10 @@ async function supprimerUn(
     const orgContact = (data as any).entites?.org_id;
     if (orgContact && orgContact !== org_id) return;
     await supabase!.from("contacts").delete().eq("id", id);
+  } else if (type === "relance") {
+    const { data } = await supabase!.from("relances").select("id, org_id").eq("id", id).maybeSingle();
+    if (!data || data.org_id !== org_id) return;
+    await supabase!.from("relances").delete().eq("id", id);
   }
 }
 
