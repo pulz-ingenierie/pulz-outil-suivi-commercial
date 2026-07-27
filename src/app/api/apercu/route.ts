@@ -86,7 +86,9 @@ export async function GET(req: Request) {
     }
 
     if (type === "operation") {
-      const { data: o } = await sb.from("operations").select("id, nom, statut, montant_estime, ville").eq("id", id).maybeSingle();
+      // select("*") plutôt que de nommer "ville" : reste robuste si la migration
+      // de la colonne ville n'a pas encore été jouée (lecture sans échec).
+      const { data: o } = await sb.from("operations").select("*").eq("id", id).maybeSingle();
       if (!o) return NextResponse.json({ error: "introuvable" }, { status: 404 });
       const { data: liens } = await sb.from("entite_operation").select("entites(id, nom)").eq("operation_id", id);
       const structs = (liens ?? []).map((l: any) => l.entites).filter(Boolean);
