@@ -7,6 +7,7 @@ import { signOut } from "@/lib/auth-actions";
 import MoeiaLogo from "@/components/MoeiaLogo";
 import DeleteSheet from "@/components/DeleteSheet";
 import BottomNav from "@/components/BottomNav";
+import StickyOffset from "@/components/StickyOffset";
 
 // Fontes moeïa : Inter (UI), Space Grotesk (titres), JetBrains Mono (chiffres).
 const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-ui", display: "swap" });
@@ -75,6 +76,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 </form>
               </div>
             </header>
+            <StickyOffset />
             <div className="shell-content">{children}</div>
             <BottomNav />
           </div>

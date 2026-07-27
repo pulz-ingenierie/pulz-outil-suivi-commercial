@@ -28,11 +28,34 @@ type Groupe = { titre: string; classe: string; items: RelRow[] };
 
 export default function RelancesListe({ groupes }: { groupes: Groupe[] }) {
   const [ouvert, setOuvert] = useState<string | null>(null);
+  const [vue, setVue] = useState<string>("__toutes__");
   const toggle = (id: string) => setOuvert((cur) => (cur === id ? null : id));
+
+  const total = groupes.reduce((n, g) => n + g.items.length, 0);
+  // Onglets secondaires : « Toutes » + un onglet par groupe. Le contenu se filtre
+  // sur l'onglet actif (épinglé sous la barre du haut).
+  const onglets = [{ cle: "__toutes__", titre: "Toutes", n: total }, ...groupes.map((g) => ({ cle: g.titre, titre: g.titre, n: g.items.length }))];
+  const groupesVisibles = vue === "__toutes__" ? groupes : groupes.filter((g) => g.titre === vue);
+
+  if (total === 0) return null;
 
   return (
     <>
-      {groupes.map((g) =>
+      <div className="subtabs" role="tablist" aria-label="Filtrer les relances">
+        {onglets.map((o) => (
+          <button
+            key={o.cle}
+            role="tab"
+            aria-selected={vue === o.cle}
+            className={`subtab${vue === o.cle ? " on" : ""}`}
+            onClick={() => setVue(o.cle)}
+          >
+            {o.titre} <span className="subtab-n tnum">{o.n}</span>
+          </button>
+        ))}
+      </div>
+      <div className="tab-body">
+      {groupesVisibles.map((g) =>
         g.items.length ? (
           <section className="rel-group" key={g.titre}>
             <h2 className={`rel-h ${g.classe}`}>{g.titre} <span className="tnum">{g.items.length}</span></h2>
@@ -113,6 +136,7 @@ export default function RelancesListe({ groupes }: { groupes: Groupe[] }) {
           </section>
         ) : null,
       )}
+      </div>
     </>
   );
 }

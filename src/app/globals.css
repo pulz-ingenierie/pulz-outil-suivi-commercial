@@ -156,15 +156,21 @@ h1 { font-weight: 700; }
    filtrent le contenu de l'écran et se placent juste sous le titre. Le filet du
    bas court d'un bord à l'autre de l'écran ; l'onglet actif est souligné en encre. */
 .subtabs { display: flex; gap: 0; border-bottom: 1px solid var(--line);
-       margin: 0 calc(-1 * var(--wrap-pad, 16px)) 18px; padding: 0 var(--wrap-pad, 16px);
-       overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+       margin: 0 calc(-1 * var(--wrap-pad, 16px)); padding: 0 var(--wrap-pad, 16px);
+       overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+       /* Épinglé juste sous la barre du haut (hauteur mesurée en JS). */
+       position: sticky; top: var(--topbar-h, 52px); z-index: 20; background: var(--ground); }
 .subtabs::-webkit-scrollbar { display: none; }
+/* Contenu piloté par les onglets : respire sous la barre d'onglets épinglée. */
+.tab-body { padding-top: 18px; }
 .subtab { flex: 0 0 auto; font: inherit; font-size: 14.5px; font-weight: 600; color: var(--muted);
        background: none; border: none; padding: 11px 2px; margin-right: 22px; cursor: pointer;
        border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; transition: color .12s; }
 .subtab:last-child { margin-right: 0; }
 .subtab:hover { color: var(--ink); }
 .subtab.on { color: var(--ink); border-bottom-color: var(--ink); }
+.subtab-n { font-size: 11px; font-weight: 600; color: var(--faint); margin-left: 3px; }
+.subtab.on .subtab-n { color: var(--muted); }
 
 /* Liste verticale (les affaires ou les groupes s'empilent). */
 .vlist { display: flex; flex-direction: column; gap: 12px; }

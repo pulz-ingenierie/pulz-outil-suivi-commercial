@@ -106,10 +106,12 @@ export default function PipelineViews({ operations, reseau, personnes }: Props) 
         </button>
       </div>
 
-      {vue === "phase" && <VuePhase operations={operations} />}
-      {vue === "operation" && <VueOperation operations={operations} />}
-      {vue === "structure" && <VueStructures reseau={reseau} />}
-      {vue === "personne" && <VuePersonnes personnes={personnes} />}
+      <div className="tab-body">
+        {vue === "phase" && <VuePhase operations={operations} />}
+        {vue === "operation" && <VueOperation operations={operations} />}
+        {vue === "structure" && <VueStructures reseau={reseau} />}
+        {vue === "personne" && <VuePersonnes personnes={personnes} />}
+      </div>
     </>
   );
 }
