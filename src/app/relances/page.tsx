@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
 import { createRelance } from "@/lib/actions";
-import { envoyerRappelsMaintenant, envoyerEmailTest } from "@/lib/admin-actions";
+import { envoyerRappelsMaintenant } from "@/lib/admin-actions";
 import { getIdentite } from "@/lib/auth";
 import { indexerLiens, lienPersonne } from "@/lib/personnes";
 import RelancesListe, { type RelRow } from "@/components/RelancesListe";
@@ -144,16 +144,14 @@ export default async function Relances({
           <div className="eyebrow">Suites à donner</div>
           <h1>Relances <span className="count-badge">{list.length}</span></h1>
         </div>
-        {estPilote && (
-          <div className="rel-acts">
-            <form action={envoyerEmailTest}>
-              <button className="btn ghost" type="submit">E-mail de test</button>
-            </form>
+        <div className="rel-acts">
+          {estPilote && (
             <form action={envoyerRappelsMaintenant}>
               <button className="btn ghost" type="submit">Envoyer les rappels maintenant</button>
             </form>
-          </div>
-        )}
+          )}
+          <a className="btn" href="#nouvelle-relance">+ Nouvelle relance</a>
+        </div>
       </div>
 
       {sp.mailtest !== undefined && (
@@ -190,7 +188,7 @@ export default async function Relances({
       />
 
       {/* Créer une relance à la main */}
-      <section className="rel-group">
+      <section className="rel-group" id="nouvelle-relance" style={{ scrollMarginTop: "calc(var(--topbar-h, 60px) + 12px)" }}>
         <h2 className="rel-h muted-h">Ajouter une relance</h2>
         <form action={createRelance} className="form card">
           <label className="field">

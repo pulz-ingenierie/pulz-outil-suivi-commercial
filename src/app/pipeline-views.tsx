@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useState } from "react";
 import { STATUT_LABELS, STATUT_ORDRE, type OperationStatut } from "@/lib/types";
-import ExpandableRow from "@/components/ExpandableRow";
 import OperationRow from "@/components/OperationRow";
 
 // Couleur associée à chaque étape (variables CSS définies dans globals.css).
@@ -29,88 +28,27 @@ type Op = {
   montant_estime: number | null;
 };
 
-type Ent = { id: string; nom: string };
+type Props = { operations: Op[] };
 
-type Personne = {
-  id: string;
-  nom: string;
-  prenom: string | null;
-  fonction: string | null;
-  tel: string | null;
-  email: string | null;
-};
+type Vue = "phase" | "operation";
 
-type Structure = {
-  id: string;
-  nom: string;
-  type: string;
-  ville: string | null;
-  dernierContact: string | null;
-  silencieux: boolean;
-  dormant: boolean;
-  ops: Op[];
-  contacts: Personne[];
-  prochaineRelance: string | null;
-};
-
-function dateCourt(d: string): string {
-  try {
-    return new Date(d + "T00:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
-  } catch {
-    return d;
-  }
-}
-
-type PersonneListe = {
-  id: string;
-  nom: string;
-  prenom: string | null;
-  fonction: string | null;
-  entiteId: string | null;
-  entiteNom: string | null;
-};
-
-type Props = {
-  operations: Op[];
-  opEntites: Record<string, Ent[]>;
-  reseau: Structure[];
-  personnes: PersonneListe[];
-};
-
-type Vue = "phase" | "operation" | "structure" | "personne";
-
-function euro(n: number | null): string | null {
-  if (n == null) return null;
-  return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n) + " €";
-}
-
-
-
-export default function PipelineViews({ operations, reseau, personnes }: Props) {
+export default function PipelineViews({ operations }: Props) {
   const [vue, setVue] = useState<Vue>("phase");
 
   return (
     <>
-      <div className="subtabs" role="tablist" aria-label="Manière de classer">
+      <div className="subtabs" role="tablist" aria-label="Manière de classer les opérations">
         <button role="tab" aria-selected={vue === "phase"} className={`subtab${vue === "phase" ? " on" : ""}`} onClick={() => setVue("phase")}>
-          Phases
+          Par phase
         </button>
         <button role="tab" aria-selected={vue === "operation"} className={`subtab${vue === "operation" ? " on" : ""}`} onClick={() => setVue("operation")}>
-          Opérations
-        </button>
-        <button role="tab" aria-selected={vue === "structure"} className={`subtab${vue === "structure" ? " on" : ""}`} onClick={() => setVue("structure")}>
-          Structures
-        </button>
-        <button role="tab" aria-selected={vue === "personne"} className={`subtab${vue === "personne" ? " on" : ""}`} onClick={() => setVue("personne")}>
-          Personnes
+          Par opération
         </button>
       </div>
 
       <div className="tab-body">
         {vue === "phase" && <VuePhase operations={operations} />}
         {vue === "operation" && <VueOperation operations={operations} />}
-        {vue === "structure" && <VueStructures reseau={reseau} />}
-        {vue === "personne" && <VuePersonnes personnes={personnes} />}
       </div>
     </>
   );
@@ -191,89 +129,6 @@ function VueOperation({ operations }: { operations: Op[] }) {
             {operations.length ? "Aucune affaire ne correspond à votre recherche." : "Aucune opération pour le moment."}
           </span>
         </div>
-      )}
-    </>
-  );
-}
-
-// --- Vue « Structures » : cartes ÉPURÉES, cliquables → carte complète.
-function VueStructures({ reseau }: { reseau: Structure[] }) {
-  const [q, setQ] = useState("");
-  const terme = q.trim().toLowerCase();
-  const list = terme ? reseau.filter((s) => s.nom.toLowerCase().includes(terme)) : reseau;
-  if (!reseau.length) {
-    return <div className="card"><span className="empty">Aucune structure enregistrée pour le moment.</span></div>;
-  }
-  return (
-    <>
-      <input
-        className="search"
-        type="search"
-        placeholder="Rechercher une structure…"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        aria-label="Rechercher une structure"
-      />
-      {list.length ? (
-        <div className="vlist2">
-          {list.map((s) => (
-            <ExpandableRow type="entite" id={s.id} nom={s.nom} key={s.id}>
-              <span className="vrow-nom">{s.nom}</span>
-              <span className="vrow-meta">
-                {s.prochaineRelance && <span className="vrow-rel">Relance {dateCourt(s.prochaineRelance)}</span>}
-                {s.dormant && <span className="pill dormant">sommeil</span>}
-                {s.silencieux && s.ops.length === 0 && <span className="pill silence">à réchauffer</span>}
-                <span className="vrow-type">{s.type}</span>
-              </span>
-            </ExpandableRow>
-          ))}
-        </div>
-      ) : (
-        <div className="card"><span className="empty">Aucune structure ne correspond à votre recherche.</span></div>
-      )}
-    </>
-  );
-}
-
-// --- Vue « Personnes » : cartes ÉPURÉES, cliquables → carte complète.
-function VuePersonnes({ personnes }: { personnes: PersonneListe[] }) {
-  const [q, setQ] = useState("");
-  const terme = q.trim().toLowerCase();
-  const list = terme
-    ? personnes.filter((p) =>
-        `${p.prenom ?? ""} ${p.nom} ${p.entiteNom ?? ""}`.toLowerCase().includes(terme),
-      )
-    : personnes;
-  if (!personnes.length) {
-    return <div className="card"><span className="empty">Aucune personne enregistrée pour le moment.</span></div>;
-  }
-  return (
-    <>
-      <input
-        className="search"
-        type="search"
-        placeholder="Rechercher une personne…"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        aria-label="Rechercher une personne"
-      />
-      {list.length ? (
-        <div className="vlist2">
-          {list.map((p) => {
-            const nomComplet = [p.prenom, p.nom].filter(Boolean).join(" ") || p.nom;
-            return (
-              <ExpandableRow type="personne" id={p.id} nom={nomComplet} key={p.id}>
-                <span className="vrow-nom">{nomComplet}</span>
-                <span className="vrow-meta">
-                  {p.fonction && <span>{p.fonction}</span>}
-                  {p.entiteNom && <span className="vrow-type">{p.entiteNom}</span>}
-                </span>
-              </ExpandableRow>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="card"><span className="empty">Aucune personne ne correspond à votre recherche.</span></div>
       )}
     </>
   );

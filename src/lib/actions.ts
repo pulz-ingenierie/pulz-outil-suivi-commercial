@@ -812,6 +812,35 @@ export async function createRelance(fd: FormData) {
   redirect("/relances");
 }
 
+// -----------------------------------------------------------------------------
+// Personnes (contacts)
+// -----------------------------------------------------------------------------
+export async function createContact(fd: FormData) {
+  const supabase = requireSupabase();
+  const org_id = await currentOrgId(supabase);
+
+  const nom = str(fd, "nom");
+  if (!nom) throw new Error("Le nom de la personne est obligatoire.");
+
+  const { data, error } = await supabase
+    .from("contacts")
+    .insert({
+      org_id,
+      nom,
+      prenom: strOrNull(fd, "prenom"),
+      fonction: strOrNull(fd, "fonction"),
+      tel: strOrNull(fd, "tel"),
+      email: strOrNull(fd, "email"),
+      entite_id: strOrNull(fd, "entite_id"),
+    })
+    .select("id")
+    .single();
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/entites");
+  redirect(`/personnes/${data.id}`);
+}
+
 // Fait avancer une relance : faite / reportée (nouvelle date) / abandonnée.
 export async function updateRelance(fd: FormData) {
   const supabase = requireSupabase();
