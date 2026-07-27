@@ -29,7 +29,7 @@ export interface Synthese {
   entites: string[];
   operations: string[];
   nouvelles_entites: NouvelleEntite[];
-  nouvelles_operations: { nom: string; entite: string | null; phase: string }[];
+  nouvelles_operations: { nom: string; entite: string | null; ville: string | null; phase: string }[];
   liens: { operation: string; entite: string }[]; // rattachement affaire ↔ structure (par nom)
   contacts: ContactExtrait[];
   // Chaque relance précise l'affaire / la structure qu'elle concerne (par nom),
@@ -128,6 +128,7 @@ export function validateSynthese(
     .map((op) => ({
       nom: typeof op.nom === "string" ? op.nom.trim() : "",
       entite: typeof op.entite === "string" && op.entite.trim() ? op.entite.trim() : null,
+      ville: typeof op.ville === "string" && op.ville.trim() && op.ville.trim() !== "✕" ? op.ville.trim() : null,
       phase: typeof op.phase === "string" && (STATUTS_OP as readonly string[]).includes(op.phase) ? op.phase : "piste",
     }))
     .filter((op) => {

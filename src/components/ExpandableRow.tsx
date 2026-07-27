@@ -14,7 +14,7 @@ import { demanderSuppression } from "@/lib/gestures";
 type Item = { type: "entite" | "operation" | "personne"; id: string; cat: string; label: string };
 type Section = { titre: string; items: Item[] };
 type Relance = { id: string; objet: string; echeance: string; enRetard: boolean; personne: string | null };
-type Apercu = { cat: string; catLabel: string; nom: string; meta?: string; href: string; sections: Section[]; relances?: Relance[] };
+type Apercu = { cat: string; catLabel: string; nom: string; meta?: string; ville?: string | null; href: string; sections: Section[]; relances?: Relance[] };
 
 export default function ExpandableRow({
   type,
@@ -68,6 +68,14 @@ export default function ExpandableRow({
           {data && (
             <>
               {data.meta ? <div className="lx-meta">{data.meta}</div> : null}
+              {data.cat === "op" && (
+                <div className="lx-sect">
+                  <div className="lx-sect-h">Ville</div>
+                  <div className="sig-wrap">
+                    <span className={`sig-d ville${data.ville ? "" : " vide"}`}><span className="sig-lbl">{data.ville || "✕ à compléter"}</span></span>
+                  </div>
+                </div>
+              )}
               {data.sections.map((s, i) => (
                 <div className="lx-sect" key={i}>
                   <div className="lx-sect-h">{s.titre}</div>

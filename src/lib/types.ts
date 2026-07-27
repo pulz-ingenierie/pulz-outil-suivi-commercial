@@ -19,6 +19,7 @@ export interface Operation {
   org_id: string;
   nom: string;
   description: string | null;
+  ville: string | null;
   statut: OperationStatut;
   montant_estime: number | null;
   referent_id: string | null;

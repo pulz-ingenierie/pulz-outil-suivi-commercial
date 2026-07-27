@@ -595,9 +595,9 @@ a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); tran
        background: color-mix(in srgb, #3E9E7A 16%, transparent); color: #2c7a5e; }
 
 /* ===== Signets Format D + encarts + carte au clic ===== */
-:root { --c-struct: #3E7A4E; --c-op: #6B5CA5; --c-pers: #476C8C; --c-rel: #855900; --c-type: #6E6961; }
+:root { --c-struct: #3E7A4E; --c-op: #6B5CA5; --c-pers: #476C8C; --c-rel: #855900; --c-type: #6E6961; --c-ville: #A15C3E; }
 @media (prefers-color-scheme: dark) {
-  :root { --c-struct: #74B07C; --c-op: #A99AD6; --c-pers: #83A6C6; --c-rel: #D3A24E; --c-type: #A7A199; }
+  :root { --c-struct: #74B07C; --c-op: #A99AD6; --c-pers: #83A6C6; --c-rel: #D3A24E; --c-type: #A7A199; --c-ville: #C88A6A; }
 }
 
 .ic { width: 15px; height: 15px; flex: none; }
@@ -632,6 +632,13 @@ a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); tran
 .sig-d.struct { --cat: var(--c-struct); } .sig-d.op { --cat: var(--c-op); }
 .sig-d.pers { --cat: var(--c-pers); } .sig-d.rel { --cat: var(--c-rel); }
 .sig-d.date { --cat: var(--faint); } .sig-d.type { --cat: var(--c-type); }
+.sig-d.ville { --cat: var(--c-ville); }
+/* Signet « information à compléter » (✕) : ressort en rouge discret pour signaler
+   qu'il faut aller chercher l'info (ex. ville d'une opération non renseignée). */
+.sig-d.vide { --cat: var(--crit); background: color-mix(in srgb, var(--crit) 8%, var(--surface));
+       color: var(--crit); font-weight: 650;
+       box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--crit) 34%, transparent); }
+.sig-d.vide:hover { background: color-mix(in srgb, var(--crit) 14%, var(--surface)); }
 .sig-d.late { --cat: var(--crit); } .sig-d.ia { --cat: var(--muted); }
 /* Signet « moi » (l'auteur du CR, présent au rendez-vous) : légèrement rempli. */
 .sig-d.moi { background: color-mix(in srgb, var(--c-pers) 12%, var(--surface)); font-style: normal; }

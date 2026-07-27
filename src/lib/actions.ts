@@ -93,6 +93,7 @@ export async function createOperation(fd: FormData) {
       org_id,
       nom,
       statut,
+      ville: strOrNull(fd, "ville"),
       montant_estime: montant(fd, "montant_estime"),
       referent_id: strOrNull(fd, "referent_id"),
       description: strOrNull(fd, "description"),
@@ -141,6 +142,7 @@ export async function updateOperation(fd: FormData) {
     .update({
       nom,
       statut,
+      ville: strOrNull(fd, "ville"),
       montant_estime: montant(fd, "montant_estime"),
       referent_id: strOrNull(fd, "referent_id"),
       description: strOrNull(fd, "description"),
@@ -304,9 +306,11 @@ async function materialiserCr(
     // Phase proposée par l'IA et éventuellement ajustée par l'utilisateur.
     const statut =
       typeof o?.statut === "string" && (STATUT_ORDRE as readonly string[]).includes(o.statut) ? o.statut : "piste";
+    // Ville (commune) du projet : renseignée si connue, sinon NULL (affiché ✕).
+    const ville = typeof o?.ville === "string" && o.ville.trim() && o.ville.trim() !== "✕" ? o.ville.trim() : null;
     const { data } = await sb
       .from("operations")
-      .insert({ org_id, nom, statut, referent_id: auteurId })
+      .insert({ org_id, nom, statut, ville, referent_id: auteurId })
       .select("id")
       .single();
     if (data?.id) {

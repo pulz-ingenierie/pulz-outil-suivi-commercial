@@ -42,6 +42,12 @@ export default async function ModifierOperation({ params }: { params: Promise<{ 
         <label className="field">
           <span className="lab">Nom de l'opération <em>*</em></span>
           <input name="nom" required defaultValue={operation.nom} />
+          <small className="hint">Format : « Client - Ville - Nature » (ex. « Spirit - Poitiers - Construction de 80 logements »).</small>
+        </label>
+
+        <label className="field">
+          <span className="lab">Ville (commune du projet)</span>
+          <input name="ville" defaultValue={operation.ville ?? ""} placeholder="Ex. Poitiers, Roncq…" />
         </label>
 
         <div className="row2">

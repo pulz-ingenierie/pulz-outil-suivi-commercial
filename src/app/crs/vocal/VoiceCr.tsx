@@ -20,7 +20,7 @@ type ContactBase = { nom: string; prenom: string | null };
 // Rattachement unifié : une structure OU une opération (bascule possible).
 // `type` = type de structure (MOA/archi/promoteur/confrere/autre), pour une
 // nouvelle structure à créer.
-type Rattach = { kind: "structure" | "operation"; name: string; type?: string; entite?: string; statut?: string };
+type Rattach = { kind: "structure" | "operation"; name: string; type?: string; entite?: string; statut?: string; ville?: string | null };
 
 const TYPE_STRUCTURE = [
   { v: "MOA", l: "MOA" },
@@ -301,7 +301,7 @@ export default function VoiceCr({
       ...(s.entites ?? []).map((n) => ({ kind: "structure" as const, name: n })),
       ...(s.operations ?? []).map((n) => ({ kind: "operation" as const, name: n })),
       ...(s.nouvelles_entites ?? []).map((e) => ({ kind: "structure" as const, name: e.nom, type: e.type })),
-      ...(s.nouvelles_operations ?? []).map((o) => ({ kind: "operation" as const, name: o.nom, entite: (o as any).entite ?? undefined, statut: (o as any).phase ?? undefined })),
+      ...(s.nouvelles_operations ?? []).map((o) => ({ kind: "operation" as const, name: o.nom, entite: (o as any).entite ?? undefined, statut: (o as any).phase ?? undefined, ville: (o as any).ville ?? null })),
     ];
     setRattachements((prev) => dedupRattach(authoritative ? rats : [...prev, ...rats]));
     // Filet de sécurité : ne jamais proposer un membre de l'équipe (Administration)
@@ -482,7 +482,7 @@ export default function VoiceCr({
     .map((r) => ({ nom: r.name.trim(), type: r.type ?? "autre" }));
   const nouvellesOperations = ratsNets
     .filter((r) => r.kind === "operation" && !opNameSet.has(r.name.trim().toLowerCase()))
-    .map((r) => ({ nom: r.name.trim(), entite: r.entite?.trim() || null, statut: r.statut || null }));
+    .map((r) => ({ nom: r.name.trim(), entite: r.entite?.trim() || null, statut: r.statut || null, ville: r.ville?.trim() || null }));
   const contactsPayload = personnes
     .filter((p) => p.nom.trim())
     .map((p) => ({
@@ -565,11 +565,32 @@ export default function VoiceCr({
       ].filter(Boolean),
     ),
   );
-  const aCompleter = structAPreciser.length > 0 || persAPreciser.length > 0 || opsSansStruct || relSansPersonne.length > 0 || opsSansRelance.length > 0 || pasDeRelanceGenerique;
+  // Opérations nouvelles sans commune : on demande où se situe le projet (la
+  // ville est un signet à part entière, et complète le titre « Client - Ville - … »).
+  const opsSansVille = rattachements
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => r.kind === "operation" && r.name.trim() && !ratEnBase(r) && !(r.ville && r.ville.trim()));
+  const aCompleter = structAPreciser.length > 0 || persAPreciser.length > 0 || opsSansStruct || relSansPersonne.length > 0 || opsSansRelance.length > 0 || pasDeRelanceGenerique || opsSansVille.length > 0;
 
   // Mises à jour des blocs.
   const majRat = (i: number, patch: Partial<Rattach>) =>
     setRattachements((prev) => prev.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  // Renseigne la ville d'une opération ET remplace le « ✕ » de la ville dans son
+  // libellé « Client - Ville - Nature » (la ville est la 2ᵉ partie).
+  const majVille = (i: number, ville: string) =>
+    setRattachements((prev) =>
+      prev.map((x, j) => {
+        if (j !== i) return x;
+        const v = ville.trim();
+        let name = x.name;
+        if (v) {
+          const parts = x.name.split(" - ");
+          if (parts.length === 3) { parts[1] = v; name = parts.join(" - "); }
+          else if (x.name.includes("✕")) name = x.name.replace("✕", v);
+        }
+        return { ...x, ville: v || null, name };
+      }),
+    );
   const majPers = (i: number, patch: Partial<PersonneEdit>) =>
     setPersonnes((prev) => prev.map((x, j) => (j === i ? { ...x, ...patch } : x)));
   const majRel = (i: number, patch: Partial<RelanceEdit>) =>
@@ -694,6 +715,17 @@ export default function VoiceCr({
                   {structsDeLop(r.name).map(({ r: s, idx }) => <AssocSignet key={idx} kind="struct" label={s.name} onClick={() => ouvrirCarte("rat", idx)} />)}
                 </SectionAssoc>
               )}
+              {/* Ville (commune) de l'affaire : signet à part entière ; ✕ si à compléter. */}
+              {!structure && (
+                <div className="carte-sect">
+                  <div className="carte-sect-h"><Icon name="structure" /> Ville</div>
+                  <div className="sig-wrap">
+                    <span className={`sig-d ville${r.ville && r.ville.trim() ? "" : " vide"}`}>
+                      <span className="sig-lbl">{r.ville && r.ville.trim() ? r.ville : "✕ à compléter"}</span>
+                    </span>
+                  </div>
+                </div>
+              )}
               {/* Phase de l'affaire : proposée par l'IA, modifiable avant de consolider. */}
               {!structure && !enBase && (
                 <div className="carte-sect">
@@ -727,6 +759,10 @@ export default function VoiceCr({
                 <select value={r.type ?? "autre"} onChange={(e) => majRat(i, { type: e.target.value })}>
                   {TYPE_STRUCTURE.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
                 </select></label>
+            )}
+            {!structure && (
+              <label className="field"><span className="lab">Ville (commune du projet)</span>
+                <input value={r.ville ?? ""} placeholder="Ex. Poitiers, Roncq…" onChange={(e) => majVille(i, e.target.value)} /></label>
             )}
             <div className="carte-foot"><button type="button" className="btn" onClick={() => setCardMode("view")}>OK</button></div>
           </div>
@@ -1110,6 +1146,12 @@ export default function VoiceCr({
                 <button type="button" className="btn ghost mini" onClick={() => { setRattachements((p) => [...p, { kind: "structure", name: "" }]); ouvrirCarte("rat", rattachements.length, "edit"); }}>Ajouter une structure</button>
               </div>
             )}
+            {opsSansVille.map(({ r, i }) => (
+              <label className="precise-row" key={`v${r.name}`}>
+                <span className="precise-q">Où se situe <strong>{r.name}</strong> ? <em className="precise-hint">(commune du projet)</em></span>
+                <input defaultValue={r.ville ?? ""} placeholder="Ex. Poitiers, Roncq…" onBlur={(e) => majVille(i, e.target.value)} />
+              </label>
+            ))}
             {relancesAvecObjet.map(({ r, i }) => (
               <div className="precise-row" key={`r${i}`}>
                 <span className="precise-q">Qui doit s'occuper de <strong>{r.objet || "cette relance"}</strong> ? <em className="precise-hint">(plusieurs possibles)</em></span>

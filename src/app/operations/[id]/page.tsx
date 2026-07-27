@@ -93,6 +93,9 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
             <PhaseSelect id={operation.id} statut={st} />
           </div>
           <div className="kv"><span className="k">Référent</span><span>{referent?.nom ?? "—"}</span></div>
+          <div className="kv"><span className="k">Ville</span>
+            <span className={`sig-d ville${operation.ville ? "" : " vide"}`}><span className="sig-lbl">{operation.ville || "✕ à compléter"}</span></span>
+          </div>
           {operation.montant_estime != null && (
             <div className="kv"><span className="k">Montant estimé</span><span>{euro(operation.montant_estime)}</span></div>
           )}

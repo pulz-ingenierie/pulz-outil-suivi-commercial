@@ -86,7 +86,7 @@ export async function GET(req: Request) {
     }
 
     if (type === "operation") {
-      const { data: o } = await sb.from("operations").select("id, nom, statut, montant_estime").eq("id", id).maybeSingle();
+      const { data: o } = await sb.from("operations").select("id, nom, statut, montant_estime, ville").eq("id", id).maybeSingle();
       if (!o) return NextResponse.json({ error: "introuvable" }, { status: 404 });
       const { data: liens } = await sb.from("entite_operation").select("entites(id, nom)").eq("operation_id", id);
       const structs = (liens ?? []).map((l: any) => l.entites).filter(Boolean);
@@ -101,6 +101,7 @@ export async function GET(req: Request) {
       return NextResponse.json({
         cat: "op", catLabel: "Opération", nom: (o as any).nom,
         meta: STATUT_LABELS[(o as any).statut as keyof typeof STATUT_LABELS] ?? (o as any).statut,
+        ville: (o as any).ville ?? null,
         href: `/operations/${id}`, sections, relances, aSupprimer,
       });
     }

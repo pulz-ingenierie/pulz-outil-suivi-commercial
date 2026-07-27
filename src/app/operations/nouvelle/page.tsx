@@ -34,7 +34,13 @@ export default async function NouvelleOperation() {
       <form action={createOperation} className="form">
         <label className="field">
           <span className="lab">Nom de l'opération <em>*</em></span>
-          <input name="nom" required placeholder="Ex. Réhabilitation groupe scolaire Jean Jaurès" />
+          <input name="nom" required placeholder="Ex. Spirit - Poitiers - Construction de 80 logements" />
+          <small className="hint">Format : « Client - Ville - Nature ».</small>
+        </label>
+
+        <label className="field">
+          <span className="lab">Ville (commune du projet)</span>
+          <input name="ville" placeholder="Ex. Poitiers, Roncq…" />
         </label>
 
         <div className="row2">
