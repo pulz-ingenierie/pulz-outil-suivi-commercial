@@ -31,7 +31,7 @@ export default function RelanceRow({
   return (
     <div className={`lx${open ? " open" : ""}`}>
       <div
-        className={`vrow${enRetard ? " late" : ""}`}
+        className={`vrow rel-vrow${enRetard ? " late" : ""}`}
         role="button"
         tabIndex={0}
         style={{ cursor: "pointer" }}
@@ -39,11 +39,14 @@ export default function RelanceRow({
         onClick={() => setOpen((o) => !o)}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((o) => !o); } }}
       >
-        <span className="vrow-nom">{objet}</span>
-        <span className="vrow-meta">
-          <span className={`vrow-rel${enRetard ? " crit" : ""}`}>{echeance}{enRetard ? " · en retard" : ""}</span>
-          <span className="lx-chev" aria-hidden>›</span>
-        </span>
+        <div className="rel-vrow-main">
+          <span className="vrow-nom">{objet}</span>
+          <div className="rel-vrow-sub">
+            {op && <span className="sig-d op rel-op-chip"><span className="sig-lbl">{op.nom}</span></span>}
+            <span className={`vrow-rel${enRetard ? " crit" : ""}`}>{echeance}{enRetard ? " · en retard" : ""}</span>
+          </div>
+        </div>
+        <span className="lx-chev" aria-hidden>›</span>
       </div>
       {open && (
         <div className="lx-body">

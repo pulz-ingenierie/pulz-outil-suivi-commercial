@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
 import { createRelance } from "@/lib/actions";
 import { envoyerRappelsMaintenant } from "@/lib/admin-actions";
@@ -86,7 +85,6 @@ export default async function Relances({
   if (!isSupabaseConfigured()) {
     return (
       <main className="wrap">
-        <Link className="back" href="/tableau">← Retour au tableau de bord</Link>
         <div className="card notice"><h2>Base de données à connecter</h2></div>
       </main>
     );
@@ -138,21 +136,18 @@ export default async function Relances({
 
   return (
     <main className="wrap">
-      <Link className="back" href="/tableau">← Retour au tableau de bord</Link>
       <div className="fiche-head">
         <div>
           <div className="eyebrow">Suites à donner</div>
           <h1>Relances <span className="count-badge">{list.length}</span></h1>
         </div>
-        <div className="rel-acts">
-          {estPilote && (
-            <form action={envoyerRappelsMaintenant}>
-              <button className="btn ghost" type="submit">Envoyer les rappels maintenant</button>
-            </form>
-          )}
-          <a className="btn" href="#nouvelle-relance">+ Nouvelle relance</a>
-        </div>
+        <a className="btn" href="#nouvelle-relance">+ Nouvelle relance</a>
       </div>
+      {estPilote && (
+        <form action={envoyerRappelsMaintenant} style={{ margin: "-6px 0 16px" }}>
+          <button className="btn ghost mini" type="submit">Envoyer les rappels maintenant</button>
+        </form>
+      )}
 
       {sp.mailtest !== undefined && (
         <div className={`card notice${sp.mailtest === "ok" ? "" : " err"}`} style={{ marginBottom: 14 }}>

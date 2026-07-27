@@ -559,6 +559,16 @@ a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); tran
 /* Relance cliquable (dans un volet) : ouvre la relance sur l'écran Relances. */
 a.rel-line-link { text-decoration: none; color: inherit; cursor: pointer; transition: border-color .12s, background .12s; }
 a.rel-line-link:hover { border-color: var(--muted); background: var(--surface); }
+
+/* Ligne de relance (fiches) sur deux niveaux : l'objet, puis l'opération
+   concernée + l'échéance — pour savoir d'un coup d'œil de quelle affaire il
+   s'agit sans déplier. */
+.rel-vrow { align-items: center; }
+.rel-vrow-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1 1 auto; }
+.rel-vrow-main .vrow-nom { white-space: normal; }
+.rel-vrow-sub { display: flex; align-items: center; gap: var(--gap-sig, 6px); min-width: 0; }
+.rel-vrow-sub .vrow-rel { flex: none; font-size: 12px; }
+.rel-op-chip { min-width: 0; }
 .rel-add { font: inherit; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer;
        padding: 9px 13px; border: 1px dashed var(--line); border-radius: 10px; background: transparent; text-align: left; }
 .rel-add:hover { color: var(--ink); border-color: var(--muted); }
