@@ -11,6 +11,7 @@
   --warn: #855900; --warn-soft: #F8F0DC;
   --crit: #B3352B; --crit-soft: #F9EAE8;
   --shadow: 0 1px 2px rgba(34,31,26,.05);
+  --gap-sig: 6px; /* espacement unique entre signets, partout */
   /* Phases : progression en encre (clair → foncé) + concours (bleu) et à chiffrer (ambre) */
   --s-piste: #8F8A82; --s-qualifie: #6E6961; --s-concours: #476C8C; --s-chiffrer: #855900;
   --s-offre: #57534E; --s-nego: #221F1A; --s-gagne: #3E7A4E; --s-perdu: #B3352B;
@@ -225,8 +226,8 @@ a.vrow { color: var(--ink); text-decoration: none; }
        -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: pan-y; }
 .swrow-del { position: absolute; top: 0; right: 0; height: 100%; width: 88px; border: none;
        background: var(--crit); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; letter-spacing: .01em; }
-.vrow-nom { font-weight: 560; font-size: 14px; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.vrow-meta { display: flex; align-items: center; gap: 10px; flex: none; color: var(--muted); font-size: 12px; }
+.vrow-nom { font-weight: 400; font-size: 14px; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vrow-meta { display: flex; align-items: center; gap: var(--gap-sig, 6px); flex: none; color: var(--muted); font-size: 12px; }
 .vrow-meta .amt { font-size: 11.5px; color: var(--muted); }
 .vrow-type { letter-spacing: .01em; font-size: 12px; color: var(--faint); }
 .vrow-rel { color: var(--c-rel); font-weight: 560; }
@@ -254,7 +255,7 @@ a.vrow { color: var(--ink); text-decoration: none; }
 .op .onm { display: block; font-weight: 560; font-size: 14.5px; line-height: 1.25;
       text-decoration: none; color: var(--ink); }
 .op .onm:hover { color: var(--accent); text-decoration: underline; }
-.op .ometa { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 8px; }
+.op .ometa { display: flex; align-items: center; gap: var(--gap-sig, 6px); flex-wrap: wrap; margin-top: 8px; }
 .op .amt { font-size: 11.5px; color: var(--muted); font-weight: 560; }
 
 /* Étiquettes : étape (avec puce colorée) et prospect rattaché. */
@@ -542,7 +543,7 @@ a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); tran
        border-radius: 6px; background: var(--surface); color: var(--ink); min-width: 200px; }
 .precise-row select:focus, .precise-row input:focus { outline: none; border-color: var(--accent); }
 /* Réponse à une question du débrief : propositions cliquables + saisie libre. */
-.precise-answer { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; }
+.precise-answer { display: flex; flex-wrap: wrap; gap: var(--gap-sig, 6px); align-items: center; justify-content: flex-end; }
 .precise-answer input { min-width: 150px; }
 
 /* Ligne de relance en lecture (fiche opération) : action + signets. */
@@ -600,7 +601,8 @@ a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); tran
             border-radius: 8px; background: var(--surface); color: var(--ink); }
 
 /* --- Signets : pastilles colorées compactes (affichage par défaut) --- */
-.sig-wrap { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+/* Espacement UNIQUE entre signets partout dans l'outil (--gap-sig). */
+.sig-wrap { display: flex; flex-wrap: wrap; gap: var(--gap-sig, 6px); align-items: center; }
 
 .sig { display: inline-flex; align-items: stretch; max-width: 100%; border: 1px solid var(--line);
        border-radius: 11px; overflow: hidden; background: var(--surface); box-shadow: var(--shadow); }
@@ -647,7 +649,7 @@ a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); tran
 .sig-d.on { background: color-mix(in srgb, var(--cat) 26%, var(--surface));
        color: color-mix(in srgb, var(--cat) 78%, var(--ink)); font-weight: 650;
        box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--cat) 50%, transparent); }
-.pers-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.pers-chips { display: flex; flex-wrap: wrap; gap: var(--gap-sig, 6px); margin-bottom: 8px; }
 .precise-hint { font-style: normal; font-weight: 400; color: var(--faint); font-size: 12px; }
 .sig-d.struct { --cat: var(--c-struct); } .sig-d.op { --cat: var(--c-op); }
 .sig-d.pers { --cat: var(--c-pers); } .sig-d.rel { --cat: var(--c-rel); }

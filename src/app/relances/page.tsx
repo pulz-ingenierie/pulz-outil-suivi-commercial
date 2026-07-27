@@ -126,8 +126,8 @@ export default async function Relances({
   }
 
   const enRetard = list.filter((r) => r.date_echeance < today);
-  const aujourdhui = list.filter((r) => r.date_echeance === today);
-  const aVenir = list.filter((r) => r.date_echeance > today);
+  // Les relances du jour tombent dans « À venir » (échéance >= aujourd'hui).
+  const aVenir = list.filter((r) => r.date_echeance >= today);
 
   const { profil } = await getIdentite();
   const estPilote = profil?.role === "pilote";
@@ -185,7 +185,6 @@ export default async function Relances({
       <RelancesListe
         groupes={[
           { titre: "En retard", classe: "crit", items: enRetard.map((r) => versRow(r, today, personnesIdx, opStructures)) },
-          { titre: "Pour aujourd'hui", classe: "", items: aujourdhui.map((r) => versRow(r, today, personnesIdx, opStructures)) },
           { titre: "À venir", classe: "muted-h", items: aVenir.map((r) => versRow(r, today, personnesIdx, opStructures)) },
         ]}
       />
