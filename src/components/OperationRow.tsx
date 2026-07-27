@@ -4,12 +4,17 @@ import ExpandableRow from "@/components/ExpandableRow";
 import { STATUT_LABELS, type OperationStatut } from "@/lib/types";
 
 const STATUT_VAR: Record<string, string> = {
-  piste: "--s-piste", qualifie: "--s-qualifie", concours: "--s-concours", a_chiffrer: "--s-chiffrer",
-  offre_remise: "--s-offre", nego: "--s-nego", gagne: "--s-gagne", perdu: "--s-perdu",
+  piste: "--s-piste",
+  qualifie: "--s-qualifie",
+  concours: "--s-concours",
+  a_chiffrer: "--s-chiffrer",
+  offre_remise: "--s-offre",
+  nego: "--s-nego",
+  gagne: "--s-gagne",
+  perdu: "--s-perdu",
 };
 
-// Ligne d'affaire : nom + étape (+ montant). Tap → se déplie sur place (aperçu +
-// actions) ; « Ouvrir la fiche » pour le détail complet.
+// Ligne d'affaire dans une liste : nom + étape (+ montant). Tap → se déplie.
 export default function OperationRow({
   id, nom, statut, montant, role,
 }: {

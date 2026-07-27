@@ -69,7 +69,7 @@ h1 { font-weight: 700; }
 .brand-word { font-family: var(--font-display, 'Space Grotesk', sans-serif); font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
 .brand small { font-weight: 500; color: var(--faint); font-size: 12px; }
 
-.wrap { max-width: 1280px; margin: 0 auto; padding: 24px 22px 60px; --wrap-pad: 22px; }
+.wrap { max-width: 860px; margin: 0 auto; padding: 24px 22px 60px; --wrap-pad: 22px; }
 .eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .01em; color: var(--faint); }
 
 /* KPI discrets : rangée fine, sobre — pas de grosses cartes. */
@@ -120,7 +120,7 @@ h1 { font-weight: 700; }
 
 /* Sélecteur « Par phase / Par opération / Par prospect ». */
 .seg { display: flex; gap: 4px; background: var(--surface-2); border: 1px solid var(--line);
-       border-radius: 12px; padding: 4px; margin-bottom: 16px; }
+       border-radius: 10px; padding: 4px; margin-bottom: 16px; }
 .seg button { flex: 1; min-width: 0; font: inherit; font-size: 13.5px; font-weight: 600; padding: 9px 10px;
        border: none; background: transparent; color: var(--muted); border-radius: 9px; white-space: nowrap;
        cursor: pointer; transition: background .12s, color .12s; }
@@ -134,15 +134,11 @@ h1 { font-weight: 700; }
 /* Liste épurée : un objet par ligne, séparé par un filet ; clic → volet. */
 /* Liste « boîte de réception » : pleine largeur écran, à plat, séparateurs fins.
    Elle déborde le rembourrage latéral de .wrap pour toucher les bords. */
-.vlist2 { background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
-        margin-inline: calc(-1 * var(--wrap-pad, 22px)); }
+.vlist2 { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .vrow { display: flex; align-items: center; justify-content: space-between; gap: 12px;
-        padding: 13px var(--wrap-pad, 22px); border-top: 1px solid var(--line-2); }
+        padding: 12px 14px; border-top: 1px solid var(--line-2); }
 .vrow:first-child { border-top: none; }
 .vrow:hover { background: var(--surface-2); }
-/* Dans une fiche (section .block), la liste reste dans sa carte (pas de débord). */
-.block .vlist2 { margin-inline: 0; }
-.block .vrow { padding-left: 14px; padding-right: 14px; }
 
 /* Glisser-pour-supprimer : la piste (.swrow-track) coulisse et révèle le bouton
    rouge dessous. Le liseré de séparation passe sur .swrow quand il enveloppe. */
@@ -156,10 +152,9 @@ h1 { font-weight: 700; }
 .lx-chev { color: var(--faint); font-size: 18px; line-height: 1; transition: transform .15s; margin-left: 2px; }
 .lx.open .lx-chev { transform: rotate(90deg); }
 /* Panneau déplié : recessé (effet tiroir) pour bien se distinguer de la ligne. */
-.lx-body { background: var(--surface-2); padding: 12px var(--wrap-pad, 22px) 16px; display: flex; flex-direction: column; gap: 12px;
+.lx-body { background: var(--surface-2); padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 12px;
        border-top: 1px solid var(--line);
        box-shadow: inset 0 8px 10px -10px rgba(0,0,0,.14), inset 0 -1px 0 var(--line); }
-.block .lx-body { padding-left: 16px; padding-right: 16px; }
 .lx-meta { font-size: 13px; color: var(--muted); }
 .lx-sect { display: flex; flex-direction: column; gap: 7px; }
 .lx-sect-h { font-size: 11.5px; font-weight: 600; color: var(--faint); letter-spacing: .01em; }
@@ -238,7 +233,7 @@ h1 { font-weight: 700; }
 .phases > .phase-item:first-child { border-top: none; }
 .phase-row { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; font: inherit;
        background: transparent; border: none; border-radius: 0; box-shadow: none;
-       padding: 13px var(--wrap-pad, 22px); color: inherit; cursor: pointer; transition: background .1s; }
+       padding: 13px 14px; color: inherit; cursor: pointer; transition: background .1s; }
 .phase-row:not(:disabled):hover { background: var(--surface-2); }
 .phase-row:disabled { cursor: default; }
 .phase-row .dot { width: 11px; height: 11px; border-radius: 50%; flex: none; }
@@ -252,15 +247,15 @@ h1 { font-weight: 700; }
 
 /* Contenu déplié d'une phase : sous-liste plate, légèrement en retrait. */
 .phase-body { padding: 0 0 6px; background: var(--surface-2); }
-.phase-body .vlist2 { margin-inline: 0; border: none; background: transparent; }
-.phase-body .vrow { padding-left: calc(var(--wrap-pad, 22px) + 12px); }
+.phase-body .vlist2 { border: none; border-radius: 0; background: transparent; }
+.phase-body .vrow { padding-left: 26px; }
 .voir-tout { display: inline-block; color: var(--accent-ink); font-size: 13px; font-weight: 560;
-       text-decoration: none; padding: 6px 0 6px calc(var(--wrap-pad, 22px) + 12px); }
+       text-decoration: none; padding: 6px 0 6px 26px; }
 .voir-tout:hover { text-decoration: underline; }
 
 /* Barre de recherche (vue Par opération). */
 .search { width: 100%; font: inherit; font-size: 14px; padding: 10px 14px; border: 1px solid var(--line);
-       border-radius: 11px; background: var(--surface); color: var(--ink); margin-bottom: 14px; }
+       border-radius: 10px; background: var(--surface); color: var(--ink); margin-bottom: 14px; }
 .search:focus { outline: none; border-color: var(--accent); }
 
 /* Personnes à joindre, sur la carte d'une structure (vue Réseau). */
@@ -302,8 +297,8 @@ h1 { font-weight: 700; }
 .fiche-head h1 { font-size: 24px; }
 .statut-badge { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 560; padding: 6px 12px; border-radius: 999px; }
 .statut-badge .dot { width: 8px; height: 8px; border-radius: 50%; }
-.blocks { display: grid; grid-template-columns: 1fr; gap: 16px; max-width: 780px; }
-.block { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: var(--shadow); }
+.blocks { display: grid; grid-template-columns: 1fr; gap: 16px; }
+.block { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; box-shadow: var(--shadow); }
 .block .eyebrow { margin-bottom: 11px; }
 /* En-tête d'un encart avec un signet dans l'angle (ex. la phase sur Repères). */
 .block-h { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 11px; }
@@ -322,10 +317,6 @@ h1 { font-weight: 700; }
 .kv { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
 .kv:last-child { border-bottom: 0; }
 .kv .k { color: var(--muted); }
-.kv.crit span:last-child { color: var(--crit); font-weight: 560; }
-/* La ligne de liste est un lien (taper = ouvrir la fiche) : pas de soulignement. */
-a.vrow { text-decoration: none; color: inherit; }
-a.vrow:hover { background: var(--surface-2); }
 .ent-chip { display: inline-flex; flex-direction: column; gap: 2px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); margin: 0 8px 8px 0; }
 .ent-chip b { font-size: 14px; } .ent-chip small { color: var(--faint); font-size: 11.5px; }
 .tl { position: relative; padding-left: 20px; }
@@ -748,7 +739,7 @@ a.sig-d { text-decoration: none; }
   .utrow .u-mail, .utrow .u-soc { grid-column: 1 / -1; }
 }
 
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; box-shadow: var(--shadow); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; box-shadow: var(--shadow); }
 .notice { border-left: 3px solid var(--warn); }
 .notice code { background: var(--surface-2); padding: 1px 6px; border-radius: 5px; font-size: 13px; }
 .muted { color: var(--muted); }

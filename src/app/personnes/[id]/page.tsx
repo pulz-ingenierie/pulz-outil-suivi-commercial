@@ -85,7 +85,7 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
       <BackButton />
 
       <div className="page-actions">
-        {struct && <Link className="btn ghost" href={`/crs/vocal?entite=${struct.id}`}>Dicter un CR</Link>}
+        {struct && <Link className="btn ghost" href={`/crs/vocal?entite=${struct.id}`}>🎙 Dicter un CR</Link>}
         <Link className="btn ghost" href={`/personnes/${contact.id}/modifier`}>Modifier</Link>
       </div>
 
