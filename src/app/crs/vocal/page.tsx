@@ -24,10 +24,15 @@ export default async function VocalPage({
   const [{ data: entites }, { data: operations }, { data: contactsBase }, { data: membresRows }, { data: relancesEnCours }] = await Promise.all([
     supabase.from("entites").select("id, nom, type").order("nom"),
     supabase.from("operations").select("id, nom").order("created_at", { ascending: false }),
-    supabase.from("contacts").select("nom, prenom"),
+    supabase.from("contacts").select("nom, prenom, entites(nom)"),
     supabase.from("utilisateurs").select("nom").eq("actif", true),
     supabase.from("relances").select("operation_id").eq("statut", "a_faire"),
   ]);
+  // Chaque contact connu porte le nom de sa structure (si rattaché) : l'IA s'en
+  // sert pour ramener la bonne structure quand la personne est évoquée.
+  const contacts = (contactsBase ?? []).map((c: any) => ({
+    nom: c.nom, prenom: c.prenom ?? null, entiteNom: c.entites?.nom ?? null,
+  }));
   const membres = (membresRows ?? []).map((m: any) => String(m.nom ?? "").trim()).filter(Boolean);
   // Opérations qui ont DÉJÀ une relance en cours : on ne re-proposera pas de
   // suite pour elles (évite les doublons quand on met à jour une fiche).
@@ -64,7 +69,7 @@ export default async function VocalPage({
       <VoiceCr
         entites={entites ?? []}
         operations={operations ?? []}
-        contactsBase={contactsBase ?? []}
+        contactsBase={contacts}
         membres={membres}
         opsAvecRelance={opsAvecRelance}
         today={today}

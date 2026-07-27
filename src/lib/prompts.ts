@@ -35,9 +35,10 @@ ${listeEntites}
 Opérations déjà connues (même règle) :
 ${listeOps}
 
-Personnes déjà connues dans l'outil (« Prénom Nom ») :
+Personnes déjà connues dans l'outil — au format « Prénom Nom » ou « Prénom Nom — Structure » (ce qui suit le tiret « — » est LA STRUCTURE de rattachement de la personne, ce n'est PAS une partie de son nom) :
 ${listePersonnes}
-- Si une personne évoquée dans le texte correspond à une personne connue ci-dessus — MÊME si seul son prénom est prononcé (ex. « Florian » → « Florian Dupont ») — utilise son prénom ET son nom EXACTS tels qu'écrits ci-dessus, et inclus-la dans "contacts". Idem pour le champ "personne" d'une relance : reprends le « Prénom Nom » complet et exact de la personne connue.
+- Si une personne évoquée dans le texte correspond à une personne connue ci-dessus — MÊME si seul son prénom est prononcé (ex. « Florian » → « Florian Dupont ») — utilise son prénom ET son nom EXACTS tels qu'écrits ci-dessus (SANS la structure), et inclus-la dans "contacts". Idem pour le champ "personne" d'une relance : reprends le « Prénom Nom » complet et exact de la personne connue.
+- STRUCTURE D'UNE PERSONNE CONNUE (TRÈS IMPORTANT) : si une personne connue a une structure indiquée ci-dessus (après le « — ») et qu'elle est évoquée dans la dictée, alors sa structure est CONCERNÉE par l'échange, MÊME si son nom n'est pas prononcé. Tu DOIS : (1) l'ajouter dans "entites" (libellé exact) ; (2) la rattacher à l'affaire évoquée dans "liens" — elle en est le client / donneur d'ordre, donc c'est aussi le « Client » du titre et le "entite" de la nouvelle opération ; (3) la renseigner comme "entite" de la relance correspondante. Exemple : dictée « Florian relance Béatrice Massy sur une nouvelle opération de 35 lots », avec « Béatrice Massy — Pichet Promotion » connue → entites: ["Pichet Promotion"] ; nouvelles_operations: [{nom:"Pichet Promotion - ✕ - Construction de 35 lots", entite:"Pichet Promotion", ville:null}] ; liens: [{operation:"Pichet Promotion - ✕ - Construction de 35 lots", entite:"Pichet Promotion"}] ; relances: [{objet:"Relancer sur la nouvelle opération de 35 lots", personne:"Florian …", entite:"Pichet Promotion", operation:"Pichet Promotion - ✕ - Construction de 35 lots"}].
 
 ÉQUIPE INTERNE (Administration PULZ) — NE JAMAIS mettre dans "contacts" :
 ${listeMembres}
@@ -78,7 +79,7 @@ RATTACHEMENT opération ↔ structure (TRÈS IMPORTANT — source d'erreurs) : c
   liens = [{operation:"Nacarat - La Chapelle-d'Armentières - Construction de 40 logements", entite:"Nacarat"}, {operation:"Nacarat - Roncq - Construction de 200 logements", entite:"Nacarat"}, {operation:"Spirit - ✕ - Construction de 80 lots", entite:"Spirit"}].
   → Nacarat NE doit PAS apparaître sur l'affaire de Spirit, et Spirit NE doit PAS apparaître sur les 2 affaires de Nacarat.
 
-RELANCES (suites à donner) — règle stricte : le champ "objet" décrit UNIQUEMENT l'action à réaliser, à l'impératif, SANS le nom de la personne. N'écris JAMAIS « Florian doit relancer Vilogia » ni « rappeler Romain » ; écris « Relancer Vilogia pour le parking silo ». Mets la personne RESPONSABLE de l'action ou concernée (celui qui doit la réaliser, OU la personne à recontacter) à part dans "personne" — même si seul son prénom est cité (ex. « Florian »). Si AUCUNE personne n'est explicitement responsable/concernée, mets "personne" à null (surtout n'invente personne).
+RELANCES (suites à donner) — règle stricte : une formulation au présent, au passé ou au futur qui décrit un RECONTACT (« Florian relance Béatrice », « Florian a relancé Béatrice », « il faut rappeler Béatrice ») est une SUITE À DONNER : crée la relance correspondante. La personne EXTERNE recontactée sert à identifier la structure concernée (applique la règle « STRUCTURE D'UNE PERSONNE CONNUE » : rattache sa structure à l'affaire et à la relance). Le champ "objet" décrit UNIQUEMENT l'action à réaliser, à l'impératif, SANS le nom de la personne. N'écris JAMAIS « Florian doit relancer Vilogia » ni « rappeler Romain » ; écris « Relancer Vilogia pour le parking silo ». Mets la personne RESPONSABLE de l'action ou concernée (celui qui doit la réaliser, OU la personne à recontacter) à part dans "personne" — même si seul son prénom est cité (ex. « Florian »). Si AUCUNE personne n'est explicitement responsable/concernée, mets "personne" à null (surtout n'invente personne).
 
 EXHAUSTIVITÉ des relances (TRÈS IMPORTANT quand le compte rendu couvre PLUSIEURS affaires) : prévois une suite à donner PAR affaire qui en nécessite une. Ne regroupe pas plusieurs affaires dans une seule relance. Pour CHAQUE relance, renseigne l'affaire qu'elle concerne dans "operation" (nom exact de l'opération, connue ou nouvelle) et/ou la structure dans "entite". Exemples de suites à prévoir : une affaire remportée → préparer/rendre l'offre ou lancer les études ; une affaire perdue → en tirer le bilan / rester en veille ; une nouvelle sollicitation → répondre / chiffrer. Chaque affaire active du compte rendu doit avoir au moins une suite si le texte l'appelle.
 
@@ -130,7 +131,7 @@ ${listeEntites}
 Opérations connues :
 ${listeOps}
 
-Personnes connues (« Prénom Nom ») — si l'une est évoquée, même par son seul prénom, reprends son prénom et nom EXACTS :
+Personnes connues — « Prénom Nom » ou « Prénom Nom — Structure » (après le « — » = sa structure, PAS son nom). Si l'une est évoquée, même par son seul prénom, reprends son prénom et nom EXACTS (sans la structure) ; et si elle a une structure, rattache cette structure à l'affaire concernée (client) et à la relance :
 ${listePersonnes}
 
 Réponds UNIQUEMENT par l'objet JSON complet et corrigé, sans texte autour, de la forme :

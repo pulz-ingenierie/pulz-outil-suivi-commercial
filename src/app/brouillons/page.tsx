@@ -39,10 +39,13 @@ export default async function Brouillons({
       .order("created_at", { ascending: true }),
     supabase.from("entites").select("id, nom, type").order("nom"),
     supabase.from("operations").select("id, nom").order("created_at", { ascending: false }),
-    supabase.from("contacts").select("nom, prenom"),
+    supabase.from("contacts").select("nom, prenom, entites(nom)"),
     supabase.from("utilisateurs").select("nom").eq("actif", true),
   ]);
   const membres = (membresRows ?? []).map((m: any) => String(m.nom ?? "").trim()).filter(Boolean);
+  const contacts = (contactsBase ?? []).map((c: any) => ({
+    nom: c.nom, prenom: c.prenom ?? null, entiteNom: c.entites?.nom ?? null,
+  }));
   const { data: relancesEnCours } = await supabase.from("relances").select("operation_id").eq("statut", "a_faire");
   const opNomById = new Map((operations ?? []).map((o: any) => [o.id, o.nom as string]));
   const opsAvecRelance = Array.from(
@@ -109,7 +112,7 @@ export default async function Brouillons({
       <VoiceCr
         entites={entites ?? []}
         operations={operations ?? []}
-        contactsBase={contactsBase ?? []}
+        contactsBase={contacts}
         membres={membres}
         opsAvecRelance={opsAvecRelance}
         today={today}

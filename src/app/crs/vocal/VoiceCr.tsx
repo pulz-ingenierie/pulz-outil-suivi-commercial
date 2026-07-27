@@ -15,7 +15,7 @@ const STATUT_VAR_CR: Record<string, string> = {
 
 type Opt = { id: string; nom: string };
 type Ent = { id: string; nom: string; type?: string };
-type ContactBase = { nom: string; prenom: string | null };
+type ContactBase = { nom: string; prenom: string | null; entiteNom?: string | null };
 
 // Rattachement unifié : une structure OU une opération (bascule possible).
 // `type` = type de structure (MOA/archi/promoteur/confrere/autre), pour une
@@ -457,10 +457,16 @@ export default function VoiceCr({
   // Personnes déjà connues (« Prénom Nom ») transmises à l'IA pour qu'elle
   // reconnaisse quelqu'un cité par son seul prénom et reprenne son identité
   // exacte. On mélange les contacts rencontrés ET l'équipe (Administration).
+  // On accole à chaque contact connu le nom de SA structure (« Prénom Nom —
+  // Structure ») : l'IA peut ainsi ramener la bonne structure quand la personne
+  // est évoquée, même si le nom de la structure n'est pas prononcé.
   const contactsConnus = Array.from(
     new Set(
       [
-        ...contactsBase.map((c) => [c.prenom, c.nom].filter(Boolean).join(" ").trim()),
+        ...contactsBase.map((c) => {
+          const nom = [c.prenom, c.nom].filter(Boolean).join(" ").trim();
+          return c.entiteNom && c.entiteNom.trim() ? `${nom} — ${c.entiteNom.trim()}` : nom;
+        }),
         ...membres,
       ].filter(Boolean),
     ),
