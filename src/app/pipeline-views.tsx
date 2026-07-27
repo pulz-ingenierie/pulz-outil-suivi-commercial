@@ -91,17 +91,17 @@ export default function PipelineViews({ operations, reseau, personnes }: Props) 
 
   return (
     <>
-      <div className="seg" role="tablist" aria-label="Manière de classer">
-        <button className={vue === "phase" ? "on" : ""} onClick={() => setVue("phase")}>
+      <div className="subtabs" role="tablist" aria-label="Manière de classer">
+        <button role="tab" aria-selected={vue === "phase"} className={`subtab${vue === "phase" ? " on" : ""}`} onClick={() => setVue("phase")}>
           Phases
         </button>
-        <button className={vue === "operation" ? "on" : ""} onClick={() => setVue("operation")}>
+        <button role="tab" aria-selected={vue === "operation"} className={`subtab${vue === "operation" ? " on" : ""}`} onClick={() => setVue("operation")}>
           Opérations
         </button>
-        <button className={vue === "structure" ? "on" : ""} onClick={() => setVue("structure")}>
+        <button role="tab" aria-selected={vue === "structure"} className={`subtab${vue === "structure" ? " on" : ""}`} onClick={() => setVue("structure")}>
           Structures
         </button>
-        <button className={vue === "personne" ? "on" : ""} onClick={() => setVue("personne")}>
+        <button role="tab" aria-selected={vue === "personne"} className={`subtab${vue === "personne" ? " on" : ""}`} onClick={() => setVue("personne")}>
           Personnes
         </button>
       </div>

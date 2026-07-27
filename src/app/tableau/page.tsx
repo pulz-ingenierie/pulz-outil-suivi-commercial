@@ -189,22 +189,18 @@ export default async function Dashboard() {
 
   return (
     <main className="wrap">
-      <div className="page-actions">
-        <Link className="btn" href="/crs/vocal">Saisir un compte rendu</Link>
+      <div className="fiche-head">
+        <div>
+          <div className="eyebrow">Suivi commercial</div>
+          <h1>Tableau de bord</h1>
+        </div>
         <Link className="btn ghost" href="/operations/nouvelle">+ Nouvelle opération</Link>
-        <Link className="btn ghost" href="/relances">Relances</Link>
-        <Link className="btn ghost" href="/brouillons">Brouillons</Link>
       </div>
 
       <div className="kpis">
         <Link className="kpi crit link" href="/relances"><span className="n tnum">{enRetard}</span><span className="l">en retard</span></Link>
         <Link className="kpi warn link" href="/relances"><span className="n tnum">{rels.length}</span><span className="l">relances à faire</span></Link>
         <div className="kpi"><span className="n tnum">{silence}</span><span className="l">contacts à réchauffer</span></div>
-      </div>
-
-      <div className="section-t">
-        <h2>Pipeline des affaires</h2>
-        <span>le pilotage se fait par affaire — jamais par euro</span>
       </div>
 
       <PipelineViews
