@@ -190,7 +190,7 @@ export default async function Dashboard() {
   return (
     <main className="wrap">
       <div className="page-actions">
-        <Link className="btn" href="/crs/vocal">🎙 Saisir un compte rendu</Link>
+        <Link className="btn" href="/crs/vocal">Saisir un compte rendu</Link>
         <Link className="btn ghost" href="/operations/nouvelle">+ Nouvelle opération</Link>
         <Link className="btn ghost" href="/relances">Relances</Link>
         <Link className="btn ghost" href="/brouillons">Brouillons</Link>

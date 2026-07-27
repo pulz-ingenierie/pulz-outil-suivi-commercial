@@ -3,7 +3,6 @@ import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
 import { createRelance } from "@/lib/actions";
 import { envoyerRappelsMaintenant, envoyerEmailTest } from "@/lib/admin-actions";
 import { getIdentite } from "@/lib/auth";
-import { indexerLiens, lienPersonne } from "@/lib/personnes";
 import RelancesListe, { type RelRow } from "@/components/RelancesListe";
 
 export const dynamic = "force-dynamic";
@@ -35,45 +34,12 @@ type Rel = {
 };
 
 // Transforme une relance en ligne sérialisable pour la liste cliente.
-function versRow(
-  r: Rel,
-  today: string,
-  personnesIdx: Record<string, string>,
-  opStructures: Record<string, { id: string; nom: string }[]>,
-): RelRow {
-  const persHref = r.personne ? lienPersonne(personnesIdx, r.personne) : null;
-  const op = r.operation_id && r.operations?.nom
-    ? { id: r.operation_id, nom: r.operations.nom }
-    : null;
-  const structsBrut = r.operation_id
-    ? (opStructures[r.operation_id] ?? [])
-    : (r.entite_id && r.entites?.nom ? [{ id: r.entite_id, nom: r.entites.nom }] : []);
-  // Dédoublonnage par nom (évite un même libellé affiché deux fois).
-  const vusStruct = new Set<string>();
-  const structs = structsBrut.filter((s) => {
-    const k = (s.nom ?? "").trim().toLowerCase();
-    if (!k || vusStruct.has(k)) return false;
-    vusStruct.add(k);
-    return true;
-  });
-  // « Traiter » une relance = raconter le recontact dans un nouveau compte rendu,
-  // pré-rattaché à l'opération/entité de la relance (close à l'enregistrement).
-  const crHref = r.operation_id
-    ? `/crs/vocal?operation=${r.operation_id}&relance=${r.id}`
-    : r.entite_id
-      ? `/crs/vocal?entite=${r.entite_id}&relance=${r.id}`
-      : `/crs/vocal?relance=${r.id}`;
+function versRow(r: Rel, today: string): RelRow {
   return {
     id: r.id,
     objet: r.objet,
     echeance: dateFr(r.date_echeance),
     enRetard: r.date_echeance < today,
-    op,
-    structs,
-    personne: r.personne,
-    persHref,
-    crHref,
-    reporterDefault: plusJours(7),
   };
 }
 
@@ -104,26 +70,9 @@ export default async function Relances({
     supabase.from("utilisateurs").select("id, nom").eq("actif", true).order("nom"),
     supabase.from("contacts").select("id, nom, prenom"),
   ]);
-  const personnesIdx = indexerLiens((contacts ?? []) as any, (utilisateurs ?? []) as any);
 
   const today = new Date().toISOString().slice(0, 10);
   const list = (relances ?? []) as unknown as Rel[];
-
-  // Pour chaque rappel lié à une opération : la/les structure(s) de cette
-  // opération, pour les afficher aussi en signets sur le rappel.
-  const opIds = [...new Set(list.map((r) => r.operation_id).filter(Boolean))] as string[];
-  const opStructures: Record<string, { id: string; nom: string }[]> = {};
-  if (opIds.length) {
-    const { data: opLiens } = await supabase
-      .from("entite_operation")
-      .select("operation_id, entites(id, nom)")
-      .in("operation_id", opIds);
-    for (const l of (opLiens ?? []) as any[]) {
-      if (l.operation_id && l.entites?.id) {
-        (opStructures[l.operation_id] ??= []).push({ id: l.entites.id, nom: l.entites.nom });
-      }
-    }
-  }
 
   const enRetard = list.filter((r) => r.date_echeance < today);
   const aujourdhui = list.filter((r) => r.date_echeance === today);
@@ -147,7 +96,7 @@ export default async function Relances({
         {estPilote && (
           <div className="rel-acts">
             <form action={envoyerEmailTest}>
-              <button className="btn ghost" type="submit">✉️ E-mail de test</button>
+              <button className="btn ghost" type="submit">E-mail de test</button>
             </form>
             <form action={envoyerRappelsMaintenant}>
               <button className="btn ghost" type="submit">Envoyer les rappels maintenant</button>
@@ -184,9 +133,9 @@ export default async function Relances({
 
       <RelancesListe
         groupes={[
-          { titre: "En retard", classe: "crit", items: enRetard.map((r) => versRow(r, today, personnesIdx, opStructures)) },
-          { titre: "Pour aujourd'hui", classe: "", items: aujourdhui.map((r) => versRow(r, today, personnesIdx, opStructures)) },
-          { titre: "À venir", classe: "muted-h", items: aVenir.map((r) => versRow(r, today, personnesIdx, opStructures)) },
+          { titre: "En retard", classe: "crit", items: enRetard.map((r) => versRow(r, today)) },
+          { titre: "Pour aujourd'hui", classe: "", items: aujourdhui.map((r) => versRow(r, today)) },
+          { titre: "À venir", classe: "muted-h", items: aVenir.map((r) => versRow(r, today)) },
         ]}
       />
 

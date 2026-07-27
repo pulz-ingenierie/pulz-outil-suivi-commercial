@@ -1,20 +1,14 @@
 "use client";
 
-import ExpandableRow from "@/components/ExpandableRow";
+import NavRow from "@/components/NavRow";
 import { STATUT_LABELS, type OperationStatut } from "@/lib/types";
 
 const STATUT_VAR: Record<string, string> = {
-  piste: "--s-piste",
-  qualifie: "--s-qualifie",
-  concours: "--s-concours",
-  a_chiffrer: "--s-chiffrer",
-  offre_remise: "--s-offre",
-  nego: "--s-nego",
-  gagne: "--s-gagne",
-  perdu: "--s-perdu",
+  piste: "--s-piste", qualifie: "--s-qualifie", concours: "--s-concours", a_chiffrer: "--s-chiffrer",
+  offre_remise: "--s-offre", nego: "--s-nego", gagne: "--s-gagne", perdu: "--s-perdu",
 };
 
-// Ligne d'affaire dans une liste : nom + étape (+ montant). Tap → se déplie.
+// Ligne d'affaire : nom + étape (+ montant). Tap → ouvre la fiche opération.
 export default function OperationRow({
   id, nom, statut, montant, role,
 }: {
@@ -22,13 +16,13 @@ export default function OperationRow({
 }) {
   const m = montant != null ? new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(montant) + " €" : null;
   return (
-    <ExpandableRow type="operation" id={id} nom={nom}>
+    <NavRow href={`/operations/${id}`} type="operation" id={id} nom={nom}>
       <span className="vrow-nom">{nom}</span>
       <span className="vrow-meta">
         {role ? <span className="vrow-type">{role}</span> : null}
         <span className="phase-tag"><span className="dot" style={{ background: `var(${STATUT_VAR[statut]})` }} />{STATUT_LABELS[statut] ?? statut}</span>
         {m ? <span className="amt tnum">{m}</span> : null}
       </span>
-    </ExpandableRow>
+    </NavRow>
   );
 }
