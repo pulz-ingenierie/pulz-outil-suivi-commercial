@@ -467,19 +467,19 @@ a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); tran
 .correct-box .proc { margin: 0; }
 
 /* --- Fiche compte rendu en blocs éditables (dictée ET brouillons) --- */
-.bloc { background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
-        padding: 14px 15px; box-shadow: var(--shadow); margin-bottom: 12px; }
+.bloc { background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+        padding: 16px 18px; box-shadow: var(--shadow); margin-bottom: 16px; }
 .bloc > h3 { font-size: 14px; margin: 0 0 11px; display: flex; align-items: center; gap: 7px; }
 /* Zone de rédaction du compte rendu : au ton de l'appli, pas de fond blanc cru. */
 .bloc textarea { width: 100%; font: inherit; font-size: 15px; line-height: 1.5; padding: 12px 14px;
-       border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); color: var(--ink);
+       border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); color: var(--ink);
        resize: vertical; }
 .bloc textarea:focus { outline: none; border-color: var(--accent); background: var(--surface); }
 .bloc textarea::placeholder { color: var(--faint); }
 /* Suites à donner (relances) : une liste d'actions, pas des signets. */
 .rel-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .rel-item { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
-       padding: 6px 8px 6px 13px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-2); }
+       padding: 6px 8px 6px 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
 .rel-item:hover { border-color: color-mix(in srgb, var(--c-rel) 45%, var(--line)); }
 .rel-item-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; font: inherit; font-size: 14px;
        text-align: left; background: transparent; border: none; color: var(--ink); cursor: pointer; padding: 5px 0; }
@@ -510,10 +510,10 @@ a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); tran
 
 /* Ligne de relance en lecture (fiche opération) : action + signets. */
 .rel-line { display: flex; flex-direction: column; gap: 8px; padding: 11px 13px;
-       border: 1px solid var(--line); border-radius: 11px; background: var(--surface-2); }
+       border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
 .rel-line-obj { font-size: 14px; }
 .rel-add { font: inherit; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer;
-       padding: 9px 13px; border: 1px dashed var(--line); border-radius: 11px; background: transparent; text-align: left; }
+       padding: 9px 13px; border: 1px dashed var(--line); border-radius: 10px; background: transparent; text-align: left; }
 .rel-add:hover { color: var(--ink); border-color: var(--muted); }
 .bloc .row2 { margin: 0; }
 .bloc .resume { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
