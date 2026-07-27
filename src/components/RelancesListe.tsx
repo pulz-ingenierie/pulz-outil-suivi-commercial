@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { updateRelance } from "@/lib/actions";
 import ReporterRelance from "@/components/ReporterRelance";
 import Signet from "@/components/Signet";
@@ -31,6 +31,19 @@ export default function RelancesListe({ groupes }: { groupes: Groupe[] }) {
   const [ouvert, setOuvert] = useState<string | null>(null);
   const [vue, setVue] = useState<string>("__toutes__");
   const toggle = (id: string) => setOuvert((cur) => (cur === id ? null : id));
+
+  // Arrivée depuis un lien « #r-<id> » (ex. clic sur une relance dans un volet) :
+  // on ouvre directement la relance visée et on la fait défiler à l'écran.
+  useEffect(() => {
+    const m = (typeof window !== "undefined" ? window.location.hash : "").match(/^#r-(.+)$/);
+    if (!m) return;
+    const relId = m[1];
+    setOuvert(relId);
+    const t = setTimeout(() => {
+      document.getElementById(`r-${relId}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 60);
+    return () => clearTimeout(t);
+  }, []);
 
   const total = groupes.reduce((n, g) => n + g.items.length, 0);
   // Onglets secondaires : « Toutes » + un onglet par groupe. Le contenu se filtre
@@ -64,7 +77,7 @@ export default function RelancesListe({ groupes }: { groupes: Groupe[] }) {
               {g.items.map((r) => {
                 const open = ouvert === r.id;
                 return (
-                  <div className={`lx${open ? " open" : ""}`} key={r.id}>
+                  <div className={`lx${open ? " open" : ""}`} key={r.id} id={`r-${r.id}`} style={{ scrollMarginTop: "calc(var(--topbar-h, 60px) + 52px)" }}>
                     <SwipeRow type="relance" id={r.id} nom={r.objet}>
                       <div
                         className={`vrow${r.enRetard ? " late" : ""}`}

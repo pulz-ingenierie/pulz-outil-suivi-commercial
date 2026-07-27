@@ -38,6 +38,7 @@ function formatRelances(rows: any[] | null): any[] {
       echeance: dateFr(r.date_echeance),
       enRetard: !!r.date_echeance && r.date_echeance < today,
       personne: r.personne ?? null,
+      operation: r.operation_id && r.operations?.nom ? { id: r.operation_id, nom: r.operations.nom } : null,
     }));
 }
 
@@ -69,7 +70,7 @@ export async function GET(req: Request) {
       if (opIds.length) orParts.push(`operation_id.in.(${opIds.join(",")})`);
       const { data: rel } = await sb
         .from("relances")
-        .select("id, objet, date_echeance, personne, entite_id, operation_id")
+        .select("id, objet, date_echeance, personne, entite_id, operation_id, operations(nom)")
         .eq("statut", "a_faire")
         .or(orParts.join(","));
       const relances = formatRelances(rel);
@@ -97,7 +98,7 @@ export async function GET(req: Request) {
       ].filter((s) => s.items.length);
       // Relances en cours rattachées à l'opération : affichées et proposées à la
       // suppression.
-      const { data: rel } = await sb.from("relances").select("id, objet, date_echeance, personne").eq("operation_id", id).eq("statut", "a_faire");
+      const { data: rel } = await sb.from("relances").select("id, objet, date_echeance, personne, operation_id, operations(nom)").eq("operation_id", id).eq("statut", "a_faire");
       const relances = formatRelances(rel);
       const aSupprimer = (rel ?? []).map((r: any) => ({ type: "relance", id: r.id, cat: "rel", label: r.objet }));
       return NextResponse.json({
@@ -128,7 +129,7 @@ export async function GET(req: Request) {
       const nomComplet = [cc.prenom, cc.nom].filter(Boolean).join(" ") || cc.nom;
       const { data: rel } = await sb
         .from("relances")
-        .select("id, objet, date_echeance, personne")
+        .select("id, objet, date_echeance, personne, operation_id, operations(nom)")
         .eq("statut", "a_faire")
         .ilike("personne", `%${cc.nom}%`);
       const relances = formatRelances(rel);

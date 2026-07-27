@@ -556,6 +556,9 @@ a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); tran
 .rel-line { display: flex; flex-direction: column; gap: 8px; padding: 11px 13px;
        border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
 .rel-line-obj { font-size: 14px; }
+/* Relance cliquable (dans un volet) : ouvre la relance sur l'écran Relances. */
+a.rel-line-link { text-decoration: none; color: inherit; cursor: pointer; transition: border-color .12s, background .12s; }
+a.rel-line-link:hover { border-color: var(--muted); background: var(--surface); }
 .rel-add { font: inherit; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer;
        padding: 9px 13px; border: 1px dashed var(--line); border-radius: 10px; background: transparent; text-align: left; }
 .rel-add:hover { color: var(--ink); border-color: var(--muted); }
