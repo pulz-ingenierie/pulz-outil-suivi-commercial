@@ -46,21 +46,23 @@ h1 { font-weight: 700; }
 .tnum { font-variant-numeric: tabular-nums; font-family: var(--font-mono, ui-monospace, monospace); }
 ::selection { background: var(--accent-soft); }
 
-/* App-shell plein écran : coquille fixée sur tout le viewport (fiable en mode
-   application iOS, sans vide en bas), top bar fixe · contenu défilant · nav basse. */
-.shell { position: fixed; inset: 0; display: flex; flex-direction: column; }
-.shell-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
+/* App-shell plein écran (pattern iOS fiable) : la page défile normalement ;
+   la top bar est COLLANTE en haut, la nav est FIXÉE au bord bas. Le contenu
+   réserve une marge basse pour ne pas passer sous la nav. */
+.shell { min-height: 100dvh; }
+.shell-content { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
 
 .topbar {
-  flex: none;
+  position: sticky; top: 0; z-index: 30;
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   padding: 12px 18px; padding-top: calc(12px + env(safe-area-inset-top));
   border-bottom: 1px solid var(--line); background: var(--surface);
 }
 
-/* Navigation primaire, en bas, à portée de pouce. */
+/* Navigation primaire, FIXÉE en bas de l'écran, à portée de pouce. */
 .bottom-nav {
-  flex: none; display: flex; align-items: flex-end; justify-content: space-around; gap: 2px;
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+  display: flex; align-items: flex-end; justify-content: space-around; gap: 2px;
   background: var(--surface); border-top: 1px solid var(--line);
   padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
 }
