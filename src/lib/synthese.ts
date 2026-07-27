@@ -4,6 +4,10 @@
 
 export const TYPES_RDV = ["dejeuner", "appel", "visite", "salon", "autre"] as const;
 
+// Phases d'une opération (miroir de OperationStatut). L'IA propose la phase de
+// chaque nouvelle affaire ; l'utilisateur peut l'ajuster avant de consolider.
+export const STATUTS_OP = ["piste", "qualifie", "concours", "a_chiffrer", "offre_remise", "nego", "gagne", "perdu"] as const;
+
 // Une personne physique évoquée (à distinguer d'une structure/organisation).
 export interface ContactExtrait {
   nom: string;
@@ -25,7 +29,7 @@ export interface Synthese {
   entites: string[];
   operations: string[];
   nouvelles_entites: NouvelleEntite[];
-  nouvelles_operations: { nom: string; entite: string | null }[];
+  nouvelles_operations: { nom: string; entite: string | null; phase: string }[];
   liens: { operation: string; entite: string }[]; // rattachement affaire ↔ structure (par nom)
   contacts: ContactExtrait[];
   // Chaque relance précise l'affaire / la structure qu'elle concerne (par nom),
@@ -124,6 +128,7 @@ export function validateSynthese(
     .map((op) => ({
       nom: typeof op.nom === "string" ? op.nom.trim() : "",
       entite: typeof op.entite === "string" && op.entite.trim() ? op.entite.trim() : null,
+      phase: typeof op.phase === "string" && (STATUTS_OP as readonly string[]).includes(op.phase) ? op.phase : "piste",
     }))
     .filter((op) => {
       const k = op.nom.toLowerCase();

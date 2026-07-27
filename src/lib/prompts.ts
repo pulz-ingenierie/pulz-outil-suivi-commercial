@@ -49,6 +49,17 @@ Structures et affaires NOUVELLES : si une structure ou une affaire est clairemen
 
 CASSE des noms de structures : si un nom de structure est écrit TOUT EN MAJUSCULES dans le texte (ex. « NACARAT »), écris-le en casse normale (« Nacarat »). EXCEPTION : garde en majuscules les sigles courts de 2 à 4 lettres (ex. « SIGH », « SNI », « CDC »).
 
+PHASE d'une opération (nouvelles_operations[].phase) — classe CHAQUE nouvelle affaire dans l'étape du pipeline la plus juste d'après le texte :
+- "piste" : simple piste / premier contact, rien de qualifié encore.
+- "qualifie" : affaire confirmée, réelle, sur laquelle on se positionne.
+- "concours" : affaire en CONCOURS de maîtrise d'œuvre (compétition sur projet).
+- "a_chiffrer" : on nous sollicite / il faut produire une offre ou des honoraires.
+- "offre_remise" : l'offre a été déposée, en attente de décision.
+- "nego" : mise au point / négociation finale avant contrat.
+- "gagne" : affaire REMPORTÉE / gagnée (« nous prend sur », « on décroche », « remporté »).
+- "perdu" : affaire PERDUE (« on n'a pas eu », « non retenu »).
+Exemples : « Nacarat nous prend sur 40 logements » → "gagne" ; « concours de 200 logements » → "concours" ; « on n'a pas eu le contrat cadre INV » → "perdu" ; « Spirit nous sollicite pour 80 lots » → "a_chiffrer". En cas de doute, mets "piste".
+
 TITRE d'une opération — format COHÉRENT et STABLE : « [nombre] [nature] à [commune] » (ex. « 40 logements à La Chapelle-d'Armentières », « 200 logements à Roncq », « 80 lots à … »). Règles :
 - NE mets JAMAIS le nom du promoteur/de la structure dans le titre, ni entre parenthèses (ex. écris « 80 lots à … », PAS « 80 lots (Spirit) »). La structure est portée par son signet via "liens".
 - Pas de parenthèses, pas de mention du donneur d'ordre, pas de guillemets. Même forme pour toutes les opérations.
@@ -75,7 +86,7 @@ Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, de la forme :
   "entites": ["libellé exact d'une STRUCTURE connue évoquée"],
   "operations": ["libellé exact d'une opération connue évoquée"],
   "nouvelles_entites": [{ "nom": "structure évoquée mais absente des connues", "type": "MOA|archi|promoteur|bet|confrere|autre (bet = bureau d'études techniques)" }],
-  "nouvelles_operations": [{ "nom": "affaire/projet évoqué mais absent des connues", "entite": "nom exact de la structure qui porte cette affaire (connue ou nouvelle) ou null" }],
+  "nouvelles_operations": [{ "nom": "affaire/projet évoqué mais absent des connues", "entite": "nom exact de la structure qui porte cette affaire (connue ou nouvelle) ou null", "phase": "piste|qualifie|concours|a_chiffrer|offre_remise|nego|gagne|perdu" }],
   "liens": [{ "operation": "nom exact d'une opération (connue ou nouvelle)", "entite": "nom exact de la structure qui la porte (connue ou nouvelle)" }],
   "contacts": [{ "nom": "nom de famille", "prenom": "prénom ou null", "fonction": "fonction ou null", "entite": "libellé de sa structure (connue ou nouvelle) ou null" }],
   "relances": [{ "objet": "action de suivi à faire, à l'impératif, SANS nom de personne", "personne": "personne concernée (nom ou « Prénom Nom ») ou null", "operation": "nom de l'affaire concernée (connue ou nouvelle) ou null", "entite": "nom de la structure concernée ou null", "dans_jours": 14 }]
@@ -125,7 +136,7 @@ Réponds UNIQUEMENT par l'objet JSON complet et corrigé, sans texte autour, de 
   "entites": ["libellé exact d'une STRUCTURE connue"],
   "operations": ["libellé exact d'une opération connue"],
   "nouvelles_entites": [{ "nom": "structure nouvelle", "type": "MOA|archi|promoteur|bet|confrere|autre (bet = bureau d'études techniques)" }],
-  "nouvelles_operations": [{ "nom": "affaire nouvelle", "entite": "structure qui la porte ou null" }],
+  "nouvelles_operations": [{ "nom": "affaire nouvelle", "entite": "structure qui la porte ou null", "phase": "piste|qualifie|concours|a_chiffrer|offre_remise|nego|gagne|perdu" }],
   "liens": [{ "operation": "nom exact d'une opération (connue ou nouvelle)", "entite": "nom exact de la structure qui la porte" }],
   "contacts": [{ "nom": "…", "prenom": "… ou null", "fonction": "… ou null", "entite": "structure ou null" }],
   "relances": [{ "objet": "action à l'impératif, SANS nom de personne", "personne": "personne concernée ou null", "operation": "nom de l'affaire concernée ou null", "entite": "nom de la structure concernée ou null", "dans_jours": 14 }]

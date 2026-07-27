@@ -301,9 +301,12 @@ async function materialiserCr(
   for (const o of jsonArray(fd, "nouvelles_operations_json")) {
     const nom = typeof o?.nom === "string" ? o.nom.trim() : "";
     if (!nom) continue;
+    // Phase proposée par l'IA et éventuellement ajustée par l'utilisateur.
+    const statut =
+      typeof o?.statut === "string" && (STATUT_ORDRE as readonly string[]).includes(o.statut) ? o.statut : "piste";
     const { data } = await sb
       .from("operations")
-      .insert({ org_id, nom, statut: "piste", referent_id: auteurId })
+      .insert({ org_id, nom, statut, referent_id: auteurId })
       .select("id")
       .single();
     if (data?.id) {

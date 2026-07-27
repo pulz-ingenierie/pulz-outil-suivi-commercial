@@ -752,3 +752,13 @@ a.sig-d { text-decoration: none; }
 /* Marqueur de version (discret) : permet de confirmer le déploiement en cours. */
 .build-tag { position: fixed; bottom: 4px; right: 6px; font-size: 9px; color: var(--faint);
        opacity: .5; font-family: var(--font-mono, monospace); pointer-events: none; z-index: 5; }
+
+/* Signet de phase (saisie CR) : puce colorée éditable via un select superposé. */
+.phase-signet { position: relative; display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+       font-size: 12px; font-weight: 650; letter-spacing: .01em; padding: 6px 11px; border-radius: 999px;
+       color: color-mix(in srgb, var(--cat) 78%, var(--ink));
+       background: color-mix(in srgb, var(--cat) 15%, var(--surface)); }
+.phase-signet-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cat); flex: none; }
+.phase-signet-chev { font-size: 10px; opacity: .7; }
+.phase-signet select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;
+       border: none; margin: 0; padding: 0; -webkit-appearance: none; appearance: none; }

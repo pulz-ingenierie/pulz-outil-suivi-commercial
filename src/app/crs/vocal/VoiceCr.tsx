@@ -4,7 +4,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createCr, finaliserBrouillon, supprimerBrouillon } from "@/lib/actions";
 import type { Synthese } from "@/lib/synthese";
+import { STATUT_LABELS, STATUT_ORDRE } from "@/lib/types";
 import SubmitButton from "@/components/SubmitButton";
+
+// Couleur d'étape (variables CSS de globals.css), pour le signet de phase.
+const STATUT_VAR_CR: Record<string, string> = {
+  piste: "--s-piste", qualifie: "--s-qualifie", concours: "--s-concours", a_chiffrer: "--s-chiffrer",
+  offre_remise: "--s-offre", nego: "--s-nego", gagne: "--s-gagne", perdu: "--s-perdu",
+};
 
 type Opt = { id: string; nom: string };
 type Ent = { id: string; nom: string; type?: string };
@@ -13,7 +20,7 @@ type ContactBase = { nom: string; prenom: string | null };
 // Rattachement unifié : une structure OU une opération (bascule possible).
 // `type` = type de structure (MOA/archi/promoteur/confrere/autre), pour une
 // nouvelle structure à créer.
-type Rattach = { kind: "structure" | "operation"; name: string; type?: string; entite?: string };
+type Rattach = { kind: "structure" | "operation"; name: string; type?: string; entite?: string; statut?: string };
 
 const TYPE_STRUCTURE = [
   { v: "MOA", l: "MOA" },
@@ -280,7 +287,7 @@ export default function VoiceCr({
       ...(s.entites ?? []).map((n) => ({ kind: "structure" as const, name: n })),
       ...(s.operations ?? []).map((n) => ({ kind: "operation" as const, name: n })),
       ...(s.nouvelles_entites ?? []).map((e) => ({ kind: "structure" as const, name: e.nom, type: e.type })),
-      ...(s.nouvelles_operations ?? []).map((o) => ({ kind: "operation" as const, name: o.nom, entite: (o as any).entite ?? undefined })),
+      ...(s.nouvelles_operations ?? []).map((o) => ({ kind: "operation" as const, name: o.nom, entite: (o as any).entite ?? undefined, statut: (o as any).phase ?? undefined })),
     ];
     setRattachements((prev) => dedupRattach(authoritative ? rats : [...prev, ...rats]));
     // Filet de sécurité : ne jamais proposer un membre de l'équipe (Administration)
@@ -461,7 +468,7 @@ export default function VoiceCr({
     .map((r) => ({ nom: r.name.trim(), type: r.type ?? "autre" }));
   const nouvellesOperations = ratsNets
     .filter((r) => r.kind === "operation" && !opNameSet.has(r.name.trim().toLowerCase()))
-    .map((r) => ({ nom: r.name.trim(), entite: r.entite?.trim() || null }));
+    .map((r) => ({ nom: r.name.trim(), entite: r.entite?.trim() || null, statut: r.statut || null }));
   const contactsPayload = personnes
     .filter((p) => p.nom.trim())
     .map((p) => ({
@@ -672,6 +679,20 @@ export default function VoiceCr({
                 <SectionAssoc titre="Structure" icon="structure">
                   {structsDeLop(r.name).map(({ r: s, idx }) => <AssocSignet key={idx} kind="struct" label={s.name} onClick={() => ouvrirCarte("rat", idx)} />)}
                 </SectionAssoc>
+              )}
+              {/* Phase de l'affaire : proposée par l'IA, modifiable avant de consolider. */}
+              {!structure && !enBase && (
+                <div className="carte-sect">
+                  <div className="carte-sect-h"><Icon name="operation" /> Phase de l'affaire</div>
+                  <label className="phase-signet" style={{ ["--cat" as string]: `var(${STATUT_VAR_CR[r.statut ?? "piste"] ?? "--s-piste"})` }}>
+                    <span className="phase-signet-dot" />
+                    <span className="phase-signet-lbl">{STATUT_LABELS[(r.statut ?? "piste") as keyof typeof STATUT_LABELS]}</span>
+                    <span className="phase-signet-chev">▾</span>
+                    <select value={r.statut ?? "piste"} onChange={(e) => majRat(i, { statut: e.target.value })}>
+                      {STATUT_ORDRE.map((s) => <option key={s} value={s}>{STATUT_LABELS[s]}</option>)}
+                    </select>
+                  </label>
+                </div>
               )}
               <p className="hint">L'historique complet de cette fiche (toutes ses opérations) apparaîtra dans le Réseau / Pipeline.</p>
               <div className="carte-foot">
