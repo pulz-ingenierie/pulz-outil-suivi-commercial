@@ -121,16 +121,20 @@ export default function RelancesListe({ groupes }: { groupes: Groupe[] }) {
                               </div>
                             </div>
                           )}
-                          {r.personne && (
-                            <div className="carte-sect">
-                              <div className="carte-sect-h"><CatIcon name="personne" /> Personne à relancer</div>
-                              <div className="sig-wrap">
-                                {r.persHref
-                                  ? <Link className="sig-d pers" href={r.persHref}><span className="sig-lbl">{r.personne}</span></Link>
-                                  : <span className="sig-d pers"><span className="sig-lbl">{r.personne}</span></span>}
+                          {r.personne && (() => {
+                            const membre = !!r.persHref && r.persHref.startsWith("/membres/");
+                            const cls = `sig-d pers${membre ? " membre" : ""}`;
+                            return (
+                              <div className="carte-sect">
+                                <div className="carte-sect-h"><CatIcon name="personne" /> {membre ? "Personne concernée (groupement)" : "Personne à relancer"}</div>
+                                <div className="sig-wrap">
+                                  {r.persHref
+                                    ? <Link className={cls} href={r.persHref}><span className="sig-lbl">{r.personne}</span></Link>
+                                    : <span className={cls}><span className="sig-lbl">{r.personne}</span></span>}
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            );
+                          })()}
                           <div className="rel-acts">
                             <Link className="btn" href={r.crHref}>Nouveau compte rendu</Link>
                             <div className="rel-acts-row">

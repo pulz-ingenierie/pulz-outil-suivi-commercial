@@ -26,7 +26,8 @@ function dateFr(d: string | null): string {
 // personne, retard). L'aperçu déplié montre tout ce qui touche à l'objet SAUF le
 // fil des comptes rendus (réservé à la fiche complète).
 const AUJ = () => new Date().toISOString().slice(0, 10);
-function formatRelances(rows: any[] | null): any[] {
+const normP = (s: string | null | undefined) => (s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+function formatRelances(rows: any[] | null, membreSet: Set<string> = new Set()): any[] {
   const today = AUJ();
   const vues = new Set<string>();
   return (rows ?? [])
@@ -38,6 +39,8 @@ function formatRelances(rows: any[] | null): any[] {
       echeance: dateFr(r.date_echeance),
       enRetard: !!r.date_echeance && r.date_echeance < today,
       personne: r.personne ?? null,
+      // Membre du groupement (interne) plutôt qu'un contact externe.
+      personneMembre: !!r.personne && membreSet.has(normP(r.personne)),
       operation: r.operation_id && r.operations?.nom ? { id: r.operation_id, nom: r.operations.nom } : null,
     }));
 }
@@ -49,6 +52,11 @@ export async function GET(req: Request) {
   const id = searchParams.get("id");
   if (!type || !id) return NextResponse.json({ error: "paramètres manquants" }, { status: 400 });
   const sb = getServerSupabase()!;
+
+  // Noms des membres du groupement (interne) : pour distinguer une « personne
+  // concernée » interne d'un contact externe « à relancer ».
+  const { data: membresRows } = await sb.from("utilisateurs").select("nom");
+  const membreSet = new Set((membresRows ?? []).map((m: any) => normP(m.nom)).filter(Boolean));
 
   try {
     if (type === "entite") {
@@ -73,7 +81,7 @@ export async function GET(req: Request) {
         .select("id, objet, date_echeance, personne, entite_id, operation_id, operations(nom)")
         .eq("statut", "a_faire")
         .or(orParts.join(","));
-      const relances = formatRelances(rel);
+      const relances = formatRelances(rel, membreSet);
       // Suppression en cascade : uniquement les relances rattachées DIRECTEMENT à
       // la structure (pas celles de ses opérations, qui vivent avec l'opération).
       const aSupprimer = (rel ?? [])
@@ -99,7 +107,7 @@ export async function GET(req: Request) {
       // Relances en cours rattachées à l'opération : affichées et proposées à la
       // suppression.
       const { data: rel } = await sb.from("relances").select("id, objet, date_echeance, personne, operation_id, operations(nom)").eq("operation_id", id).eq("statut", "a_faire");
-      const relances = formatRelances(rel);
+      const relances = formatRelances(rel, membreSet);
       const aSupprimer = (rel ?? []).map((r: any) => ({ type: "relance", id: r.id, cat: "rel", label: r.objet }));
       return NextResponse.json({
         cat: "op", catLabel: "Opération", nom: (o as any).nom,
@@ -132,7 +140,7 @@ export async function GET(req: Request) {
         .select("id, objet, date_echeance, personne, operation_id, operations(nom)")
         .eq("statut", "a_faire")
         .ilike("personne", `%${cc.nom}%`);
-      const relances = formatRelances(rel);
+      const relances = formatRelances(rel, membreSet);
       return NextResponse.json({
         cat: "pers", catLabel: "Personne", nom: nomComplet,
         meta: cc.fonction ?? "", href: `/personnes/${id}`, sections, relances,

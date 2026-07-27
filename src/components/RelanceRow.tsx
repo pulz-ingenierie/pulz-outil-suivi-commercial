@@ -68,16 +68,20 @@ export default function RelanceRow({
                 <div className="sig-wrap">{structs.map((s) => <Signet key={s.id} type="entite" id={s.id} cat="struct" label={s.nom} />)}</div>
               </div>
             )}
-            {personne && (
-              <div className="carte-sect">
-                <div className="carte-sect-h"><CatIcon name="personne" /> Personne à relancer</div>
-                <div className="sig-wrap">
-                  {persHref
-                    ? <Link className="sig-d pers" href={persHref}><span className="sig-lbl">{personne}</span></Link>
-                    : <span className="sig-d pers"><span className="sig-lbl">{personne}</span></span>}
+            {personne && (() => {
+              const membre = !!persHref && persHref.startsWith("/membres/");
+              const cls = `sig-d pers${membre ? " membre" : ""}`;
+              return (
+                <div className="carte-sect">
+                  <div className="carte-sect-h"><CatIcon name="personne" /> {membre ? "Personne concernée (groupement)" : "Personne à relancer"}</div>
+                  <div className="sig-wrap">
+                    {persHref
+                      ? <Link className={cls} href={persHref}><span className="sig-lbl">{personne}</span></Link>
+                      : <span className={cls}><span className="sig-lbl">{personne}</span></span>}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
             <div className="carte-foot">
               <Link className="btn" href={`/relances#r-${id}`}>Ouvrir la relance</Link>
             </div>

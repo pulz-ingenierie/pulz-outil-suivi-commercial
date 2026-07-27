@@ -23,7 +23,7 @@ const CATS = {
 type Item = { type: "entite" | "operation" | "personne"; id: string; cat: string; label: string };
 type SectionIcon = "structure" | "operation" | "personne" | "relance" | "ville";
 type Section = { titre: string; icon?: SectionIcon; items: Item[] };
-type Relance = { id: string; objet: string; echeance: string; enRetard: boolean; personne: string | null; operation?: { id: string; nom: string } | null };
+type Relance = { id: string; objet: string; echeance: string; enRetard: boolean; personne: string | null; personneMembre?: boolean; operation?: { id: string; nom: string } | null };
 type Apercu = { cat: string; catLabel: string; nom: string; meta?: string; ville?: string | null; href: string; sections: Section[]; relances?: Relance[] };
 
 export default function ExpandableRow({
@@ -111,7 +111,7 @@ export default function ExpandableRow({
                           </div>
                           <div className="rel-card-sigs sig-wrap">
                             {r.operation && r.operation.id !== id && <span className="sig-d op"><span className="sig-lbl">{r.operation.nom}</span></span>}
-                            {r.personne && <span className="sig-d pers"><span className="sig-lbl">{r.personne}</span></span>}
+                            {r.personne && <span className={`sig-d pers${r.personneMembre ? " membre" : ""}`}><span className="sig-lbl">{r.personne}</span></span>}
                           </div>
                         </Link>
                       ))}

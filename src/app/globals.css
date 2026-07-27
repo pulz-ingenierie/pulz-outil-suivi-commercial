@@ -697,6 +697,11 @@ a.rel-card:hover { border-color: var(--muted); background: var(--surface); }
 .sig-d.late { --cat: var(--crit); } .sig-d.ia { --cat: var(--muted); }
 /* Signet « moi » (l'auteur du CR, présent au rendez-vous) : légèrement rempli. */
 .sig-d.moi { background: color-mix(in srgb, var(--c-pers) 12%, var(--surface)); font-style: normal; }
+/* Membre du GROUPEMENT (interne) : signet rempli en encre, pour le distinguer
+   nettement d'un contact externe (« personne à relancer » d'une structure). */
+.sig-d.membre { background: var(--ink); color: var(--on-primary); border: none; font-weight: 600; }
+.sig-d.membre:hover { background: color-mix(in srgb, var(--ink) 86%, #000); color: var(--on-primary); }
+a.sig-d.membre { color: var(--on-primary); }
 /* Signet « phase » (étape du pipeline). --cat porté en inline selon l'étape. */
 .sig-d.phase { --cat: var(--muted); }
 /* Un signet peut être un lien (carte associée) : garder l'aspect signet. */

@@ -39,6 +39,7 @@ Personnes déjà connues dans l'outil — au format « Prénom Nom » ou « Pré
 ${listePersonnes}
 - Si une personne évoquée dans le texte correspond à une personne connue ci-dessus — MÊME si seul son prénom est prononcé (ex. « Florian » → « Florian Dupont ») — utilise son prénom ET son nom EXACTS tels qu'écrits ci-dessus (SANS la structure), et inclus-la dans "contacts". Idem pour le champ "personne" d'une relance : reprends le « Prénom Nom » complet et exact de la personne connue.
 - STRUCTURE D'UNE PERSONNE CONNUE (TRÈS IMPORTANT) : si une personne connue a une structure indiquée ci-dessus (après le « — ») et qu'elle est évoquée dans la dictée, alors sa structure est CONCERNÉE par l'échange, MÊME si son nom n'est pas prononcé. Tu DOIS : (1) l'ajouter dans "entites" (libellé exact) ; (2) la rattacher à l'affaire évoquée dans "liens" — elle en est le client / donneur d'ordre, donc c'est aussi le « Client » du titre et le "entite" de la nouvelle opération ; (3) la renseigner comme "entite" de la relance correspondante. Exemple : dictée « Florian relance Béatrice Massy sur une nouvelle opération de 35 lots », avec « Béatrice Massy — Pichet Promotion » connue → entites: ["Pichet Promotion"] ; nouvelles_operations: [{nom:"Pichet Promotion - ✕ - Construction de 35 lots", entite:"Pichet Promotion", ville:null}] ; liens: [{operation:"Pichet Promotion - ✕ - Construction de 35 lots", entite:"Pichet Promotion"}] ; relances: [{objet:"Relancer sur la nouvelle opération de 35 lots", personne:"Florian …", entite:"Pichet Promotion", operation:"Pichet Promotion - ✕ - Construction de 35 lots"}].
+- SENS UNIQUE — NE DÉDUIS JAMAIS une PERSONNE à partir d'une STRUCTURE : la règle ci-dessus va de la personne vers sa structure, JAMAIS l'inverse. Ce n'est pas parce qu'une structure est concernée (ex. Spirit) qu'il faut lui attribuer un de ses contacts connus (ex. « Benjamin Lepot — Spirit »). N'ajoute une personne dans "contacts", et ne la mets comme "personne" d'une relance, QUE si elle est explicitement nommée (ou clairement l'acteur/la cible de l'action) dans la dictée. Si aucune personne n'est nommée pour une relance, laisse "personne" à null — ne choisis PAS un contact de la structure par défaut.
 
 ÉQUIPE INTERNE (Administration PULZ) — NE JAMAIS mettre dans "contacts" :
 ${listeMembres}
@@ -131,7 +132,7 @@ ${listeEntites}
 Opérations connues :
 ${listeOps}
 
-Personnes connues — « Prénom Nom » ou « Prénom Nom — Structure » (après le « — » = sa structure, PAS son nom). Si l'une est évoquée, même par son seul prénom, reprends son prénom et nom EXACTS (sans la structure) ; et si elle a une structure, rattache cette structure à l'affaire concernée (client) et à la relance :
+Personnes connues — « Prénom Nom » ou « Prénom Nom — Structure » (après le « — » = sa structure, PAS son nom). Si l'une est évoquée, même par son seul prénom, reprends son prénom et nom EXACTS (sans la structure) ; et si elle a une structure, rattache cette structure à l'affaire concernée (client) et à la relance. MAIS ne déduis JAMAIS une personne à partir d'une structure : ce n'est pas parce qu'une structure est concernée qu'il faut lui attribuer un de ses contacts — n'associe une personne que si elle est explicitement nommée :
 ${listePersonnes}
 
 Réponds UNIQUEMENT par l'objet JSON complet et corrigé, sans texte autour, de la forme :
