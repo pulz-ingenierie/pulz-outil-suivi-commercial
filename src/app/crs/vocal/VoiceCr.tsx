@@ -900,8 +900,8 @@ export default function VoiceCr({
           {phase === "recorded" && (
             <div className="rec-done">
               {audioUrl && <audio className="player" src={audioUrl} controls />}
-              {busy === "transcribe" && <p className="proc">✍️ Transcription en cours…</p>}
-              {busy === "synth" && <p className="proc">✨ L'IA structure le compte rendu…</p>}
+              {busy === "transcribe" && <p className="proc">Transcription en cours…</p>}
+              {busy === "synth" && <p className="proc">L'IA structure le compte rendu…</p>}
               {!busy && synthese && <p className="proc ok">✓ Analysé — relisez les blocs ci-dessous.</p>}
               <div className="rec-acts">
                 {!busy && error && audioBlob && (
@@ -932,7 +932,7 @@ export default function VoiceCr({
 
         {/* Bloc — le compte rendu (texte). */}
         <div className="bloc">
-          <h3>📝 Compte rendu</h3>
+          <h3>Compte rendu</h3>
           <textarea
             name="transcription"
             rows={draftId ? 6 : 7}
@@ -958,7 +958,7 @@ export default function VoiceCr({
 
         {/* Encart — repères (date + type). */}
         <div className="bloc">
-          <div className="encart-h reperes">📌 Repères</div>
+          <div className="encart-h reperes">Repères</div>
           <div className="sig-wrap">
             <button type="button" className="sig-d date" onClick={() => ouvrirCarte("reperes", 0, "edit")}>{dateCourt(dateRdv)}</button>
             <button type="button" className="sig-d type" onClick={() => ouvrirCarte("reperes", 0, "edit")}>{TYPES_RDV.find((t) => t.v === typeRdv)?.l ?? "Type"}</button>
@@ -1131,7 +1131,7 @@ export default function VoiceCr({
         {/* Bloc — corriger en parlant. */}
         {synthese && (
           <div className="correct-box">
-            <span className="lab">🎙️ Corriger en parlant (ou en écrivant)</span>
+            <span className="lab">Corriger en parlant (ou en écrivant)</span>
             <div className="correct-row">
               <input
                 className="correct-input"
@@ -1145,12 +1145,12 @@ export default function VoiceCr({
               {instrRec === "recording" ? (
                 <button type="button" className="btn mic on" onClick={stopInstrRec}>● Stop</button>
               ) : (
-                <button type="button" className="btn ghost mic" onClick={startInstrRec} disabled={correcting} aria-label="Dicter la correction">🎤</button>
+                <button type="button" className="btn ghost mic" onClick={startInstrRec} disabled={correcting} aria-label="Dicter la correction"></button>
               )}
               <button type="button" className="btn ia" onClick={() => applyCorrection(instr)} disabled={correcting || instrRec === "recording" || !instr.trim()}>Corriger</button>
             </div>
-            {instrRec === "recording" && <p className="proc">🎤 J'écoute… tapez « Stop » quand c'est dit.</p>}
-            {correcting && <p className="proc">✨ Je corrige la fiche…</p>}
+            {instrRec === "recording" && <p className="proc">J'écoute… tapez « Stop » quand c'est dit.</p>}
+            {correcting && <p className="proc">Je corrige la fiche…</p>}
           </div>
         )}
 

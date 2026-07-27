@@ -147,7 +147,7 @@ export default async function Relances({
         {estPilote && (
           <div className="rel-acts">
             <form action={envoyerEmailTest}>
-              <button className="btn ghost" type="submit">✉️ E-mail de test</button>
+              <button className="btn ghost" type="submit">E-mail de test</button>
             </form>
             <form action={envoyerRappelsMaintenant}>
               <button className="btn ghost" type="submit">Envoyer les rappels maintenant</button>

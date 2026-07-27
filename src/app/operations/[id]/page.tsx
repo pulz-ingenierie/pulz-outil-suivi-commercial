@@ -72,7 +72,7 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
       <BackButton />
 
       <div className="page-actions">
-        <Link className="btn ghost" href={`/crs/vocal?operation=${operation.id}`}>🎙 Dicter un CR</Link>
+        <Link className="btn ghost" href={`/crs/vocal?operation=${operation.id}`}>Dicter un CR</Link>
         <Link className="btn" href={`/operations/${operation.id}/modifier`}>Modifier</Link>
       </div>
 
