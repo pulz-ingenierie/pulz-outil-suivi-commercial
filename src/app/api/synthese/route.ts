@@ -1,7 +1,7 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { syntheseSystemPrompt, SYNTHESE_USER_PREFIX } from "@/lib/prompts";
-import { extractJsonObject, isIsoDate, validateSynthese } from "@/lib/synthese";
+import { isIsoDate } from "@/lib/synthese";
+import { analyseCompteRendu, type PieceJointeIA } from "@/lib/ia-synthese";
+import { getServerSupabase } from "@/lib/supabase/server";
 
 // Synthèse IA d'un compte rendu (texte → structure). Appel serveur : la clé
 // Anthropic reste côté serveur. La sortie de l'IA est VALIDÉE contre un schéma
@@ -10,8 +10,6 @@ import { extractJsonObject, isIsoDate, validateSynthese } from "@/lib/synthese";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
-
 interface Body {
   transcription?: string;
   entites?: string[];
@@ -19,6 +17,7 @@ interface Body {
   contacts?: string[];
   membres?: string[];
   today?: string;
+  draftId?: string; // brouillon : permet d'inclure ses pièces jointes (photo) conservées
 }
 
 function asStringArray(v: unknown): string[] {
@@ -43,7 +42,24 @@ export async function POST(req: Request) {
   }
 
   const transcription = (body.transcription ?? "").trim();
-  if (!transcription) {
+
+  // Brouillon issu d'un e-mail : on récupère ses pièces jointes conservées (photo
+  // normalisée en JPEG), pour que l'IA LISE la pièce et pas seulement le texte.
+  let pieces: PieceJointeIA[] = [];
+  if (body.draftId) {
+    try {
+      const sb = getServerSupabase();
+      if (sb) {
+        const { data } = await sb.from("crs").select("pieces_ia").eq("id", body.draftId).maybeSingle();
+        const p = (data as any)?.pieces_ia;
+        if (Array.isArray(p)) pieces = p as PieceJointeIA[];
+      }
+    } catch {
+      /* colonne absente ou lecture impossible : on analyse le texte seul */
+    }
+  }
+
+  if (!transcription && pieces.length === 0) {
     return NextResponse.json({ error: "Aucun texte à synthétiser." }, { status: 400 });
   }
 
@@ -52,28 +68,21 @@ export async function POST(req: Request) {
   const knownMembres = asStringArray(body.membres);
   const knownPersonnes = Array.from(new Set([...asStringArray(body.contacts), ...knownMembres]));
   const today = isIsoDate(body.today) ? body.today : new Date().toISOString().slice(0, 10);
-  const client = new Anthropic({ apiKey });
 
   try {
-    const response = await client.messages.create({
-      model: MODEL,
-      max_tokens: 2000,
-      system: syntheseSystemPrompt(knownEntites, knownOps, knownPersonnes, today, knownMembres),
-      messages: [{ role: "user", content: SYNTHESE_USER_PREFIX + transcription }],
-    });
-
-    const text = response.content
-      .filter((b): b is Anthropic.TextBlock => b.type === "text")
-      .map((b) => b.text)
-      .join("")
-      .trim();
-
-    const parsed = extractJsonObject(text);
-    if (parsed == null) {
+    const synthese = await analyseCompteRendu(
+      transcription,
+      knownEntites,
+      knownOps,
+      today,
+      pieces,
+      knownPersonnes,
+      knownMembres,
+    );
+    if (synthese == null) {
       return NextResponse.json({ error: "Réponse IA illisible." }, { status: 502 });
     }
-
-    return NextResponse.json({ synthese: validateSynthese(parsed, knownEntites, knownOps, today) });
+    return NextResponse.json({ synthese });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erreur inconnue.";
     return NextResponse.json({ error: `Synthèse échouée : ${message}` }, { status: 502 });

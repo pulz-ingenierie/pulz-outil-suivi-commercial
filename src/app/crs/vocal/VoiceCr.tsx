@@ -346,6 +346,7 @@ export default function VoiceCr({
           contacts: contactsConnus,
           membres,
           today,
+          draftId, // brouillon : inclut la photo conservée dans l'analyse
         }),
       });
       const data = await res.json();

@@ -150,7 +150,9 @@ export async function releverEmails(): Promise<IntakeResult> {
             synth = null; // l'analyse a échoué : on crée quand même le brouillon brut
           }
 
-          const { error } = await supabase.from("crs").insert({
+          // On CONSERVE les pièces normalisées avec le brouillon : si l'analyse a
+          // échoué (ou pour ré-analyser), la photo reste disponible côté serveur.
+          const insertRow: Record<string, unknown> = {
             org_id: member.org_id,
             date_rdv: synth?.date_rdv || today,
             type_rdv: synth?.type_rdv || "autre",
@@ -158,7 +160,14 @@ export async function releverEmails(): Promise<IntakeResult> {
             statut: "brouillon",
             synthese: synth ?? null,
             auteur_id: member.id,
-          });
+            pieces_ia: pieces.length ? pieces : null,
+          };
+          let { error } = await supabase.from("crs").insert(insertRow);
+          // Repli si la colonne pieces_ia n'existe pas encore (migration 0009).
+          if (error && /pieces_ia/.test(error.message)) {
+            delete insertRow.pieces_ia;
+            ({ error } = await supabase.from("crs").insert(insertRow));
+          }
           if (error) {
             erreurs++;
             continue;
