@@ -180,6 +180,20 @@ export default function VoiceCr({
     setCardMode(mode);
     setOpenCard({ cat, i });
   };
+  // Taper un élément le déplie EN PLACE ; re-taper le referme (dépliage cohérent
+  // avec le reste de l'outil, plus de volet en surimpression).
+  const basculerCarte = (cat: "rat" | "pers" | "rel" | "reperes", i: number) => {
+    if (openCard && openCard.cat === cat && openCard.i === i) fermerCarte();
+    else ouvrirCarte(cat, i);
+  };
+  // Éditeur en place d'un bloc (rendu sous les puces du bloc concerné).
+  const editeurEnPlace = () =>
+    openCard ? (
+      <div className="cr-edit">
+        <button type="button" className="cr-edit-close" onClick={fermerCarte}>Replier ▲</button>
+        {carteContenu()}
+      </div>
+    ) : null;
 
   // Chat de correction.
   const [instr, setInstr] = useState("");
@@ -960,9 +974,10 @@ export default function VoiceCr({
         <div className="bloc">
           <div className="encart-h reperes">Repères</div>
           <div className="sig-wrap">
-            <button type="button" className="sig-d date" onClick={() => ouvrirCarte("reperes", 0, "edit")}>{dateCourt(dateRdv)}</button>
-            <button type="button" className="sig-d type" onClick={() => ouvrirCarte("reperes", 0, "edit")}>{TYPES_RDV.find((t) => t.v === typeRdv)?.l ?? "Type"}</button>
+            <button type="button" className={`sig-d date${openCard?.cat === "reperes" ? " on" : ""}`} onClick={() => basculerCarte("reperes", 0)}>{dateCourt(dateRdv)}</button>
+            <button type="button" className={`sig-d type${openCard?.cat === "reperes" ? " on" : ""}`} onClick={() => basculerCarte("reperes", 0)}>{TYPES_RDV.find((t) => t.v === typeRdv)?.l ?? "Type"}</button>
           </div>
+          {openCard?.cat === "reperes" && editeurEnPlace()}
         </div>
 
         {/* Encart — structures. */}
@@ -974,7 +989,7 @@ export default function VoiceCr({
               const enBase = ratEnBase(r);
               const typeLbl = LABEL_TYPE[(enBase ? entTypeByNom.get(r.name.trim().toLowerCase()) : r.type) ?? "autre"];
               return (
-                <button type="button" className="sig-d struct" key={i} onClick={() => ouvrirCarte("rat", i)}>
+                <button type="button" className={`sig-d struct${openCard?.cat === "rat" && openCard.i === i ? " on" : ""}`} key={i} onClick={() => basculerCarte("rat", i)}>
                   <span className="sig-lbl">{r.name.trim() || "(à nommer)"}</span>
                   {typeLbl && <span className="sig-sub">{typeLbl}</span>}
                   <span className={`sig-badge ${enBase ? "base" : "new"}`}>{enBase ? "en base" : "à créer"}</span>
@@ -983,6 +998,7 @@ export default function VoiceCr({
             })}
             <button type="button" className="sig-add" onClick={() => { setRattachements((p) => [...p, { kind: "structure", name: "" }]); ouvrirCarte("rat", rattachements.length, "edit"); }}>＋ Ajouter</button>
           </div>
+          {openCard?.cat === "rat" && rattachements[openCard.i]?.kind === "structure" && editeurEnPlace()}
         </div>
 
         {/* Encart — opérations. */}
@@ -993,7 +1009,7 @@ export default function VoiceCr({
               if (r.kind !== "operation") return null;
               const enBase = ratEnBase(r);
               return (
-                <button type="button" className="sig-d op" key={i} onClick={() => ouvrirCarte("rat", i)}>
+                <button type="button" className={`sig-d op${openCard?.cat === "rat" && openCard.i === i ? " on" : ""}`} key={i} onClick={() => basculerCarte("rat", i)}>
                   <span className="sig-lbl">{r.name.trim() || "(à nommer)"}</span>
                   <span className={`sig-badge ${enBase ? "base" : "new"}`}>{enBase ? "en base" : "à créer"}</span>
                 </button>
@@ -1001,6 +1017,7 @@ export default function VoiceCr({
             })}
             <button type="button" className="sig-add" onClick={() => { setRattachements((p) => [...p, { kind: "operation", name: "" }]); ouvrirCarte("rat", rattachements.length, "edit"); }}>＋ Ajouter</button>
           </div>
+          {openCard?.cat === "rat" && rattachements[openCard.i]?.kind === "operation" && editeurEnPlace()}
         </div>
 
         {/* Encart — personnes. */}
@@ -1011,7 +1028,7 @@ export default function VoiceCr({
               const nomComplet = [p.prenom, p.nom].filter(Boolean).join(" ") || "(à nommer)";
               const enBase = persEnBase(p);
               return (
-                <button type="button" className="sig-d pers" key={i} onClick={() => ouvrirCarte("pers", i)}>
+                <button type="button" className={`sig-d pers${openCard?.cat === "pers" && openCard.i === i ? " on" : ""}`} key={i} onClick={() => basculerCarte("pers", i)}>
                   <span className="sig-lbl">{nomComplet}</span>
                   {p.entite.trim() && <span className="mini-sig">{p.entite}</span>}
                   <span className={`sig-badge ${enBase ? "base" : "new"}`}>{enBase ? "en base" : "à créer"}</span>
@@ -1020,6 +1037,7 @@ export default function VoiceCr({
             })}
             <button type="button" className="sig-add" onClick={() => { setPersonnes((pp) => [...pp, { prenom: "", nom: "", fonction: "", entite: "" }]); ouvrirCarte("pers", personnes.length, "edit"); }}>＋ Ajouter</button>
           </div>
+          {openCard?.cat === "pers" && editeurEnPlace()}
         </div>
 
         {/* Bloc — suites à donner. Une relance est une ACTION à faire, pas un
@@ -1028,16 +1046,19 @@ export default function VoiceCr({
           <div className="encart-h rel"><Icon name="relance" /> Suites à donner</div>
           <ul className="rel-list">
             {relances.map((r, i) => (
-              <li key={i} className="rel-item">
-                <button type="button" className="rel-item-main" onClick={() => ouvrirCarte("rel", i)}>
-                  <span className="rel-item-obj">{r.objet.trim() || "(à préciser)"}</span>
-                  {r.personne.trim() && <span className="rel-item-pers">{r.personne}</span>}
-                </button>
-                {/* Date cliquable : ouvre le calendrier natif pour la modifier. */}
-                <label className="rel-item-date" title="Modifier la date de la relance">
-                  <span className="rel-item-date-lbl">{dateCourt(r.date)}</span>
-                  <input type="date" value={r.date} onChange={(e) => majRel(i, { date: e.target.value })} />
-                </label>
+              <li key={i} className="rel-item-wrap">
+                <div className={`rel-item${openCard?.cat === "rel" && openCard.i === i ? " on" : ""}`}>
+                  <button type="button" className="rel-item-main" onClick={() => basculerCarte("rel", i)}>
+                    <span className="rel-item-obj">{r.objet.trim() || "(à préciser)"}</span>
+                    {r.personne.trim() && <span className="rel-item-pers">{r.personne}</span>}
+                  </button>
+                  {/* Date cliquable : ouvre le calendrier natif pour la modifier. */}
+                  <label className="rel-item-date" title="Modifier la date de la relance">
+                    <span className="rel-item-date-lbl">{dateCourt(r.date)}</span>
+                    <input type="date" value={r.date} onChange={(e) => majRel(i, { date: e.target.value })} />
+                  </label>
+                </div>
+                {openCard?.cat === "rel" && openCard.i === i && editeurEnPlace()}
               </li>
             ))}
             <li>
@@ -1177,16 +1198,6 @@ export default function VoiceCr({
           </div>
         )}
       </form>
-
-      {/* Carte ouverte au clic sur un signet (overlay, sans saut d'écran). */}
-      {openCard && (
-        <div className="cardovl" onClick={fermerCarte}>
-          <div className="carte" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="carte-close" aria-label="Fermer" onClick={fermerCarte}>×</button>
-            {carteContenu()}
-          </div>
-        </div>
-      )}
     </>
   );
 }
