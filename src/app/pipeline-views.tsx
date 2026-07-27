@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { STATUT_LABELS, STATUT_ORDRE, type OperationStatut } from "@/lib/types";
-import NavRow from "@/components/NavRow";
+import ExpandableRow from "@/components/ExpandableRow";
 import OperationRow from "@/components/OperationRow";
 
 // Couleur associée à chaque étape (variables CSS définies dans globals.css).
@@ -215,7 +215,7 @@ function VueStructures({ reseau }: { reseau: Structure[] }) {
       {list.length ? (
         <div className="vlist2">
           {list.map((s) => (
-            <NavRow href={`/entites/${s.id}`} type="entite" id={s.id} nom={s.nom} key={s.id}>
+            <ExpandableRow type="entite" id={s.id} nom={s.nom} key={s.id}>
               <span className="vrow-nom">{s.nom}</span>
               <span className="vrow-meta">
                 {s.prochaineRelance && <span className="vrow-rel">Relance {dateCourt(s.prochaineRelance)}</span>}
@@ -223,7 +223,7 @@ function VueStructures({ reseau }: { reseau: Structure[] }) {
                 {s.silencieux && s.ops.length === 0 && <span className="pill silence">à réchauffer</span>}
                 <span className="vrow-type">{s.type}</span>
               </span>
-            </NavRow>
+            </ExpandableRow>
           ))}
         </div>
       ) : (
@@ -260,13 +260,13 @@ function VuePersonnes({ personnes }: { personnes: PersonneListe[] }) {
           {list.map((p) => {
             const nomComplet = [p.prenom, p.nom].filter(Boolean).join(" ") || p.nom;
             return (
-              <NavRow href={`/personnes/${p.id}`} type="personne" id={p.id} nom={nomComplet} key={p.id}>
+              <ExpandableRow type="personne" id={p.id} nom={nomComplet} key={p.id}>
                 <span className="vrow-nom">{nomComplet}</span>
                 <span className="vrow-meta">
                   {p.fonction && <span>{p.fonction}</span>}
                   {p.entiteNom && <span className="vrow-type">{p.entiteNom}</span>}
                 </span>
-              </NavRow>
+              </ExpandableRow>
             );
           })}
         </div>
