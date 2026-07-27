@@ -42,17 +42,15 @@ export default async function Entites() {
       </div>
 
       {list.length ? (
-        <div className="minigrid">
+        <div className="vlist2">
           {list.map((e: any) => (
-            <Link className="minicard" href={`/entites/${e.id}`} key={e.id}>
-              <div className="mc-top">
-                <span className="mc-nom">{e.nom}</span>
-                <span className="sig-d type"><span className="sig-lbl">{TYPE_ENTITE[e.type] ?? e.type}</span></span>
-              </div>
-              <div className="mc-meta">
+            <Link className="vrow" href={`/entites/${e.id}`} key={e.id}>
+              <span className="vrow-nom">{e.nom}</span>
+              <span className="vrow-meta">
                 {e.ville && <span>{e.ville}</span>}
                 {e.statut_vie === "dormant" && <span className="pill dormant">en sommeil</span>}
-              </div>
+                <span className="vrow-type">{TYPE_ENTITE[e.type] ?? e.type}</span>
+              </span>
             </Link>
           ))}
         </div>

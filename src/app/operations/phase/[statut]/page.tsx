@@ -7,7 +7,7 @@ import {
   type Operation,
   type OperationStatut,
 } from "@/lib/types";
-import Signet from "@/components/Signet";
+import OperationRow from "@/components/OperationRow";
 
 export const dynamic = "force-dynamic";
 
@@ -21,11 +21,6 @@ const STATUT_VAR: Record<string, string> = {
   gagne: "--s-gagne",
   perdu: "--s-perdu",
 };
-
-function euro(n: number | null): string | null {
-  if (n == null) return null;
-  return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n) + " €";
-}
 
 // Page dédiée à une étape : liste toutes les affaires qui s'y trouvent.
 export default async function PhasePage({ params }: { params: Promise<{ statut: string }> }) {
@@ -47,14 +42,11 @@ export default async function PhasePage({ params }: { params: Promise<{ statut: 
   }
 
   const supabase = getServerSupabase()!;
-  const [{ data: ops, error }, { data: liens }] = await Promise.all([
-    supabase
-      .from("operations")
-      .select("*")
-      .eq("statut", st)
-      .order("created_at", { ascending: false }),
-    supabase.from("entite_operation").select("operation_id, entites(id, nom)"),
-  ]);
+  const { data: ops, error } = await supabase
+    .from("operations")
+    .select("*")
+    .eq("statut", st)
+    .order("created_at", { ascending: false });
 
   if (error) {
     return (
@@ -68,14 +60,6 @@ export default async function PhasePage({ params }: { params: Promise<{ statut: 
   }
 
   const operations = (ops ?? []) as Operation[];
-
-  // Prospects rattachés à chaque affaire (les portes d'entrée), avec leur id
-  // pour ouvrir leur carte.
-  const opEntites: Record<string, { id: string; nom: string }[]> = {};
-  for (const l of (liens ?? []) as any[]) {
-    if (!l.operation_id || !l.entites?.id) continue;
-    (opEntites[l.operation_id] ??= []).push({ id: l.entites.id, nom: l.entites.nom ?? "—" });
-  }
 
   return (
     <main className="wrap">
@@ -103,24 +87,10 @@ export default async function PhasePage({ params }: { params: Promise<{ statut: 
       </div>
 
       {operations.length ? (
-        <div className="vlist">
-          {operations.map((o) => {
-            const montant = euro(o.montant_estime);
-            const ents = opEntites[o.id] ?? [];
-            return (
-              <div className="op" key={o.id}>
-                <Link className="onm" href={`/operations/${o.id}`}>{o.nom}</Link>
-                {(ents.length > 0 || montant) && (
-                  <div className="ometa">
-                    {ents.map((e) => (
-                      <Signet key={e.id} type="entite" id={e.id} cat="struct" label={e.nom} />
-                    ))}
-                    {montant && <span className="amt">{montant}</span>}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        <div className="vlist2">
+          {operations.map((o) => (
+            <OperationRow key={o.id} id={o.id} nom={o.nom} statut={o.statut} montant={o.montant_estime} />
+          ))}
         </div>
       ) : (
         <div className="card"><span className="empty">Aucune affaire à cette étape.</span></div>
