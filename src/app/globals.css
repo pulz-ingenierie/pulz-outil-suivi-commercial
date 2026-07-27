@@ -567,9 +567,12 @@ a.rel-card:hover { border-color: var(--muted); background: var(--surface); }
 .rel-card-obj { font-size: 14px; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rel-card-date { flex: none; font-size: 12px; font-weight: 560; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .rel-card-date.crit { color: var(--crit); }
-.rel-card-sigs { min-height: 20px; flex-wrap: nowrap; }
-.rel-card-sigs .sig-d.op { min-width: 0; max-width: 62%; }
-.rel-card-sigs .sig-d.pers { flex: none; }
+/* Opération à gauche (tronquée si longue), personne calée à droite : les signets
+   tombent au même endroit d'une carte à l'autre. */
+.rel-card-sigs { display: flex; align-items: center; justify-content: space-between;
+       gap: 8px; min-height: 20px; flex-wrap: nowrap; }
+.rel-card-sigs .sig-d.op { min-width: 0; flex: 0 1 auto; }
+.rel-card-sigs .sig-d.pers { flex: none; margin-left: auto; }
 
 /* Ligne de relance (fiches) sur deux niveaux : l'objet, puis l'opération
    concernée + l'échéance — pour savoir d'un coup d'œil de quelle affaire il
