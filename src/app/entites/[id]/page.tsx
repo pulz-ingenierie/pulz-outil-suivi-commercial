@@ -6,7 +6,8 @@ import FilCr from "@/components/FilCr";
 import BackButton from "@/components/BackButton";
 import Signet from "@/components/Signet";
 import OperationRow from "@/components/OperationRow";
-import { indexerLiens } from "@/lib/personnes";
+import RelanceRow from "@/components/RelanceRow";
+import { indexerLiens, lienPersonne } from "@/lib/personnes";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +74,20 @@ export default async function FicheStructure({ params }: { params: Promise<{ id:
     .sort((a: any, b: any) => (a.date_rdv < b.date_rdv ? 1 : -1));
   const dernierContact = crs.length ? crs[0].date_rdv : null;
 
+  // Relances propres à la structure : directes OU via l'une de ses opérations.
+  const today = new Date().toISOString().slice(0, 10);
+  const opIds = operations.map((o: any) => o.id).filter(Boolean);
+  const orParts = [`entite_id.eq.${id}`];
+  if (opIds.length) orParts.push(`operation_id.in.(${opIds.join(",")})`);
+  const { data: relRows } = await supabase
+    .from("relances")
+    .select("id, objet, date_echeance, personne, operation_id, operations(nom)")
+    .eq("statut", "a_faire")
+    .or(orParts.join(","))
+    .order("date_echeance", { ascending: true });
+  const vusRel = new Set<string>();
+  const relances = (relRows ?? []).filter((r: any) => { if (vusRel.has(r.id)) return false; vusRel.add(r.id); return true; });
+
   const typeLbl = TYPE_ENTITE[entite.type] ?? entite.type;
 
   return (
@@ -114,6 +129,28 @@ export default async function FicheStructure({ params }: { params: Promise<{ id:
             </div>
           ) : (
             <div className="empty">Aucune opération rattachée — piste du réseau.</div>
+          )}
+        </div>
+
+        <div className="block">
+          <div className="eyebrow">Prochaines relances</div>
+          {relances.length ? (
+            <div className="vlist2">
+              {relances.map((r: any) => (
+                <RelanceRow
+                  key={r.id}
+                  id={r.id}
+                  objet={r.objet}
+                  echeance={dateFr(r.date_echeance)}
+                  enRetard={r.date_echeance < today}
+                  op={r.operation_id && r.operations?.nom ? { id: r.operation_id, nom: r.operations.nom } : null}
+                  personne={r.personne ?? null}
+                  persHref={r.personne ? lienPersonne(liensPersonnes, r.personne) : null}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="empty">Aucune relance planifiée pour cette structure.</div>
           )}
         </div>
 

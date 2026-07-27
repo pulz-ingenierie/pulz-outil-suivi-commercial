@@ -5,6 +5,7 @@ import { type OperationStatut } from "@/lib/types";
 import BackButton from "@/components/BackButton";
 import Signet from "@/components/Signet";
 import OperationRow from "@/components/OperationRow";
+import RelanceRow from "@/components/RelanceRow";
 import { normNom } from "@/lib/personnes";
 
 export const dynamic = "force-dynamic";
@@ -63,22 +64,18 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
 
   const nomComplet = [contact.prenom, contact.nom].filter(Boolean).join(" ") || contact.nom;
 
-  // Prochaine relance qui concerne cette personne : d'abord une relance qui la
-  // nomme explicitement, sinon la prochaine relance de sa structure / de ses
-  // affaires (fonctionne même sans la colonne « personne »). Les relances sont
-  // déjà triées par échéance croissante.
+  // Relances qui concernent cette personne : celles qui la nomment, + celles de
+  // sa structure / de ses affaires. Les relances sont triées par échéance.
+  const today = new Date().toISOString().slice(0, 10);
   const nomNorm = normNom(nomComplet);
   const opIds = new Set(operations.map((o: any) => o.id));
   const rlist = (relances ?? []) as any[];
-  const prochaine =
-    rlist.find((r) => r.personne && normNom(r.personne) === nomNorm) ??
-    rlist.find(
-      (r) => (contact.entite_id && r.entite_id === contact.entite_id) || (r.operation_id && opIds.has(r.operation_id)),
-    ) ??
-    null;
-  const prochaineHref = prochaine
-    ? (prochaine.operation_id ? `/operations/${prochaine.operation_id}` : "/relances")
-    : null;
+  const mesRelances = rlist.filter(
+    (r) =>
+      (r.personne && normNom(r.personne) === nomNorm) ||
+      (contact.entite_id && r.entite_id === contact.entite_id) ||
+      (r.operation_id && opIds.has(r.operation_id)),
+  );
 
   return (
     <main className="wrap">
@@ -96,14 +93,6 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
         </div>
       </div>
 
-      {prochaine && (
-        <div className="sig-wrap" style={{ marginBottom: 16 }}>
-          <Link className="sig-d rel" href={prochaineHref!}>
-            <span className="sig-lbl">Prochaine relance · {dateFr(prochaine.date_echeance)}</span>
-          </Link>
-        </div>
-      )}
-
       <div className="blocks">
         <div className="block">
           <div className="block-h">
@@ -118,6 +107,27 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
               {contact.tel && <a className="btn ghost mini" href={`tel:${contact.tel}`}>Appeler</a>}
               {contact.email && <a className="btn ghost mini" href={`mailto:${contact.email}`}>E-mail</a>}
             </div>
+          )}
+        </div>
+
+        <div className="block">
+          <div className="eyebrow">Prochaines relances</div>
+          {mesRelances.length ? (
+            <div className="vlist2">
+              {mesRelances.map((r: any) => (
+                <RelanceRow
+                  key={r.id}
+                  id={r.id}
+                  objet={r.objet}
+                  echeance={dateFr(r.date_echeance)}
+                  enRetard={r.date_echeance < today}
+                  op={r.operation_id && r.operations?.nom ? { id: r.operation_id, nom: r.operations.nom } : null}
+                  personne={r.personne ?? null}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="empty">Aucune relance planifiée pour cette personne.</div>
           )}
         </div>
 

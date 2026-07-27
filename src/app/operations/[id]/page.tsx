@@ -6,6 +6,7 @@ import FilCr from "@/components/FilCr";
 import PhaseSelect from "./PhaseSelect";
 import BackButton from "@/components/BackButton";
 import Signet from "@/components/Signet";
+import RelanceRow from "@/components/RelanceRow";
 import { indexerLiens, lienPersonne } from "@/lib/personnes";
 
 export const dynamic = "force-dynamic";
@@ -126,25 +127,19 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
         <div className="block">
           <div className="eyebrow">Prochaines relances</div>
           {rels.length ? (
-            <div className="fil">
-              {rels.map((r: any) => {
-                const late = r.date_echeance < today;
-                return (
-                  <div className="rel-line" key={r.id}>
-                    <span className="rel-line-obj">{r.objet}</span>
-                    <div className="sig-wrap">
-                      {r.personne && (() => {
-                        const href = lienPersonne(liensPersonnes, r.personne);
-                        return href
-                          ? <Link className="sig-d pers" href={href}><span className="sig-lbl">{r.personne}</span></Link>
-                          : <span className="sig-d pers"><span className="sig-lbl">{r.personne}</span></span>;
-                      })()}
-                      <span className={`sig-d date${late ? " late" : ""}`}><span className="sig-lbl">{dateFr(r.date_echeance)}</span></span>
-                      {r.auto && <span className="sig-d ia"><span className="sig-lbl">IA</span></span>}
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="vlist2">
+              {rels.map((r: any) => (
+                <RelanceRow
+                  key={r.id}
+                  id={r.id}
+                  objet={r.objet}
+                  echeance={dateFr(r.date_echeance)}
+                  enRetard={r.date_echeance < today}
+                  structs={entites.map((e: any) => ({ id: e.id, nom: e.nom }))}
+                  personne={r.personne ?? null}
+                  persHref={r.personne ? lienPersonne(liensPersonnes, r.personne) : null}
+                />
+              ))}
             </div>
           ) : <div className="empty">Aucune relance planifiée.</div>}
         </div>

@@ -955,7 +955,6 @@ export default function VoiceCr({
           )}
           {phase === "recorded" && (
             <div className="rec-done">
-              {audioUrl && <audio className="player" src={audioUrl} controls />}
               {busy === "transcribe" && <p className="proc">Transcription en cours…</p>}
               {busy === "synth" && <p className="proc">L'IA structure le compte rendu…</p>}
               {!busy && synthese && <p className="proc ok">✓ Analysé — relisez les blocs ci-dessous.</p>}
