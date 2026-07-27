@@ -46,11 +46,32 @@ h1 { font-weight: 700; }
 .tnum { font-variant-numeric: tabular-nums; font-family: var(--font-mono, ui-monospace, monospace); }
 ::selection { background: var(--accent-soft); }
 
+/* App-shell plein écran : top bar fixe · contenu (seul à défiler) · nav basse. */
+.shell { display: flex; flex-direction: column; height: 100dvh; }
+.shell-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
+
 .topbar {
+  flex: none;
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 14px 22px; border-bottom: 1px solid var(--line);
-  background: var(--surface);
+  padding: 12px 18px; padding-top: calc(12px + env(safe-area-inset-top));
+  border-bottom: 1px solid var(--line); background: var(--surface);
 }
+
+/* Navigation primaire, en bas, à portée de pouce. */
+.bottom-nav {
+  flex: none; display: flex; align-items: flex-end; justify-content: space-around; gap: 2px;
+  background: var(--surface); border-top: 1px solid var(--line);
+  padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
+}
+.bn-item { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  text-decoration: none; color: var(--faint); font-size: 10.5px; font-weight: 600; padding: 2px 0; }
+.bn-item .ic { width: 22px; height: 22px; }
+.bn-item.on { color: var(--ink); }
+.bn-cr { flex: none; width: 50px; height: 50px; margin: 0 4px; border-radius: 15px;
+  background: var(--primary); color: var(--on-primary); text-decoration: none;
+  display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(34,31,26,.25);
+  transform: translateY(-8px); }
+.bn-cr .ic { width: 24px; height: 24px; }
 .top-user { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .top-user .who { font-size: 13px; color: var(--muted); font-weight: 600; }
 @media (max-width: 620px) { .top-user .who { display: none; } }
@@ -69,7 +90,7 @@ h1 { font-weight: 700; }
 .brand-word { font-family: var(--font-display, 'Space Grotesk', sans-serif); font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
 .brand small { font-weight: 500; color: var(--faint); font-size: 12px; }
 
-.wrap { max-width: 860px; margin: 0 auto; padding: 24px 22px 60px; --wrap-pad: 22px; }
+.wrap { max-width: 860px; margin: 0 auto; padding: 20px 16px 28px; --wrap-pad: 16px; }
 .eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .01em; color: var(--faint); }
 
 /* KPI discrets : rangée fine, sobre — pas de grosses cartes. */
@@ -745,8 +766,8 @@ a.sig-d { text-decoration: none; }
 .muted { color: var(--muted); }
 
 /* Marqueur de version (discret) : permet de confirmer le déploiement en cours. */
-.build-tag { position: fixed; bottom: 4px; right: 6px; font-size: 9px; color: var(--faint);
-       opacity: .5; font-family: var(--font-mono, monospace); pointer-events: none; z-index: 5; }
+.build-tag { position: fixed; bottom: calc(env(safe-area-inset-bottom) + 74px); right: 6px; font-size: 9px;
+       color: var(--faint); opacity: .45; font-family: var(--font-mono, monospace); pointer-events: none; z-index: 5; }
 
 /* Signet de phase (saisie CR) : puce colorée éditable via un select superposé. */
 .phase-signet { position: relative; display: inline-flex; align-items: center; gap: 7px; cursor: pointer;

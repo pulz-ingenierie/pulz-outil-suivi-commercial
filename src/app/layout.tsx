@@ -6,6 +6,7 @@ import { getIdentite } from "@/lib/auth";
 import { signOut } from "@/lib/auth-actions";
 import MoeiaLogo from "@/components/MoeiaLogo";
 import DeleteSheet from "@/components/DeleteSheet";
+import BottomNav from "@/components/BottomNav";
 
 // Fontes moeïa : Inter (UI), Space Grotesk (titres), JetBrains Mono (chiffres).
 const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-ui", display: "swap" });
@@ -58,23 +59,28 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="fr" className={`${inter.variable} ${grotesk.variable} ${mono.variable}`}>
       <body>
-        {profil && (
-          <header className="topbar">
-            <Link className="brand" href="/tableau" style={{ textDecoration: "none", color: "inherit" }}>
-              <MoeiaLogo /> <span className="brand-word">moeïa</span> <small>Suivi commercial</small>
-            </Link>
-            <div className="top-user">
-              {profil.role === "pilote" && (
-                <Link className="btn ghost mini" href="/admin/utilisateurs">Administration</Link>
-              )}
-              <span className="who">{profil.nom}{profil.role === "pilote" ? " · pilote" : ""}</span>
-              <form action={signOut}>
-                <button className="btn ghost mini" type="submit">Se déconnecter</button>
-              </form>
-            </div>
-          </header>
+        {profil ? (
+          <div className="shell">
+            <header className="topbar">
+              <Link className="brand" href="/tableau" style={{ textDecoration: "none", color: "inherit" }}>
+                <MoeiaLogo /> <span className="brand-word">moeïa</span>
+              </Link>
+              <div className="top-user">
+                {profil.role === "pilote" && (
+                  <Link className="btn ghost mini" href="/admin/utilisateurs">Administration</Link>
+                )}
+                <span className="who">{profil.nom}</span>
+                <form action={signOut}>
+                  <button className="btn ghost mini" type="submit">Quitter</button>
+                </form>
+              </div>
+            </header>
+            <div className="shell-content">{children}</div>
+            <BottomNav />
+          </div>
+        ) : (
+          children
         )}
-        {children}
         <DeleteSheet />
         <div className="build-tag">v{(process.env.VERCEL_GIT_COMMIT_SHA ?? "local").slice(0, 7)}</div>
       </body>
