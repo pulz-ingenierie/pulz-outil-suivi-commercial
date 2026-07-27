@@ -4,7 +4,16 @@ import { useState } from "react";
 import Link from "next/link";
 import SwipeRow from "@/components/SwipeRow";
 import Signet from "@/components/Signet";
+import CatIcon from "@/components/CatIcon";
 import { demanderSuppression } from "@/lib/gestures";
+
+// Style de volet homogène (comme la relance du compte rendu) : bandeau de
+// catégorie, titre, sections à en-têtes icônés, pied d'actions.
+const CATS = {
+  entite: { cls: "struct", icon: "structure" },
+  operation: { cls: "op", icon: "operation" },
+  personne: { cls: "pers", icon: "personne" },
+} as const;
 
 // Ligne de liste qui se DÉPLIE sur place au tap (au lieu d'un volet qui remonte
 // du bas). Elle charge à la demande l'aperçu de l'objet (/api/apercu) et affiche
@@ -12,7 +21,8 @@ import { demanderSuppression } from "@/lib/gestures";
 // gauche supprime (SwipeRow).
 
 type Item = { type: "entite" | "operation" | "personne"; id: string; cat: string; label: string };
-type Section = { titre: string; items: Item[] };
+type SectionIcon = "structure" | "operation" | "personne" | "relance" | "ville";
+type Section = { titre: string; icon?: SectionIcon; items: Item[] };
 type Relance = { id: string; objet: string; echeance: string; enRetard: boolean; personne: string | null };
 type Apercu = { cat: string; catLabel: string; nom: string; meta?: string; ville?: string | null; href: string; sections: Section[]; relances?: Relance[] };
 
@@ -67,43 +77,49 @@ export default function ExpandableRow({
           {loading && <p className="proc" style={{ margin: 0 }}>Chargement…</p>}
           {data && (
             <>
-              {data.meta ? <div className="lx-meta">{data.meta}</div> : null}
-              {data.cat === "op" && (
-                <div className="lx-sect">
-                  <div className="lx-sect-h">Ville</div>
-                  <div className="sig-wrap">
-                    <span className={`sig-d ville${data.ville ? "" : " vide"}`}><span className="sig-lbl">{data.ville || "✕ à compléter"}</span></span>
+              <div className="carte-top">
+                <span className={`carte-cat ${CATS[type].cls}`}><CatIcon name={CATS[type].icon} /> {data.catLabel}</span>
+                <h2 className="carte-nom-view">{data.nom || nom}</h2>
+                {data.meta ? <div className="carte-meta">{data.meta}</div> : null}
+              </div>
+              <div className="carte-body">
+                {data.cat === "op" && (
+                  <div className="carte-sect">
+                    <div className="carte-sect-h"><CatIcon name="ville" /> Ville</div>
+                    <div className="sig-wrap">
+                      <span className={`sig-d ville${data.ville ? "" : " vide"}`}><span className="sig-lbl">{data.ville || "✕ à compléter"}</span></span>
+                    </div>
                   </div>
-                </div>
-              )}
-              {data.sections.map((s, i) => (
-                <div className="lx-sect" key={i}>
-                  <div className="lx-sect-h">{s.titre}</div>
-                  <div className="sig-wrap">
-                    {s.items.map((it) => <Signet key={`${it.type}-${it.id}`} type={it.type} id={it.id} cat={it.cat} label={it.label} parent={{ type, id, nom: data?.nom ?? nom }} />)}
+                )}
+                {data.sections.map((s, i) => (
+                  <div className="carte-sect" key={i}>
+                    <div className="carte-sect-h"><CatIcon name={s.icon ?? "structure"} /> {s.titre}</div>
+                    <div className="sig-wrap">
+                      {s.items.map((it) => <Signet key={`${it.type}-${it.id}`} type={it.type} id={it.id} cat={it.cat} label={it.label} parent={{ type, id, nom: data?.nom ?? nom }} />)}
+                    </div>
                   </div>
-                </div>
-              ))}
-              {data.relances && data.relances.length > 0 && (
-                <div className="lx-sect">
-                  <div className="lx-sect-h">Prochaines relances</div>
-                  <div className="fil">
-                    {data.relances.map((r) => (
-                      <div className="rel-line" key={r.id}>
-                        <span className="rel-line-obj">{r.objet}</span>
-                        <div className="sig-wrap">
-                          {r.personne && <span className="sig-d pers"><span className="sig-lbl">{r.personne}</span></span>}
-                          <span className={`sig-d date${r.enRetard ? " late" : ""}`}><span className="sig-lbl">{r.echeance}</span></span>
+                ))}
+                {data.relances && data.relances.length > 0 && (
+                  <div className="carte-sect">
+                    <div className="carte-sect-h"><CatIcon name="relance" /> Prochaines relances</div>
+                    <div className="fil">
+                      {data.relances.map((r) => (
+                        <div className="rel-line" key={r.id}>
+                          <span className="rel-line-obj">{r.objet}</span>
+                          <div className="sig-wrap">
+                            {r.personne && <span className="sig-d pers"><span className="sig-lbl">{r.personne}</span></span>}
+                            <span className={`sig-d date${r.enRetard ? " late" : ""}`}><span className="sig-lbl">{r.echeance}</span></span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
+                )}
+                {data.sections.length === 0 && !(data.relances && data.relances.length) && <p className="hint" style={{ margin: 0 }}>Aucun élément associé pour l'instant.</p>}
+                <div className="carte-foot">
+                  <button type="button" className="btn ghost mini danger" onClick={() => demanderSuppression(type, id, data?.nom ?? nom)}>Supprimer</button>
+                  <Link className="btn" href={data.href}>Ouvrir la fiche</Link>
                 </div>
-              )}
-              {data.sections.length === 0 && !(data.relances && data.relances.length) && <p className="hint" style={{ margin: 0 }}>Aucun élément associé pour l'instant.</p>}
-              <div className="lx-acts">
-                <Link className="btn mini" href={data.href}>Ouvrir la fiche</Link>
-                <button type="button" className="btn ghost mini danger" onClick={() => demanderSuppression(type, id, data?.nom ?? nom)}>Supprimer</button>
               </div>
             </>
           )}

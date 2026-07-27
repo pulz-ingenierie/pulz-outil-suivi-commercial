@@ -6,6 +6,7 @@ import { updateRelance } from "@/lib/actions";
 import ReporterRelance from "@/components/ReporterRelance";
 import Signet from "@/components/Signet";
 import SwipeRow from "@/components/SwipeRow";
+import CatIcon from "@/components/CatIcon";
 
 // Une relance = une ligne qui se DÉPLIE sur place (comme le reste de l'outil) :
 // signets associés + actions (Nouveau CR, Fait, Reporter, Abandonner). Glisser
@@ -85,46 +86,53 @@ export default function RelancesListe({ groupes }: { groupes: Groupe[] }) {
                     </SwipeRow>
                     {open && (
                       <div className="lx-body">
-                        {r.op && (
-                          <div className="lx-sect">
-                            <div className="lx-sect-h">Opération</div>
-                            <div className="sig-wrap">
-                              <Signet type="operation" id={r.op.id} cat="op" label={r.op.nom} />
+                        <div className="carte-top">
+                          <span className="carte-cat rel"><CatIcon name="relance" /> Relance</span>
+                          <h2 className="carte-nom-view">{r.objet}</h2>
+                          <div className={`carte-meta${r.enRetard ? " crit" : ""}`}>Échéance : {r.echeance}{r.enRetard ? " · en retard" : ""}</div>
+                        </div>
+                        <div className="carte-body">
+                          {r.op && (
+                            <div className="carte-sect">
+                              <div className="carte-sect-h"><CatIcon name="operation" /> Opération</div>
+                              <div className="sig-wrap">
+                                <Signet type="operation" id={r.op.id} cat="op" label={r.op.nom} />
+                              </div>
                             </div>
-                          </div>
-                        )}
-                        {r.structs.length > 0 && (
-                          <div className="lx-sect">
-                            <div className="lx-sect-h">Structures</div>
-                            <div className="sig-wrap">
-                              {r.structs.map((s) => <Signet key={s.id} type="entite" id={s.id} cat="struct" label={s.nom} />)}
+                          )}
+                          {r.structs.length > 0 && (
+                            <div className="carte-sect">
+                              <div className="carte-sect-h"><CatIcon name="structure" /> Structures</div>
+                              <div className="sig-wrap">
+                                {r.structs.map((s) => <Signet key={s.id} type="entite" id={s.id} cat="struct" label={s.nom} />)}
+                              </div>
                             </div>
-                          </div>
-                        )}
-                        {r.personne && (
-                          <div className="lx-sect">
-                            <div className="lx-sect-h">Personne à relancer</div>
-                            <div className="sig-wrap">
-                              {r.persHref
-                                ? <Link className="sig-d pers" href={r.persHref}><span className="sig-lbl">{r.personne}</span></Link>
-                                : <span className="sig-d pers"><span className="sig-lbl">{r.personne}</span></span>}
+                          )}
+                          {r.personne && (
+                            <div className="carte-sect">
+                              <div className="carte-sect-h"><CatIcon name="personne" /> Personne à relancer</div>
+                              <div className="sig-wrap">
+                                {r.persHref
+                                  ? <Link className="sig-d pers" href={r.persHref}><span className="sig-lbl">{r.personne}</span></Link>
+                                  : <span className="sig-d pers"><span className="sig-lbl">{r.personne}</span></span>}
+                              </div>
                             </div>
-                          </div>
-                        )}
-                        <div className="rel-acts">
-                          <Link className="btn" href={r.crHref}>Nouveau compte rendu</Link>
-                          <div className="rel-acts-row">
-                            <form action={updateRelance}>
-                              <input type="hidden" name="id" value={r.id} />
-                              <input type="hidden" name="action" value="faite" />
-                              <button className="btn ghost mini" type="submit" title="Marquer comme fait">Fait</button>
-                            </form>
-                            <ReporterRelance id={r.id} defaultDate={r.reporterDefault} />
-                            <form action={updateRelance}>
-                              <input type="hidden" name="id" value={r.id} />
-                              <input type="hidden" name="action" value="abandonner" />
-                              <button className="btn ghost mini danger" type="submit">Abandonner</button>
-                            </form>
+                          )}
+                          <div className="rel-acts">
+                            <Link className="btn" href={r.crHref}>Nouveau compte rendu</Link>
+                            <div className="rel-acts-row">
+                              <form action={updateRelance}>
+                                <input type="hidden" name="id" value={r.id} />
+                                <input type="hidden" name="action" value="faite" />
+                                <button className="btn ghost mini" type="submit" title="Marquer comme fait">Fait</button>
+                              </form>
+                              <ReporterRelance id={r.id} defaultDate={r.reporterDefault} />
+                              <form action={updateRelance}>
+                                <input type="hidden" name="id" value={r.id} />
+                                <input type="hidden" name="action" value="abandonner" />
+                                <button className="btn ghost mini danger" type="submit">Abandonner</button>
+                              </form>
+                            </div>
                           </div>
                         </div>
                       </div>

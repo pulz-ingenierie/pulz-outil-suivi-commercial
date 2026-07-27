@@ -199,10 +199,16 @@ a.vrow { color: var(--ink); text-decoration: none; }
 .lx > .swrow { background: var(--crit); }
 .lx-chev { color: var(--faint); font-size: 18px; line-height: 1; transition: transform .15s; margin-left: 2px; }
 .lx.open .lx-chev { transform: rotate(90deg); }
-/* Panneau déplié : recessé (effet tiroir) pour bien se distinguer de la ligne. */
-.lx-body { background: var(--surface-2); padding: 12px var(--wrap-pad, 16px) 14px; display: flex; flex-direction: column; gap: 12px;
+/* Panneau déplié : recessé (effet tiroir), avec le MÊME style de volet que la
+   relance d'un compte rendu (bandeau de catégorie + titre + sections icônées). */
+.lx-body { background: var(--surface-2); padding: 0 var(--wrap-pad, 16px) 16px; display: flex; flex-direction: column;
        border-top: 1px solid var(--line);
        box-shadow: inset 0 8px 10px -10px rgba(0,0,0,.14), inset 0 -1px 0 var(--line); }
+.lx-body .carte-top { padding: 14px 0 10px; border-bottom: 1px solid var(--line); }
+.lx-body .carte-nom-view { font-size: 16px; margin-top: 8px; }
+.lx-body .carte-meta { font-size: 12.5px; }
+.lx-body .carte-body { padding: 12px 0 0; }
+.lx-body .carte-foot { margin-top: 6px; }
 .lx-meta { font-size: 13px; color: var(--muted); }
 .lx-sect { display: flex; flex-direction: column; gap: 7px; }
 .lx-sect-h { font-size: 11.5px; font-weight: 600; color: var(--faint); letter-spacing: .01em; }
