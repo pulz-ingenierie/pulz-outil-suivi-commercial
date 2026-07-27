@@ -104,12 +104,14 @@ export default function ExpandableRow({
                     <div className="carte-sect-h"><CatIcon name="relance" /> Prochaines relances</div>
                     <div className="fil">
                       {data.relances.map((r) => (
-                        <Link className="rel-line rel-line-link" href={`/relances#r-${r.id}`} key={r.id}>
-                          <span className="rel-line-obj">{r.objet}</span>
-                          <div className="sig-wrap">
+                        <Link className="rel-card" href={`/relances#r-${r.id}`} key={r.id}>
+                          <div className="rel-card-top">
+                            <span className="rel-card-obj">{r.objet}</span>
+                            <span className={`rel-card-date${r.enRetard ? " crit" : ""}`}>{r.echeance}</span>
+                          </div>
+                          <div className="rel-card-sigs sig-wrap">
                             {r.operation && r.operation.id !== id && <span className="sig-d op"><span className="sig-lbl">{r.operation.nom}</span></span>}
                             {r.personne && <span className="sig-d pers"><span className="sig-lbl">{r.personne}</span></span>}
-                            <span className={`sig-d date${r.enRetard ? " late" : ""}`}><span className="sig-lbl">{r.echeance}</span></span>
                           </div>
                         </Link>
                       ))}

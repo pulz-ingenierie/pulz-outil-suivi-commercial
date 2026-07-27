@@ -4,6 +4,7 @@ import { envoyerRappelsMaintenant } from "@/lib/admin-actions";
 import { getIdentite } from "@/lib/auth";
 import { indexerLiens, lienPersonne } from "@/lib/personnes";
 import RelancesListe, { type RelRow } from "@/components/RelancesListe";
+import HashBack from "@/components/HashBack";
 
 export const dynamic = "force-dynamic";
 
@@ -136,6 +137,7 @@ export default async function Relances({
 
   return (
     <main className="wrap">
+      <HashBack />
       <div className="fiche-head">
         <div>
           <div className="eyebrow">Suites à donner</div>

@@ -556,9 +556,20 @@ a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); tran
 .rel-line { display: flex; flex-direction: column; gap: 8px; padding: 11px 13px;
        border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
 .rel-line-obj { font-size: 14px; }
-/* Relance cliquable (dans un volet) : ouvre la relance sur l'écran Relances. */
-a.rel-line-link { text-decoration: none; color: inherit; cursor: pointer; transition: border-color .12s, background .12s; }
-a.rel-line-link:hover { border-color: var(--muted); background: var(--surface); }
+/* Carte de relance dans un volet : format FIXE et régulier. Objet sur une ligne
+   (tronqué à l'ellipse), date en haut à droite, signets alignés en dessous.
+   Cliquable → ouvre la relance sur l'écran Relances. */
+a.rel-card { display: flex; flex-direction: column; gap: 8px; padding: 11px 13px;
+       border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2);
+       text-decoration: none; color: inherit; cursor: pointer; transition: border-color .12s, background .12s; }
+a.rel-card:hover { border-color: var(--muted); background: var(--surface); }
+.rel-card-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.rel-card-obj { font-size: 14px; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rel-card-date { flex: none; font-size: 12px; font-weight: 560; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rel-card-date.crit { color: var(--crit); }
+.rel-card-sigs { min-height: 20px; flex-wrap: nowrap; }
+.rel-card-sigs .sig-d.op { min-width: 0; max-width: 62%; }
+.rel-card-sigs .sig-d.pers { flex: none; }
 
 /* Ligne de relance (fiches) sur deux niveaux : l'objet, puis l'opération
    concernée + l'échéance — pour savoir d'un coup d'œil de quelle affaire il
