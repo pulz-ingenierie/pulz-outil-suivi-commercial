@@ -75,10 +75,10 @@ h1 { font-weight: 700; }
 .top-user { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .top-user .who { font-size: 13px; color: var(--muted); font-weight: 600; }
 @media (max-width: 620px) { .top-user .who { display: none; } }
-/* Petit écran : la barre passe à la ligne au lieu de déborder, et les boutons
-   se compactent, pour qu'on n'ait jamais à défiler vers la droite. */
+/* Petit écran : boutons compacts. IMPORTANT : conserver le retrait de safe-area
+   en haut (sinon la barre passe sous la barre d'état / la dynamic island iOS). */
 @media (max-width: 620px) {
-  .topbar { flex-wrap: wrap; padding: 12px 16px; gap: 8px; }
+  .topbar { padding: 10px 16px; padding-top: calc(10px + env(safe-area-inset-top)); gap: 8px; }
   .topbar .btn.mini { padding: 6px 10px; font-size: 12px; }
 }
 
