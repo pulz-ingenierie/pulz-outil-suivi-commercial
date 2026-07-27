@@ -13,7 +13,8 @@ import { demanderSuppression } from "@/lib/gestures";
 
 type Item = { type: "entite" | "operation" | "personne"; id: string; cat: string; label: string };
 type Section = { titre: string; items: Item[] };
-type Apercu = { cat: string; catLabel: string; nom: string; meta?: string; href: string; sections: Section[] };
+type Relance = { id: string; objet: string; echeance: string; enRetard: boolean; personne: string | null };
+type Apercu = { cat: string; catLabel: string; nom: string; meta?: string; href: string; sections: Section[]; relances?: Relance[] };
 
 export default function ExpandableRow({
   type,
@@ -75,7 +76,23 @@ export default function ExpandableRow({
                   </div>
                 </div>
               ))}
-              {data.sections.length === 0 && <p className="hint" style={{ margin: 0 }}>Aucun élément associé pour l'instant.</p>}
+              {data.relances && data.relances.length > 0 && (
+                <div className="lx-sect">
+                  <div className="lx-sect-h">Prochaines relances</div>
+                  <div className="fil">
+                    {data.relances.map((r) => (
+                      <div className="rel-line" key={r.id}>
+                        <span className="rel-line-obj">{r.objet}</span>
+                        <div className="sig-wrap">
+                          {r.personne && <span className="sig-d pers"><span className="sig-lbl">{r.personne}</span></span>}
+                          <span className={`sig-d date${r.enRetard ? " late" : ""}`}><span className="sig-lbl">{r.echeance}</span></span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {data.sections.length === 0 && !(data.relances && data.relances.length) && <p className="hint" style={{ margin: 0 }}>Aucun élément associé pour l'instant.</p>}
               <div className="lx-acts">
                 <Link className="btn mini" href={data.href}>Ouvrir la fiche</Link>
                 <button type="button" className="btn ghost mini danger" onClick={() => demanderSuppression(type, id, data?.nom ?? nom)}>Supprimer</button>

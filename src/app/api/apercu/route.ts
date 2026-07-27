@@ -13,6 +13,34 @@ const TYPE_ENTITE: Record<string, string> = {
   MOA: "MOA", archi: "Architecte", promoteur: "Promoteur", bet: "BET", confrere: "Confrère", autre: "Structure",
 };
 
+function dateFr(d: string | null): string {
+  if (!d) return "—";
+  try {
+    return new Date(d + "T00:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+  } catch {
+    return d;
+  }
+}
+
+// Met en forme les relances « à faire » pour l'affichage déplié (objet, échéance,
+// personne, retard). L'aperçu déplié montre tout ce qui touche à l'objet SAUF le
+// fil des comptes rendus (réservé à la fiche complète).
+const AUJ = () => new Date().toISOString().slice(0, 10);
+function formatRelances(rows: any[] | null): any[] {
+  const today = AUJ();
+  const vues = new Set<string>();
+  return (rows ?? [])
+    .filter((r) => { if (vues.has(r.id)) return false; vues.add(r.id); return true; })
+    .sort((a, b) => (a.date_echeance ?? "") < (b.date_echeance ?? "") ? -1 : 1)
+    .map((r) => ({
+      id: r.id,
+      objet: r.objet,
+      echeance: dateFr(r.date_echeance),
+      enRetard: !!r.date_echeance && r.date_echeance < today,
+      personne: r.personne ?? null,
+    }));
+}
+
 export async function GET(req: Request) {
   if (!isSupabaseConfigured()) return NextResponse.json({ error: "non configuré" }, { status: 503 });
   const { searchParams } = new URL(req.url);
@@ -34,13 +62,26 @@ export async function GET(req: Request) {
         { titre: "Opérations", icon: "operation", items: ops.map((o: any) => ({ type: "operation", id: o.id, cat: "op", label: o.nom })) },
         { titre: "Personnes à joindre", icon: "personne", items: (contacts ?? []).map((c: any) => ({ type: "personne", id: c.id, cat: "pers", label: [c.prenom, c.nom].filter(Boolean).join(" ") || c.nom })) },
       ].filter((s) => s.items.length);
-      // Relances en cours rattachées à la structure : proposées à la suppression.
-      const { data: rel } = await sb.from("relances").select("id, objet").eq("entite_id", id).eq("statut", "a_faire");
-      const aSupprimer = (rel ?? []).map((r: any) => ({ type: "relance", id: r.id, cat: "rel", label: r.objet }));
+      // Relances en cours rattachées à la structure OU à l'une de ses opérations :
+      // affichées dépliées, et proposées à la suppression en cascade.
+      const opIds = ops.map((o: any) => o.id).filter(Boolean);
+      const orParts = [`entite_id.eq.${id}`];
+      if (opIds.length) orParts.push(`operation_id.in.(${opIds.join(",")})`);
+      const { data: rel } = await sb
+        .from("relances")
+        .select("id, objet, date_echeance, personne, entite_id, operation_id")
+        .eq("statut", "a_faire")
+        .or(orParts.join(","));
+      const relances = formatRelances(rel);
+      // Suppression en cascade : uniquement les relances rattachées DIRECTEMENT à
+      // la structure (pas celles de ses opérations, qui vivent avec l'opération).
+      const aSupprimer = (rel ?? [])
+        .filter((r: any) => r.entite_id === id)
+        .map((r: any) => ({ type: "relance", id: r.id, cat: "rel", label: r.objet }));
       return NextResponse.json({
         cat: "struct", catLabel: "Structure", nom: (e as any).nom,
         meta: [TYPE_ENTITE[(e as any).type] ?? (e as any).type, (e as any).ville].filter(Boolean).join(" · "),
-        href: `/entites/${id}`, sections, aSupprimer,
+        href: `/entites/${id}`, sections, relances, aSupprimer,
       });
     }
 
@@ -52,13 +93,15 @@ export async function GET(req: Request) {
       const sections = [
         { titre: "Structures", icon: "structure", items: structs.map((s: any) => ({ type: "entite", id: s.id, cat: "struct", label: s.nom })) },
       ].filter((s) => s.items.length);
-      // Relances en cours rattachées à l'opération : proposées à la suppression.
-      const { data: rel } = await sb.from("relances").select("id, objet").eq("operation_id", id).eq("statut", "a_faire");
+      // Relances en cours rattachées à l'opération : affichées et proposées à la
+      // suppression.
+      const { data: rel } = await sb.from("relances").select("id, objet, date_echeance, personne").eq("operation_id", id).eq("statut", "a_faire");
+      const relances = formatRelances(rel);
       const aSupprimer = (rel ?? []).map((r: any) => ({ type: "relance", id: r.id, cat: "rel", label: r.objet }));
       return NextResponse.json({
         cat: "op", catLabel: "Opération", nom: (o as any).nom,
         meta: STATUT_LABELS[(o as any).statut as keyof typeof STATUT_LABELS] ?? (o as any).statut,
-        href: `/operations/${id}`, sections, aSupprimer,
+        href: `/operations/${id}`, sections, relances, aSupprimer,
       });
     }
 
@@ -78,9 +121,17 @@ export async function GET(req: Request) {
         if (ops.length) opsSection = { titre: "Opérations", icon: "operation", items: ops.map((o: any) => ({ type: "operation", id: o.id, cat: "op", label: o.nom })) };
       }
       const sections = [structSection, opsSection].filter(Boolean);
+      // Relances en cours qui nomment cette personne (champ « personne » libre).
+      const nomComplet = [cc.prenom, cc.nom].filter(Boolean).join(" ") || cc.nom;
+      const { data: rel } = await sb
+        .from("relances")
+        .select("id, objet, date_echeance, personne")
+        .eq("statut", "a_faire")
+        .ilike("personne", `%${cc.nom}%`);
+      const relances = formatRelances(rel);
       return NextResponse.json({
-        cat: "pers", catLabel: "Personne", nom: [cc.prenom, cc.nom].filter(Boolean).join(" ") || cc.nom,
-        meta: cc.fonction ?? "", href: `/personnes/${id}`, sections,
+        cat: "pers", catLabel: "Personne", nom: nomComplet,
+        meta: cc.fonction ?? "", href: `/personnes/${id}`, sections, relances,
       });
     }
 
