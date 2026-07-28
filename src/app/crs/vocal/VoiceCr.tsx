@@ -126,6 +126,7 @@ export default function VoiceCr({
   draftId,
   initialTranscription,
   initialSynthese,
+  piecesInfo = null,
 }: {
   entites: Ent[];
   operations: Opt[];
@@ -139,6 +140,7 @@ export default function VoiceCr({
   draftId?: string;
   initialTranscription?: string;
   initialSynthese?: Synthese | null;
+  piecesInfo?: { count: number; journal: string[] } | null;
 }) {
   const [phase, setPhase] = useState<"idle" | "recording" | "recorded">("idle");
   const [seconds, setSeconds] = useState(0);
@@ -998,10 +1000,17 @@ export default function VoiceCr({
             placeholder="Le texte dicté apparaîtra ici — corrigez-le librement, ou écrivez directement."
           />
           <div className="synth-row">
-            <button type="button" className="btn ia" onClick={synthesizeManuel} disabled={busy !== null || !transcription.trim()}>
+            <button type="button" className="btn ia" onClick={synthesizeManuel} disabled={busy !== null || (!transcription.trim() && !(piecesInfo && piecesInfo.count > 0))}>
               {busy === "synth" ? "L'IA structure…" : synthese ? "✦ Relancer l'analyse" : "✦ Analyser avec l'IA"}
             </button>
           </div>
+          {piecesInfo && (
+            <p className="hint" style={{ marginTop: 8 }}>
+              {piecesInfo.count > 0
+                ? <>{piecesInfo.count} pièce(s) jointe(s) conservée(s) et transmise(s) à l'IA lors de l'analyse.</>
+                : <>Aucune pièce jointe lisible n'a pu être conservée. Reçu de l'e-mail&nbsp;: {piecesInfo.journal.join(" · ") || "aucune pièce"}.</>}
+            </p>
+          )}
           {synthese?.resume && (
             <div className="resume">
               <p className="s-resume">{synthese.resume}</p>

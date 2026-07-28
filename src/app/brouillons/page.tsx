@@ -33,7 +33,7 @@ export default async function Brouillons({
   const [{ data: drafts }, { data: entites }, { data: operations }, { data: contactsBase }, { data: membresRows }] = await Promise.all([
     supabase
       .from("crs")
-      .select("id, transcription, synthese, created_at")
+      .select("*")
       .eq("statut", "brouillon")
       .eq("auteur_id", profil.id)
       .order("created_at", { ascending: true }),
@@ -52,9 +52,20 @@ export default async function Brouillons({
     new Set((relancesEnCours ?? []).map((r: any) => r.operation_id).filter(Boolean).map((id: string) => opNomById.get(id)).filter(Boolean)),
   ) as string[];
 
-  const list = (drafts ?? []) as { id: string; transcription: string | null; synthese: any }[];
+  const list = (drafts ?? []) as { id: string; transcription: string | null; synthese: any; pieces_ia?: any }[];
   const today = new Date().toISOString().slice(0, 10);
   const estPilote = profil.role === "pilote";
+
+  // Diagnostic pièces jointes du brouillon courant : combien de pièces lisibles
+  // ont été conservées, et ce que l'e-mail portait réellement (journal).
+  const piecesInfo = (() => {
+    const raw = list[0]?.pieces_ia;
+    if (!raw) return null;
+    const pieces = Array.isArray(raw) ? raw : Array.isArray(raw?.pieces) ? raw.pieces : [];
+    const journal: string[] = Array.isArray(raw?.journal) ? raw.journal : [];
+    if (!pieces.length && !journal.length) return null;
+    return { count: pieces.length, journal };
+  })();
 
   const banniere = sp.releve !== undefined && (
     <div className={`card notice${sp.erreur ? " err" : ""}`} style={{ marginBottom: 14 }}>
@@ -119,6 +130,7 @@ export default async function Brouillons({
         draftId={current.id}
         initialTranscription={current.transcription ?? ""}
         initialSynthese={(current.synthese as Synthese) ?? null}
+        piecesInfo={piecesInfo}
       />
     </main>
   );

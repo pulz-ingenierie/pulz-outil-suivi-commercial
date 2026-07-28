@@ -52,7 +52,9 @@ export async function POST(req: Request) {
       if (sb) {
         const { data } = await sb.from("crs").select("pieces_ia").eq("id", body.draftId).maybeSingle();
         const p = (data as any)?.pieces_ia;
+        // Deux formes acceptées : tableau (ancien) ou { pieces, journal } (nouveau).
         if (Array.isArray(p)) pieces = p as PieceJointeIA[];
+        else if (Array.isArray(p?.pieces)) pieces = p.pieces as PieceJointeIA[];
       }
     } catch {
       /* colonne absente ou lecture impossible : on analyse le texte seul */

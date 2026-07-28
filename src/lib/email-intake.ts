@@ -123,24 +123,37 @@ export async function releverEmails(): Promise<IntakeResult> {
           const texte = `Objet : ${sujet}\n\n${corps}`.slice(0, 8000);
 
           // Pièces jointes lisibles par l'IA : PDF et images (photos comprises).
+          // mailparser range les images INLINE (iPhone) dans attachments ; on prend
+          // aussi le champ related au cas où. On tient un journal des pièces vues.
+          const attachments = (parsed.attachments ?? []) as any[];
           const pieces: PieceJointeIA[] = [];
-          for (const att of parsed.attachments ?? []) {
+          const journalPieces: string[] = [];
+          for (const att of attachments) {
             if (pieces.length >= MAX_PIECES) break;
             const ct = String(att.contentType ?? "").toLowerCase();
             const nom = String(att.filename ?? "").toLowerCase();
-            if (!att.content || (att.size && att.size > MAX_PIECE_OCTETS)) continue;
+            const taille = att.content ? (att.content as Buffer).length : 0;
+            journalPieces.push(`${att.filename || "(sans nom)"} ${ct || "?"} ${Math.round(taille / 1024)}ko`);
+            if (!att.content || taille > MAX_PIECE_OCTETS) continue;
             if (ct === "application/pdf" || nom.endsWith(".pdf")) {
               pieces.push({ kind: "pdf", mediaType: "application/pdf", base64: att.content.toString("base64") });
               continue;
             }
-            // Toute image (jpeg/png/webp/gif ET heic/heif d'iPhone) passe par sharp :
-            // décodage + réduction + JPEG, pour être lisible par l'IA à coup sûr.
             const estImage =
               ct.startsWith("image/") || /\.(jpe?g|png|webp|gif|heic|heif)$/.test(nom);
-            if (estImage) {
-              const piece = await imageEnJpegPourIA(att.content as Buffer);
-              if (piece) pieces.push(piece);
+            if (!estImage) continue;
+            // 1) sharp : décode (HEIC compris), réduit, ré-encode en JPEG.
+            let piece = await imageEnJpegPourIA(att.content as Buffer);
+            // 2) REPLI si sharp échoue : envoyer l'octet brut si le format est déjà
+            //    lisible nativement par l'IA (jpeg/png/webp/gif) et de taille raisonnable.
+            if (!piece) {
+              const natif = ["image/jpeg", "image/png", "image/webp", "image/gif"].find((m) => ct === m)
+                ?? (/\.jpe?g$/.test(nom) ? "image/jpeg" : /\.png$/.test(nom) ? "image/png" : /\.webp$/.test(nom) ? "image/webp" : /\.gif$/.test(nom) ? "image/gif" : null);
+              if (natif && taille > 0 && taille < 4_500_000) {
+                piece = { kind: "image", mediaType: natif, base64: (att.content as Buffer).toString("base64") };
+              }
             }
+            if (piece) pieces.push(piece);
           }
 
           let synth = null;
@@ -160,7 +173,9 @@ export async function releverEmails(): Promise<IntakeResult> {
             statut: "brouillon",
             synthese: synth ?? null,
             auteur_id: member.id,
-            pieces_ia: pieces.length ? pieces : null,
+            // { pieces: [images/pdf base64], journal: [ce que l'e-mail portait] } :
+            // le journal permet de diagnostiquer si la photo est bien arrivée.
+            pieces_ia: (pieces.length || journalPieces.length) ? { pieces, journal: journalPieces } : null,
           };
           let { error } = await supabase.from("crs").insert(insertRow);
           // Repli si la colonne pieces_ia n'existe pas encore (migration 0009).
