@@ -31,6 +31,8 @@ export interface Synthese {
   nouvelles_entites: NouvelleEntite[];
   nouvelles_operations: { nom: string; entite: string | null; ville: string | null; phase: string }[];
   liens: { operation: string; entite: string }[]; // rattachement affaire ↔ structure (par nom)
+  // Référent (membre interne EN CHARGE) d'une opération, par nom.
+  referents: { operation: string; referent: string }[];
   contacts: ContactExtrait[];
   // Chaque relance précise l'affaire / la structure qu'elle concerne (par nom),
   // pour être rattachée à la bonne opération (et non à la première du CR).
@@ -150,6 +152,16 @@ export function validateSynthese(
         .filter((l) => l.operation && l.entite)
     : [];
 
+  const referents = Array.isArray(o.referents)
+    ? o.referents
+        .map((r) => (r ?? {}) as Record<string, unknown>)
+        .map((r) => ({
+          operation: typeof r.operation === "string" ? r.operation.trim() : "",
+          referent: typeof r.referent === "string" ? r.referent.trim() : "",
+        }))
+        .filter((r) => r.operation && r.referent)
+    : [];
+
   return {
     type_rdv,
     date_rdv,
@@ -160,6 +172,7 @@ export function validateSynthese(
     nouvelles_entites,
     nouvelles_operations,
     liens,
+    referents,
     contacts,
     relances,
   };

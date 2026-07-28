@@ -985,6 +985,7 @@ export default function VoiceCr({
         <input type="hidden" name="nouvelles_entites_json" value={JSON.stringify(nouvellesEntites)} />
         <input type="hidden" name="nouvelles_operations_json" value={JSON.stringify(nouvellesOperations)} />
         <input type="hidden" name="liens_json" value={JSON.stringify(liensPayload)} />
+        <input type="hidden" name="referents_json" value={JSON.stringify((synthese as any)?.referents ?? [])} />
         <input type="hidden" name="contacts_json" value={JSON.stringify(contactsPayload)} />
         <input type="hidden" name="synthese_json" value={JSON.stringify(syntheseOut)} />
 

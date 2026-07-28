@@ -340,6 +340,19 @@ async function materialiserCr(
   const entByNom = new Map((allEnt ?? []).map((e: any) => [normNom(e.nom), e.id]));
   const opByNom = new Map((allOps ?? []).map((o: any) => [normNom(o.nom), o.id]));
 
+  // Référents explicitement dictés (« X est en charge de l'opération Y ») : on
+  // affecte le MEMBRE interne comme référent de l'affaire (nouvelle OU existante).
+  const referents = jsonArray(fd, "referents_json");
+  if (referents.length) {
+    const { data: membres } = await sb.from("utilisateurs").select("id, nom").eq("org_id", org_id);
+    const memberByNom = new Map((membres ?? []).map((m: any) => [normNom(m.nom), m.id]));
+    for (const r of referents) {
+      const opId = opByNom.get(normNom(r?.operation));
+      const memId = memberByNom.get(normNom(r?.referent));
+      if (opId && memId) await sb.from("operations").update({ referent_id: memId }).eq("id", opId);
+    }
+  }
+
   // Lien structure ⇄ opération. Chaque affaire est rattachée à SA structure — via
   // le rattachement direct porté par la nouvelle opération, puis via les liens de
   // l'IA. On NE croise PLUS toutes les structures avec toutes les opérations :
