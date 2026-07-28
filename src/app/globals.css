@@ -51,7 +51,10 @@ h1 { font-weight: 700; }
    la top bar est COLLANTE en haut, la nav est FIXÉE au bord bas. Le contenu
    réserve une marge basse pour ne pas passer sous la nav. */
 .shell { min-height: 100dvh; }
-.shell-content { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+/* overflow-x: clip = garde-fou anti-débordement horizontal (évite qu'un libellé
+   trop long fasse « dézoomer » toute la page sur iOS). clip ne crée PAS de
+   conteneur de défilement : les onglets « sticky » restent épinglés. */
+.shell-content { padding-bottom: calc(80px + env(safe-area-inset-bottom)); overflow-x: clip; }
 
 .topbar {
   position: sticky; top: 0; z-index: 30;
@@ -181,7 +184,7 @@ h1 { font-weight: 700; }
    Elle déborde le rembourrage latéral de son conteneur (.wrap ou .block) pour
    toucher les bords ; le texte des lignes reste aligné sur la marge commune. */
 .vlist2 { background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
-        margin-inline: calc(-1 * var(--wrap-pad, 16px)); }
+        margin-inline: calc(-1 * var(--wrap-pad, 16px)); overflow-x: clip; }
 .vrow { display: flex; align-items: center; justify-content: space-between; gap: 12px;
         padding: 13px var(--wrap-pad, 16px); border-top: 1px solid var(--line-2); }
 .vrow:first-child { border-top: none; }
@@ -582,7 +585,7 @@ a.rel-card:hover { border-color: var(--muted); background: var(--surface); }
 .rel-vrow-main .vrow-nom { white-space: normal; }
 .rel-vrow-sub { display: flex; align-items: center; gap: var(--gap-sig, 6px); min-width: 0; }
 .rel-vrow-sub .vrow-rel { flex: none; font-size: 12px; }
-.rel-op-chip { min-width: 0; }
+.rel-op-chip { min-width: 0; flex: 0 1 auto; }
 .rel-add { font: inherit; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer;
        padding: 9px 13px; border: 1px dashed var(--line); border-radius: 10px; background: transparent; text-align: left; }
 .rel-add:hover { color: var(--ink); border-color: var(--muted); }
