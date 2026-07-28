@@ -479,6 +479,22 @@ async function materialiserCr(
       const memId = memberByNom.get(normNom(r?.referent));
       if (opId && memId) await sb.from("operations").update({ referent_id: memId }).eq("id", opId);
     }
+    // Résolution robuste d'une référence d'opération (le contact peut la nommer
+    // en abrégé, ex. « La Chapelle-d'Armentières » pour « Nacarat - La Chapelle…
+    // - Construction de 40 logements ») : exact d'abord, puis inclusion parmi les
+    // opérations du compte rendu, puis inclusion unique dans toutes les opérations.
+    const opTitleById = new Map((allOps ?? []).map((o: any) => [o.id, normNom(o.nom)]));
+    const resolveOpRef = (ref: unknown): string | null => {
+      const n = normNom(typeof ref === "string" ? ref : "");
+      if (!n) return null;
+      if (opByNom.has(n)) return opByNom.get(n)!;
+      for (const opId of operationIds) {
+        const t = opTitleById.get(opId) ?? "";
+        if (t && (t.includes(n) || n.includes(t))) return opId;
+      }
+      const cands = [...opByNom.entries()].filter(([t]) => t.includes(n) || n.includes(t));
+      return cands.length === 1 ? cands[0][1] : null;
+    };
     // Contacts externes associés à leurs affaires.
     const liensCO: { contact_id: string; operation_id: string }[] = [];
     for (const c of contactsAvecOps) {
@@ -487,7 +503,7 @@ async function materialiserCr(
         contactByNom.get(normNom(c?.nom));
       if (!contactId) continue;
       for (const opNom of c.operations as string[]) {
-        const opId = opByNom.get(normNom(opNom));
+        const opId = resolveOpRef(opNom);
         if (opId) liensCO.push({ contact_id: contactId, operation_id: opId });
       }
     }
