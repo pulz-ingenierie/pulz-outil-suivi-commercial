@@ -14,6 +14,7 @@ export interface ContactExtrait {
   prenom: string | null;
   fonction: string | null;
   entite: string | null; // structure de rattachement (libellé)
+  operations: string[]; // affaires dont cette personne est LE CONTACT (par nom)
 }
 
 export interface NouvelleEntite {
@@ -103,6 +104,7 @@ export function validateSynthese(
           prenom: typeof c.prenom === "string" && c.prenom.trim() ? c.prenom.trim() : null,
           fonction: typeof c.fonction === "string" && c.fonction.trim() ? c.fonction.trim() : null,
           entite: typeof c.entite === "string" && c.entite.trim() ? c.entite.trim() : null,
+          operations: asStringArray(c.operations),
         }))
         .filter((c) => c.nom.length > 0)
     : [];

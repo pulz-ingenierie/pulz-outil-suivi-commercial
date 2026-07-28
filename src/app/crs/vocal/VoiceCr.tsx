@@ -43,7 +43,7 @@ function Icon({ name }: { name: "structure" | "operation" | "personne" | "relanc
     return <svg {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></svg>;
   return <svg {...p}><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6" /><path d="M10 20a2 2 0 0 0 4 0" /></svg>;
 }
-type PersonneEdit = { prenom: string; nom: string; fonction: string; entite: string };
+type PersonneEdit = { prenom: string; nom: string; fonction: string; entite: string; operations?: string[] };
 type RelanceEdit = { objet: string; date: string; personne: string; operation?: string; entite?: string };
 
 const TYPES_RDV = [
@@ -324,6 +324,7 @@ export default function VoiceCr({
           nom: c.nom,
           fonction: c.fonction ?? "",
           entite: c.entite ?? "",
+          operations: Array.isArray((c as any).operations) ? (c as any).operations : [],
         })),
     );
     // On ignore une suite proposée par l'IA si l'affaire concernée a DÉJÀ une
@@ -499,6 +500,7 @@ export default function VoiceCr({
       prenom: p.prenom.trim() || null,
       fonction: p.fonction.trim() || null,
       entite: p.entite.trim() || null,
+      operations: Array.isArray(p.operations) ? p.operations : [],
     }));
   const relancesPayload = relances
     .filter((r) => r.objet.trim())

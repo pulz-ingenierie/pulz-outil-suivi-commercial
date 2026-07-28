@@ -82,7 +82,10 @@ RATTACHEMENT opération ↔ structure (TRÈS IMPORTANT — source d'erreurs) : c
   liens = [{operation:"Nacarat - La Chapelle-d'Armentières - Construction de 40 logements", entite:"Nacarat"}, {operation:"Nacarat - Roncq - Construction de 200 logements", entite:"Nacarat"}, {operation:"Spirit - ✕ - Construction de 80 lots", entite:"Spirit"}].
   → Nacarat NE doit PAS apparaître sur l'affaire de Spirit, et Spirit NE doit PAS apparaître sur les 2 affaires de Nacarat.
 
-PERSONNE EN CHARGE d'une opération : si le texte dit qu'une personne est EN CHARGE / le contact / responsable / « s'occupe de » une ou plusieurs affaires (ex. « Rémi Thierry est le contact des opérations de Roncq et d'Armentières »), renseigne-la dans "referents" : une entrée { operation: nom EXACT de l'opération (connue ou nouvelle), referent: « Prénom Nom » de la personne } PAR affaire concernée. Cette personne peut être un CONTACT EXTERNE (le plus fréquent) OU un membre interne. Si c'est une personne EXTERNE, elle DOIT AUSSI figurer dans "contacts" (pour créer/retrouver sa fiche). N'invente pas de personne en charge si ce n'est pas dit.
+DEUX RÔLES À NE JAMAIS CONFONDRE autour d'une opération :
+1) LE CONTACT (interlocuteur EXTERNE, côté promoteur/structure) : une personne du promoteur/de la structure qui est L'INTERLOCUTEUR / la personne à contacter / le référent commercial pour une ou plusieurs AFFAIRES (ex. « Rémi Thierry, directeur d'agence, notre contact pour les opérations de Roncq et d'Armentières »). C'est un CONTACT : mets-le dans "contacts" et LISTE les affaires concernées (noms EXACTS) dans son champ "operations". NE le mets PAS dans "referents".
+2) LE RÉFÉRENT (INTERNE, ÉQUIPE / GROUPEMENT) : un MEMBRE de l'équipe interne (liste ci-dessous) qui PILOTE l'affaire côté agence. Uniquement pour un membre interne, et seulement si le texte le dit. Mets-le dans "referents" : { operation: nom EXACT, referent: « Prénom Nom » du membre }. JAMAIS un contact externe ici.
+Règle de tri : si la personne appartient au promoteur / à la structure cliente (directeur d'agence, responsable de programme…), c'est un CONTACT (rôle 1). Si elle appartient à l'équipe interne (liste ÉQUIPE INTERNE ci-dessous), c'est un RÉFÉRENT (rôle 2). Dans le doute, c'est un CONTACT.
 
 RELANCES (suites à donner) — règle stricte : une formulation au présent, au passé ou au futur qui décrit un RECONTACT (« Florian relance Béatrice », « Florian a relancé Béatrice », « il faut rappeler Béatrice ») est une SUITE À DONNER : crée la relance correspondante. La personne EXTERNE recontactée sert à identifier la structure concernée (applique la règle « STRUCTURE D'UNE PERSONNE CONNUE » : rattache sa structure à l'affaire et à la relance). Le champ "objet" décrit UNIQUEMENT l'action à réaliser, à l'impératif, SANS le nom de la personne. N'écris JAMAIS « Florian doit relancer Vilogia » ni « rappeler Romain » ; écris « Relancer Vilogia pour le parking silo ». Mets la personne RESPONSABLE de l'action ou concernée (celui qui doit la réaliser, OU la personne à recontacter) à part dans "personne" — même si seul son prénom est cité (ex. « Florian »). Si AUCUNE personne n'est explicitement responsable/concernée, mets "personne" à null (surtout n'invente personne).
 
@@ -99,8 +102,8 @@ Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, de la forme :
   "nouvelles_entites": [{ "nom": "structure évoquée mais absente des connues", "type": "MOA|archi|promoteur|bet|confrere|autre (bet = bureau d'études techniques)" }],
   "nouvelles_operations": [{ "nom": "Client - Ville - Nature (« ✕ » à la place d'une partie inconnue)", "entite": "nom exact de la structure qui porte cette affaire (connue ou nouvelle) ou null", "ville": "commune du projet (nom seul) ou null si inconnue", "phase": "piste|qualifie|concours|a_chiffrer|offre_remise|nego|gagne|perdu" }],
   "liens": [{ "operation": "nom exact d'une opération (connue ou nouvelle)", "entite": "nom exact de la structure qui la porte (connue ou nouvelle)" }],
-  "referents": [{ "operation": "nom exact d'une opération (connue ou nouvelle)", "referent": "« Prénom Nom » du MEMBRE interne qui en est responsable" }],
-  "contacts": [{ "nom": "nom de famille", "prenom": "prénom ou null", "fonction": "fonction ou null", "entite": "libellé de sa structure (connue ou nouvelle) ou null" }],
+  "referents": [{ "operation": "nom exact d'une opération (connue ou nouvelle)", "referent": "« Prénom Nom » du MEMBRE INTERNE (équipe) qui pilote l'affaire — jamais un contact externe" }],
+  "contacts": [{ "nom": "nom de famille", "prenom": "prénom ou null", "fonction": "fonction ou null", "entite": "libellé de sa structure (connue ou nouvelle) ou null", "operations": ["noms exacts des affaires dont cette personne est LE CONTACT, ou []"] }],
   "relances": [{ "objet": "action de suivi à faire, à l'impératif, SANS nom de personne", "personne": "personne concernée (nom ou « Prénom Nom ») ou null", "operation": "nom de l'affaire concernée (connue ou nouvelle) ou null", "entite": "nom de la structure concernée ou null", "dans_jours": 14 }]
 }`;
 }
@@ -151,8 +154,8 @@ Réponds UNIQUEMENT par l'objet JSON complet et corrigé, sans texte autour, de 
   "nouvelles_entites": [{ "nom": "structure nouvelle", "type": "MOA|archi|promoteur|bet|confrere|autre (bet = bureau d'études techniques)" }],
   "nouvelles_operations": [{ "nom": "Client - Ville - Nature (« ✕ » pour une partie inconnue)", "entite": "structure qui la porte ou null", "ville": "commune du projet ou null", "phase": "piste|qualifie|concours|a_chiffrer|offre_remise|nego|gagne|perdu" }],
   "liens": [{ "operation": "nom exact d'une opération (connue ou nouvelle)", "entite": "nom exact de la structure qui la porte" }],
-  "referents": [{ "operation": "nom exact d'une opération", "referent": "« Prénom Nom » du membre interne responsable" }],
-  "contacts": [{ "nom": "…", "prenom": "… ou null", "fonction": "… ou null", "entite": "structure ou null" }],
+  "referents": [{ "operation": "nom exact d'une opération", "referent": "« Prénom Nom » du membre INTERNE (équipe) — jamais un contact externe" }],
+  "contacts": [{ "nom": "…", "prenom": "… ou null", "fonction": "… ou null", "entite": "structure ou null", "operations": ["affaires dont la personne est le contact, ou []"] }],
   "relances": [{ "objet": "action à l'impératif, SANS nom de personne", "personne": "personne concernée ou null", "operation": "nom de l'affaire concernée ou null", "entite": "nom de la structure concernée ou null", "dans_jours": 14 }]
 }`;
 }

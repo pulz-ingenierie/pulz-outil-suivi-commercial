@@ -450,13 +450,17 @@ async function materialiserCr(
     }
   }
 
-  // Personne EN CHARGE d'une opération (« X est le contact / s'occupe de Y ») :
-  // si X est un MEMBRE interne → il devient référent de l'affaire ; si X est un
-  // CONTACT externe → on l'associe à l'opération (lien contact_operation), pour
-  // qu'il apparaisse en signet sur la fiche. Vaut pour les affaires nouvelles OU
-  // existantes. Exécuté APRÈS la création des contacts (pour retrouver leur id).
+  // DEUX RÔLES DISTINCTS autour d'une opération :
+  //  - RÉFÉRENT (interne) : un MEMBRE du groupement qui pilote l'affaire → referent_id.
+  //  - CONTACT (externe) : l'interlocuteur côté promoteur → lien contact_operation
+  //    (signet sur la fiche). Porté par le champ operations de chaque contact.
+  // Exécuté APRÈS la création des contacts (pour retrouver leur id). Vaut pour les
+  // affaires nouvelles OU existantes.
   const referents = jsonArray(fd, "referents_json");
-  if (referents.length) {
+  const contactsAvecOps = jsonArray(fd, "contacts_json").filter(
+    (c) => Array.isArray(c?.operations) && c.operations.length,
+  );
+  if (referents.length || contactsAvecOps.length) {
     const [{ data: membres }, { data: tousContacts }] = await Promise.all([
       sb.from("utilisateurs").select("id, nom").eq("org_id", org_id),
       sb.from("contacts").select("id, nom, prenom").eq("org_id", org_id),
@@ -469,22 +473,26 @@ async function materialiserCr(
       if (full && !contactByNom.has(full)) contactByNom.set(full, c.id);
       if (last && !contactByNom.has(last)) contactByNom.set(last, c.id);
     }
-    const liensCO: { contact_id: string; operation_id: string }[] = [];
+    // Référents INTERNES uniquement (un contact externe est ignoré ici).
     for (const r of referents) {
       const opId = opByNom.get(normNom(r?.operation));
-      if (!opId) continue;
-      const nom = normNom(r?.referent);
-      const memId = memberByNom.get(nom);
-      if (memId) {
-        await sb.from("operations").update({ referent_id: memId }).eq("id", opId);
-        continue;
+      const memId = memberByNom.get(normNom(r?.referent));
+      if (opId && memId) await sb.from("operations").update({ referent_id: memId }).eq("id", opId);
+    }
+    // Contacts externes associés à leurs affaires.
+    const liensCO: { contact_id: string; operation_id: string }[] = [];
+    for (const c of contactsAvecOps) {
+      const contactId =
+        contactByNom.get(normNom([c?.prenom, c?.nom].filter(Boolean).join(" "))) ??
+        contactByNom.get(normNom(c?.nom));
+      if (!contactId) continue;
+      for (const opNom of c.operations as string[]) {
+        const opId = opByNom.get(normNom(opNom));
+        if (opId) liensCO.push({ contact_id: contactId, operation_id: opId });
       }
-      const contactId = contactByNom.get(nom);
-      if (contactId) liensCO.push({ contact_id: contactId, operation_id: opId });
     }
     if (liensCO.length) {
-      // Défensif : si la table contact_operation n'existe pas encore (migration
-      // 0010), on n'interrompt pas la consolidation du compte rendu.
+      // Défensif : si la table contact_operation n'existe pas encore (migration 0010).
       try {
         await sb.from("contact_operation").upsert(liensCO, { onConflict: "contact_id,operation_id", ignoreDuplicates: true });
       } catch { /* migration 0010 non appliquée */ }
