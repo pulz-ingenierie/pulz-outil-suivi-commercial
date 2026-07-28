@@ -299,9 +299,15 @@ export default function VoiceCr({
     setSynthese(s);
     setTypeRdv(s.type_rdv || "autre");
     if (s.date_rdv) setDateRdv(s.date_rdv);
+    // Changement de phase proposé pour une opération EXISTANTE (« a été chiffrée »
+    // → nouveau statut) : on l'accroche à l'opération connue correspondante.
+    const chgPhase = new Map<string, string>();
+    for (const c of ((s as any).changements_phase ?? []) as { operation: string; phase: string }[]) {
+      if (c?.operation && c?.phase) chgPhase.set(c.operation.trim().toLowerCase(), c.phase);
+    }
     const rats: Rattach[] = [
       ...(s.entites ?? []).map((n) => ({ kind: "structure" as const, name: n })),
-      ...(s.operations ?? []).map((n) => ({ kind: "operation" as const, name: n })),
+      ...(s.operations ?? []).map((n) => ({ kind: "operation" as const, name: n, statut: chgPhase.get(n.trim().toLowerCase()) })),
       ...(s.nouvelles_entites ?? []).map((e) => ({ kind: "structure" as const, name: e.nom, type: e.type })),
       ...(s.nouvelles_operations ?? []).map((o) => ({ kind: "operation" as const, name: o.nom, entite: (o as any).entite ?? undefined, statut: (o as any).phase ?? undefined, ville: (o as any).ville ?? null })),
     ];
@@ -493,6 +499,11 @@ export default function VoiceCr({
   const nouvellesOperations = ratsNets
     .filter((r) => r.kind === "operation" && !opNameSet.has(r.name.trim().toLowerCase()))
     .map((r) => ({ nom: r.name.trim(), entite: r.entite?.trim() || null, statut: r.statut || null, ville: r.ville?.trim() || null }));
+  // Changements de phase d'affaires EXISTANTES (statut proposé sur une opération
+  // déjà en base) : appliqués à la consolidation.
+  const changementsPhase = ratsNets
+    .filter((r) => r.kind === "operation" && r.statut && opNameSet.has(r.name.trim().toLowerCase()))
+    .map((r) => ({ operation: r.name.trim(), phase: r.statut as string }));
   const contactsPayload = personnes
     .filter((p) => p.nom.trim())
     .map((p) => ({
@@ -767,10 +778,12 @@ export default function VoiceCr({
                   </div>
                 </div>
               )}
-              {/* Phase de l'affaire : proposée par l'IA, modifiable avant de consolider. */}
-              {!structure && !enBase && (
+              {/* Phase de l'affaire : proposée par l'IA, modifiable avant de consolider.
+                  Pour une affaire EXISTANTE, n'apparaît que si l'IA propose un
+                  changement (« a été chiffrée » → nouvelle phase). */}
+              {!structure && (!enBase || !!r.statut) && (
                 <div className="carte-sect">
-                  <div className="carte-sect-h"><Icon name="operation" /> Phase de l'affaire</div>
+                  <div className="carte-sect-h"><Icon name="operation" /> {enBase ? "Changement de phase (proposé)" : "Phase de l'affaire"}</div>
                   <label className="phase-signet" style={{ ["--cat" as string]: `var(${STATUT_VAR_CR[r.statut ?? "piste"] ?? "--s-piste"})` }}>
                     <span className="phase-signet-dot" />
                     <span className="phase-signet-lbl">{STATUT_LABELS[(r.statut ?? "piste") as keyof typeof STATUT_LABELS]}</span>
@@ -1018,6 +1031,7 @@ export default function VoiceCr({
         <input type="hidden" name="nouvelles_operations_json" value={JSON.stringify(nouvellesOperations)} />
         <input type="hidden" name="liens_json" value={JSON.stringify(liensPayload)} />
         <input type="hidden" name="referents_json" value={JSON.stringify((synthese as any)?.referents ?? [])} />
+        <input type="hidden" name="changements_phase_json" value={JSON.stringify(changementsPhase)} />
         <input type="hidden" name="contacts_json" value={JSON.stringify(contactsPayload)} />
         <input type="hidden" name="synthese_json" value={JSON.stringify(syntheseOut)} />
 

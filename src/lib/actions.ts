@@ -347,6 +347,14 @@ async function materialiserCr(
   const entByNom = new Map((allEnt ?? []).map((e: any) => [normNom(e.nom), e.id]));
   const opByNom = new Map((allOps ?? []).map((o: any) => [normNom(o.nom), o.id]));
 
+  // Changements de phase d'affaires EXISTANTES (« a été chiffrée » → nouvelle
+  // phase, validés dans le CR) : on met à jour le statut de l'opération.
+  for (const c of jsonArray(fd, "changements_phase_json")) {
+    const opId = opByNom.get(normNom(c?.operation));
+    const phase = typeof c?.phase === "string" && (STATUT_ORDRE as readonly string[]).includes(c.phase) ? c.phase : null;
+    if (opId && phase) await sb.from("operations").update({ statut: phase }).eq("id", opId);
+  }
+
   // Lien structure ⇄ opération. Chaque affaire est rattachée à SA structure — via
   // le rattachement direct porté par la nouvelle opération, puis via les liens de
   // l'IA. On NE croise PLUS toutes les structures avec toutes les opérations :

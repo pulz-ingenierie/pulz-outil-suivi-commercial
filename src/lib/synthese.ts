@@ -34,6 +34,8 @@ export interface Synthese {
   liens: { operation: string; entite: string }[]; // rattachement affaire ↔ structure (par nom)
   // Référent (membre interne EN CHARGE) d'une opération, par nom.
   referents: { operation: string; referent: string }[];
+  // Progression d'une affaire EXISTANTE : nouveau statut proposé, par nom.
+  changements_phase: { operation: string; phase: string }[];
   contacts: ContactExtrait[];
   // Chaque relance précise l'affaire / la structure qu'elle concerne (par nom),
   // pour être rattachée à la bonne opération (et non à la première du CR).
@@ -164,6 +166,16 @@ export function validateSynthese(
         .filter((r) => r.operation && r.referent)
     : [];
 
+  const changements_phase = Array.isArray(o.changements_phase)
+    ? o.changements_phase
+        .map((c) => (c ?? {}) as Record<string, unknown>)
+        .map((c) => ({
+          operation: typeof c.operation === "string" ? c.operation.trim() : "",
+          phase: typeof c.phase === "string" && (STATUTS_OP as readonly string[]).includes(c.phase) ? c.phase : "",
+        }))
+        .filter((c) => c.operation && c.phase)
+    : [];
+
   return {
     type_rdv,
     date_rdv,
@@ -175,6 +187,7 @@ export function validateSynthese(
     nouvelles_operations,
     liens,
     referents,
+    changements_phase,
     contacts,
     relances,
   };
