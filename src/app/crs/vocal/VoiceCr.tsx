@@ -526,9 +526,11 @@ export default function VoiceCr({
   const structAPreciser = rattachements
     .map((r, i) => ({ r, i }))
     .filter(({ r }) => r.kind === "structure" && r.name.trim() && !ratEnBase(r) && (!r.type || r.type === "autre"));
+  // Personnes sans fonction — SAUF celles déjà en base (leur fonction est déjà
+  // renseignée dans l'outil : ne pas la redemander).
   const persAPreciser = personnes
     .map((p, i) => ({ p, i }))
-    .filter(({ p }) => p.nom.trim() && !p.fonction.trim());
+    .filter(({ p }) => p.nom.trim() && !p.fonction.trim() && !persEnBase(p));
   const opsSansStruct =
     rattachements.some((r) => r.kind === "operation" && r.name.trim()) &&
     !rattachements.some((r) => r.kind === "structure" && r.name.trim());
@@ -581,7 +583,21 @@ export default function VoiceCr({
   const opsSansVille = rattachements
     .map((r, i) => ({ r, i }))
     .filter(({ r }) => r.kind === "operation" && r.name.trim() && !ratEnBase(r) && !(r.ville && r.ville.trim()));
-  const aCompleter = structAPreciser.length > 0 || persAPreciser.length > 0 || opsSansStruct || relSansPersonne.length > 0 || opsSansRelance.length > 0 || pasDeRelanceGenerique || opsSansVille.length > 0;
+  // Contact « en charge » d'une opération dont la référence est AMBIGUË (plusieurs
+  // affaires correspondent, ex. 2 opérations à La Chapelle-d'Armentières) : on
+  // demande laquelle, pour une attribution exacte (par identifiant).
+  const normL = (s: string | null | undefined) => (s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  const opsAmbigus: { pi: number; ref: string; candidates: Opt[] }[] = [];
+  personnes.forEach((p, pi) => {
+    (p.operations ?? []).forEach((ref) => {
+      const n = normL(ref);
+      if (!n) return;
+      if (operations.some((o) => normL(o.nom) === n)) return; // déjà exact
+      const cands = operations.filter((o) => { const t = normL(o.nom); return t.includes(n) || n.includes(t); });
+      if (cands.length > 1) opsAmbigus.push({ pi, ref, candidates: cands });
+    });
+  });
+  const aCompleter = structAPreciser.length > 0 || persAPreciser.length > 0 || opsSansStruct || relSansPersonne.length > 0 || opsSansRelance.length > 0 || pasDeRelanceGenerique || opsSansVille.length > 0 || opsAmbigus.length > 0;
 
   // Mises à jour des blocs.
   const majRat = (i: number, patch: Partial<Rattach>) =>
@@ -1169,6 +1185,21 @@ export default function VoiceCr({
                 <span className="precise-q">Où se situe <strong>{r.name}</strong> ? <em className="precise-hint">(commune du projet)</em></span>
                 <input defaultValue={r.ville ?? ""} placeholder="Ex. Poitiers, Roncq…" onBlur={(e) => majVille(i, e.target.value)} />
               </label>
+            ))}
+            {opsAmbigus.map(({ pi, ref, candidates }, k) => (
+              <div className="precise-row" key={`oa${pi}-${ref}-${k}`}>
+                <span className="precise-q">
+                  <strong>{[personnes[pi]?.prenom, personnes[pi]?.nom].filter(Boolean).join(" ")}</strong> est le contact de quelle affaire pour « {ref} » ?
+                </span>
+                <div className="precise-answer">
+                  {candidates.map((o) => (
+                    <button type="button" className="sig-d op" key={o.id}
+                      onClick={() => majPers(pi, { operations: (personnes[pi].operations ?? []).map((x) => (x === ref ? o.nom : x)) })}>
+                      <span className="sig-lbl">{o.nom}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
             {relancesAvecObjet.map(({ r, i }) => (
               <div className="precise-row" key={`r${i}`}>

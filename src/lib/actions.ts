@@ -56,6 +56,13 @@ function normNom(s: unknown): string {
     .replace(/\s+/g, " ");
 }
 
+// Première lettre en majuscule (ex. « directeur d'agence » → « Directeur d'agence »).
+function capFirst(s: string | null): string | null {
+  if (!s) return s;
+  const t = s.trim();
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : null;
+}
+
 function strOrNull(fd: FormData, key: string): string | null {
   const v = str(fd, key);
   return v.length ? v : null;
@@ -223,7 +230,7 @@ export async function updateContact(fd: FormData) {
   const update: Record<string, unknown> = {
     nom,
     prenom: strOrNull(fd, "prenom"),
-    fonction: strOrNull(fd, "fonction"),
+    fonction: capFirst(strOrNull(fd, "fonction")),
   };
   // Structure : on ne la change que si un nom de structure connu est fourni
   // (on ne détache pas ici, pour éviter tout souci avant la migration 0004).
@@ -393,7 +400,7 @@ async function materialiserCr(
       .map((p) => ({
         nom: typeof p?.nom === "string" ? p.nom.trim() : "",
         prenom: typeof p?.prenom === "string" && p.prenom.trim() ? p.prenom.trim() : null,
-        fonction: typeof p?.fonction === "string" && p.fonction.trim() ? p.fonction.trim() : null,
+        fonction: typeof p?.fonction === "string" && p.fonction.trim() ? capFirst(p.fonction.trim()) : null,
         entite_id:
           typeof p?.entite === "string" && p.entite.trim()
             ? idByNom.get(p.entite.trim().toLowerCase()) ?? null
@@ -893,7 +900,7 @@ export async function createContact(fd: FormData) {
       org_id,
       nom,
       prenom: strOrNull(fd, "prenom"),
-      fonction: strOrNull(fd, "fonction"),
+      fonction: capFirst(strOrNull(fd, "fonction")),
       tel: strOrNull(fd, "tel"),
       email: strOrNull(fd, "email"),
       entite_id: strOrNull(fd, "entite_id"),
