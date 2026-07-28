@@ -340,19 +340,6 @@ async function materialiserCr(
   const entByNom = new Map((allEnt ?? []).map((e: any) => [normNom(e.nom), e.id]));
   const opByNom = new Map((allOps ?? []).map((o: any) => [normNom(o.nom), o.id]));
 
-  // Référents explicitement dictés (« X est en charge de l'opération Y ») : on
-  // affecte le MEMBRE interne comme référent de l'affaire (nouvelle OU existante).
-  const referents = jsonArray(fd, "referents_json");
-  if (referents.length) {
-    const { data: membres } = await sb.from("utilisateurs").select("id, nom").eq("org_id", org_id);
-    const memberByNom = new Map((membres ?? []).map((m: any) => [normNom(m.nom), m.id]));
-    for (const r of referents) {
-      const opId = opByNom.get(normNom(r?.operation));
-      const memId = memberByNom.get(normNom(r?.referent));
-      if (opId && memId) await sb.from("operations").update({ referent_id: memId }).eq("id", opId);
-    }
-  }
-
   // Lien structure ⇄ opération. Chaque affaire est rattachée à SA structure — via
   // le rattachement direct porté par la nouvelle opération, puis via les liens de
   // l'IA. On NE croise PLUS toutes les structures avec toutes les opérations :
@@ -460,6 +447,47 @@ async function materialiserCr(
           sansStruct.map((p) => ({ entite_id: null, nom: p.nom, prenom: p.prenom, fonction: p.fonction, source: "vocal" })),
         );
       }
+    }
+  }
+
+  // Personne EN CHARGE d'une opération (« X est le contact / s'occupe de Y ») :
+  // si X est un MEMBRE interne → il devient référent de l'affaire ; si X est un
+  // CONTACT externe → on l'associe à l'opération (lien contact_operation), pour
+  // qu'il apparaisse en signet sur la fiche. Vaut pour les affaires nouvelles OU
+  // existantes. Exécuté APRÈS la création des contacts (pour retrouver leur id).
+  const referents = jsonArray(fd, "referents_json");
+  if (referents.length) {
+    const [{ data: membres }, { data: tousContacts }] = await Promise.all([
+      sb.from("utilisateurs").select("id, nom").eq("org_id", org_id),
+      sb.from("contacts").select("id, nom, prenom").eq("org_id", org_id),
+    ]);
+    const memberByNom = new Map((membres ?? []).map((m: any) => [normNom(m.nom), m.id]));
+    const contactByNom = new Map<string, string>();
+    for (const c of (tousContacts ?? []) as any[]) {
+      const full = normNom([c.prenom, c.nom].filter(Boolean).join(" "));
+      const last = normNom(c.nom);
+      if (full && !contactByNom.has(full)) contactByNom.set(full, c.id);
+      if (last && !contactByNom.has(last)) contactByNom.set(last, c.id);
+    }
+    const liensCO: { contact_id: string; operation_id: string }[] = [];
+    for (const r of referents) {
+      const opId = opByNom.get(normNom(r?.operation));
+      if (!opId) continue;
+      const nom = normNom(r?.referent);
+      const memId = memberByNom.get(nom);
+      if (memId) {
+        await sb.from("operations").update({ referent_id: memId }).eq("id", opId);
+        continue;
+      }
+      const contactId = contactByNom.get(nom);
+      if (contactId) liensCO.push({ contact_id: contactId, operation_id: opId });
+    }
+    if (liensCO.length) {
+      // Défensif : si la table contact_operation n'existe pas encore (migration
+      // 0010), on n'interrompt pas la consolidation du compte rendu.
+      try {
+        await sb.from("contact_operation").upsert(liensCO, { onConflict: "contact_id,operation_id", ignoreDuplicates: true });
+      } catch { /* migration 0010 non appliquée */ }
     }
   }
 

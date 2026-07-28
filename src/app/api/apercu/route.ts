@@ -99,10 +99,15 @@ export async function GET(req: Request) {
       // de la colonne ville n'a pas encore été jouée (lecture sans échec).
       const { data: o } = await sb.from("operations").select("*").eq("id", id).maybeSingle();
       if (!o) return NextResponse.json({ error: "introuvable" }, { status: 404 });
-      const { data: liens } = await sb.from("entite_operation").select("entites(id, nom)").eq("operation_id", id);
+      const [{ data: liens }, { data: persLiens }] = await Promise.all([
+        sb.from("entite_operation").select("entites(id, nom)").eq("operation_id", id),
+        sb.from("contact_operation").select("contacts(id, nom, prenom)").eq("operation_id", id),
+      ]);
       const structs = (liens ?? []).map((l: any) => l.entites).filter(Boolean);
+      const perss = (persLiens ?? []).map((l: any) => l.contacts).filter(Boolean);
       const sections = [
         { titre: "Structures", icon: "structure", items: structs.map((s: any) => ({ type: "entite", id: s.id, cat: "struct", label: s.nom })) },
+        { titre: "Personnes à joindre", icon: "personne", items: perss.map((c: any) => ({ type: "personne", id: c.id, cat: "pers", label: [c.prenom, c.nom].filter(Boolean).join(" ") || c.nom })) },
       ].filter((s) => s.items.length);
       // Relances en cours rattachées à l'opération : affichées et proposées à la
       // suppression.

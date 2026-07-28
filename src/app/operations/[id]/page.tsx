@@ -49,7 +49,7 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
   const operation = op as Operation;
 
   // Données liées (requêtes simples, robustes)
-  const [{ data: referent }, { data: liensEnt }, { data: relances }, { data: crLiens }, { data: contacts }, { data: membres }] = await Promise.all([
+  const [{ data: referent }, { data: liensEnt }, { data: relances }, { data: crLiens }, { data: contacts }, { data: membres }, { data: persLiens }] = await Promise.all([
     operation.referent_id
       ? supabase.from("utilisateurs").select("nom").eq("id", operation.referent_id).maybeSingle()
       : Promise.resolve({ data: null }),
@@ -58,6 +58,8 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
     supabase.from("cr_operations").select("crs(id, date_rdv, type_rdv, transcription, synthese, auteur:utilisateurs(nom))").eq("operation_id", id),
     supabase.from("contacts").select("id, nom, prenom"),
     supabase.from("utilisateurs").select("id, nom"),
+    // Personnes (contacts) directement associées à cette affaire.
+    supabase.from("contact_operation").select("contacts(id, nom, prenom, fonction)").eq("operation_id", id),
   ]);
 
   const st = operation.statut;
@@ -67,6 +69,10 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
   const crs = (crLiens ?? []).map((c: any) => c.crs).filter(Boolean)
     .sort((a: any, b: any) => (a.date_rdv < b.date_rdv ? 1 : -1));
   const rels = (relances ?? []).filter((r: any) => r.statut === "a_faire");
+  const personnesLiees = (persLiens ?? [])
+    .map((l: any) => l.contacts)
+    .filter(Boolean)
+    .sort((a: any, b: any) => String(a.nom).localeCompare(String(b.nom), "fr"));
 
   return (
     <main className="wrap">
@@ -118,6 +124,20 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
             ))}</div>
           ) : <div className="empty">Aucune structure rattachée.</div>}
         </div>
+
+        {personnesLiees.length > 0 && (
+          <div className="block">
+            <div className="eyebrow">Personnes à joindre — contacts de l'affaire</div>
+            <div className="sig-wrap">
+              {personnesLiees.map((c: any) => {
+                const nomComplet = [c.prenom, c.nom].filter(Boolean).join(" ") || c.nom;
+                return <Signet key={c.id} type="personne" id={c.id} cat="pers" label={nomComplet}
+                  sub={c.fonction || undefined}
+                  parent={{ type: "operation", id: operation.id, nom: operation.nom }} />;
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="block">
           <div className="eyebrow">Fil des comptes rendus</div>
