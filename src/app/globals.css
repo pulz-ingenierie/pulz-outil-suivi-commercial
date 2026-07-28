@@ -559,6 +559,9 @@ a.netcard:hover { border-color: var(--accent); transform: translateY(-1px); tran
 .rel-line { display: flex; flex-direction: column; gap: 8px; padding: 11px 13px;
        border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
 .rel-line-obj { font-size: 14px; }
+/* « Faire avancer l'affaire » depuis une relance : libellé + sélecteur d'étape. */
+.rel-phase { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.rel-phase-lab { font-size: 12.5px; color: var(--muted); }
 /* Carte de relance dans un volet : format FIXE et régulier. Objet sur une ligne
    (tronqué à l'ellipse), date en haut à droite, signets alignés en dessous.
    Cliquable → ouvre la relance sur l'écran Relances. */

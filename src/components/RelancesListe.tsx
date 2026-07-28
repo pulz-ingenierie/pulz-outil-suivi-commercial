@@ -7,6 +7,8 @@ import ReporterRelance from "@/components/ReporterRelance";
 import Signet from "@/components/Signet";
 import SwipeRow from "@/components/SwipeRow";
 import CatIcon from "@/components/CatIcon";
+import PhaseAffaire from "@/components/PhaseAffaire";
+import { type OperationStatut } from "@/lib/types";
 
 // Une relance = une ligne qui se DÉPLIE sur place (comme le reste de l'outil) :
 // signets associés + actions (Nouveau CR, Fait, Reporter, Abandonner). Glisser
@@ -17,7 +19,7 @@ export type RelRow = {
   objet: string;
   echeance: string;
   enRetard: boolean;
-  op: { id: string; nom: string } | null;
+  op: { id: string; nom: string; statut: string } | null;
   structs: { id: string; nom: string }[];
   personne: string | null;
   persHref: string | null;
@@ -110,6 +112,10 @@ export default function RelancesListe({ groupes }: { groupes: Groupe[] }) {
                               <div className="carte-sect-h"><CatIcon name="operation" /> Opération</div>
                               <div className="sig-wrap">
                                 <Signet type="operation" id={r.op.id} cat="op" label={r.op.nom} />
+                              </div>
+                              <div className="rel-phase">
+                                <span className="rel-phase-lab">Faire avancer l'affaire&nbsp;:</span>
+                                <PhaseAffaire operationId={r.op.id} statut={r.op.statut as OperationStatut} />
                               </div>
                             </div>
                           )}

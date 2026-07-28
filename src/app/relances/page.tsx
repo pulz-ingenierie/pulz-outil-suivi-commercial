@@ -30,7 +30,7 @@ type Rel = {
   personne: string | null;
   operation_id: string | null;
   entite_id: string | null;
-  operations: { nom: string } | null;
+  operations: { nom: string; statut: string } | null;
   entites: { nom: string } | null;
 };
 
@@ -43,7 +43,7 @@ function versRow(
 ): RelRow {
   const persHref = r.personne ? lienPersonne(personnesIdx, r.personne) : null;
   const op = r.operation_id && r.operations?.nom
-    ? { id: r.operation_id, nom: r.operations.nom }
+    ? { id: r.operation_id, nom: r.operations.nom, statut: r.operations.statut }
     : null;
   const structsBrut = r.operation_id
     ? (opStructures[r.operation_id] ?? [])
@@ -95,7 +95,7 @@ export default async function Relances({
   const [{ data: relances }, { data: operations }, { data: entites }, { data: utilisateurs }, { data: contacts }] = await Promise.all([
     supabase
       .from("relances")
-      .select("*, operations(nom), entites(nom)")
+      .select("*, operations(nom, statut), entites(nom)")
       .eq("statut", "a_faire")
       .order("date_echeance", { ascending: true }),
     supabase.from("operations").select("id, nom").order("created_at", { ascending: false }),

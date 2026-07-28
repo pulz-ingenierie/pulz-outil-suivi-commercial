@@ -135,6 +135,19 @@ export async function changerPhase(fd: FormData) {
   redirect(`/operations/${id}`);
 }
 
+// Fait avancer l'affaire liée à une relance, SANS quitter l'écran Relances.
+export async function majPhaseOperation(fd: FormData) {
+  const supabase = requireSupabase();
+  const id = str(fd, "id");
+  if (!id) throw new Error("Opération introuvable.");
+  const statut = pickStatut(fd);
+  const { error } = await supabase.from("operations").update({ statut }).eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/relances");
+  revalidatePath("/tableau");
+  revalidatePath(`/operations/${id}`);
+}
+
 export async function updateOperation(fd: FormData) {
   const supabase = requireSupabase();
   const id = str(fd, "id");
