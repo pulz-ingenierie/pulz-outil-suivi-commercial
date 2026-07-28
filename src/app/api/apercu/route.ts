@@ -101,10 +101,15 @@ export async function GET(req: Request) {
       if (!o) return NextResponse.json({ error: "introuvable" }, { status: 404 });
       const [{ data: liens }, { data: persLiens }] = await Promise.all([
         sb.from("entite_operation").select("entites(id, nom)").eq("operation_id", id),
-        sb.from("contact_operation").select("contacts(id, nom, prenom)").eq("operation_id", id),
+        sb.from("contact_operation").select("contact_id").eq("operation_id", id),
       ]);
       const structs = (liens ?? []).map((l: any) => l.entites).filter(Boolean);
-      const perss = (persLiens ?? []).map((l: any) => l.contacts).filter(Boolean);
+      const cids = (persLiens ?? []).map((l: any) => l.contact_id).filter(Boolean);
+      let perss: any[] = [];
+      if (cids.length) {
+        const { data: cts } = await sb.from("contacts").select("id, nom, prenom").in("id", cids);
+        perss = cts ?? [];
+      }
       const sections = [
         { titre: "Structures", icon: "structure", items: structs.map((s: any) => ({ type: "entite", id: s.id, cat: "struct", label: s.nom })) },
         { titre: "Personnes à joindre", icon: "personne", items: perss.map((c: any) => ({ type: "personne", id: c.id, cat: "pers", label: [c.prenom, c.nom].filter(Boolean).join(" ") || c.nom })) },

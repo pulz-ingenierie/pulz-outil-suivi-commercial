@@ -58,8 +58,9 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
     supabase.from("cr_operations").select("crs(id, date_rdv, type_rdv, transcription, synthese, auteur:utilisateurs(nom))").eq("operation_id", id),
     supabase.from("contacts").select("id, nom, prenom"),
     supabase.from("utilisateurs").select("id, nom"),
-    // Personnes (contacts) directement associées à cette affaire.
-    supabase.from("contact_operation").select("contacts(id, nom, prenom, fonction)").eq("operation_id", id),
+    // Personnes (contacts) directement associées à cette affaire — on lit les
+    // identifiants puis les fiches séparément (plus robuste qu'une jointure).
+    supabase.from("contact_operation").select("contact_id").eq("operation_id", id),
   ]);
 
   const st = operation.statut;
@@ -69,10 +70,12 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
   const crs = (crLiens ?? []).map((c: any) => c.crs).filter(Boolean)
     .sort((a: any, b: any) => (a.date_rdv < b.date_rdv ? 1 : -1));
   const rels = (relances ?? []).filter((r: any) => r.statut === "a_faire");
-  const personnesLiees = (persLiens ?? [])
-    .map((l: any) => l.contacts)
-    .filter(Boolean)
-    .sort((a: any, b: any) => String(a.nom).localeCompare(String(b.nom), "fr"));
+  const contactIds = (persLiens ?? []).map((l: any) => l.contact_id).filter(Boolean);
+  let personnesLiees: any[] = [];
+  if (contactIds.length) {
+    const { data: cts } = await supabase.from("contacts").select("id, nom, prenom, fonction").in("id", contactIds);
+    personnesLiees = (cts ?? []).sort((a: any, b: any) => String(a.nom).localeCompare(String(b.nom), "fr"));
+  }
 
   return (
     <main className="wrap">
