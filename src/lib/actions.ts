@@ -140,16 +140,24 @@ export async function updateOperation(fd: FormData) {
   const id = str(fd, "id");
   if (!id) throw new Error("Opération introuvable.");
 
-  const nom = str(fd, "nom");
+  let nom = str(fd, "nom");
   if (!nom) throw new Error("Le nom de l'opération est obligatoire.");
   const statut = pickStatut(fd);
+
+  // Titre « Client - Ville - Nature » : si une ville est saisie, on synchronise
+  // le 2ᵉ segment du titre (remplace notamment le « ✕ » d'une ville à compléter).
+  const ville = strOrNull(fd, "ville");
+  if (ville) {
+    const parts = nom.split(" - ");
+    if (parts.length === 3) { parts[1] = ville; nom = parts.join(" - "); }
+  }
 
   const { error } = await supabase
     .from("operations")
     .update({
       nom,
       statut,
-      ville: strOrNull(fd, "ville"),
+      ville,
       montant_estime: montant(fd, "montant_estime"),
       referent_id: strOrNull(fd, "referent_id"),
       description: strOrNull(fd, "description"),

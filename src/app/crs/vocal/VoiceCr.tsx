@@ -1217,15 +1217,18 @@ export default function VoiceCr({
             {contactsAffaires.map(({ p, i, affaires }) => (
               <div className="precise-row" key={`co${i}`}>
                 <span className="precise-q">
-                  <strong>{[p.prenom, p.nom].filter(Boolean).join(" ")}</strong> est le contact de quelle(s) affaire(s) ? <em className="precise-hint">(cochez la/les bonne(s))</em>
+                  <strong>{[p.prenom, p.nom].filter(Boolean).join(" ")}</strong> est le contact de quelle(s) affaire(s) ? <em className="precise-hint">(✓ = associé · cliquez seulement pour corriger)</em>
                 </span>
                 <div className="precise-answer">
-                  {affaires.map((a) => (
-                    <button type="button" className={`sig-d op${contactAOp(p, a) ? " on" : ""}`} key={a}
-                      onClick={() => basculerContactOp(i, a)}>
-                      <span className="sig-lbl">{a}</span>
-                    </button>
-                  ))}
+                  {affaires.map((a) => {
+                    const on = contactAOp(p, a);
+                    return (
+                      <button type="button" className={`sig-d op${on ? " on" : ""}`} key={a}
+                        onClick={() => basculerContactOp(i, a)}>
+                        <span className="sig-lbl">{on ? "✓ " : ""}{a}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ))}
