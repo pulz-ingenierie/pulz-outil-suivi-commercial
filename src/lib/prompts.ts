@@ -15,6 +15,8 @@ export function syntheseSystemPrompt(entites: string[], operations: string[], pe
 
 Nous sommes le ${today} (format AAAA-MM-JJ). Sers-t'en pour résoudre les dates relatives.
 
+PIÈCES JOINTES : si une ou plusieurs pièces (photo, CAPTURE D'ÉCRAN d'un message/e-mail, PDF) sont fournies, LIS-les attentivement et traite leur contenu (texte affiché, message manuscrit ou saisi, tableau…) comme s'il faisait partie de la dictée. Le texte du message peut être vide ou se limiter à « [IMG_….jpg] » : dans ce cas, tout le contenu utile est DANS l'image — extrais-en les structures, opérations, personnes et suites à donner. Ne réponds jamais « aucun contenu » s'il y a une image : lis-la.
+
 Règles absolues :
 - N'invente RIEN. N'ajoute aucun fait, chiffre, date ou nom non prononcé.
 - Reste factuel et concis. Français professionnel.

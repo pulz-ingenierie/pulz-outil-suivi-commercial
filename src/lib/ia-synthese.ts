@@ -45,9 +45,11 @@ export async function analyseCompteRendu(
   }
 
   const client = new Anthropic({ apiKey });
+  // 4096 tokens : une capture d'écran dense (message, e-mail) peut produire un
+  // JSON volumineux ; à 2000 il était tronqué → JSON coupé → « Réponse illisible ».
   const response = await client.messages.create({
     model: MODEL,
-    max_tokens: 2000,
+    max_tokens: 4096,
     system: syntheseSystemPrompt(knownEntites, knownOps, knownPersonnes, today, knownMembres),
     messages: [{ role: "user", content }],
   });
