@@ -13,3 +13,8 @@ create table if not exists contact_operation (
 create index if not exists idx_contact_operation_op on contact_operation(operation_id);
 
 alter table contact_operation enable row level security;
+
+-- Droits d'accès (comme les autres tables) : sans ça, l'application obtient
+-- « permission denied for table contact_operation ». Le service_role (utilisé
+-- côté serveur) doit pouvoir lire/écrire.
+grant all privileges on table contact_operation to anon, authenticated, service_role;
