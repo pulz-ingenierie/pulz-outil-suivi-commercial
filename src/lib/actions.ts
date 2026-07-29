@@ -499,7 +499,9 @@ async function materialiserCr(
   if (referents.length || contactsAvecOps.length) {
     const [{ data: membres }, { data: tousContacts }] = await Promise.all([
       sb.from("utilisateurs").select("id, nom").eq("org_id", org_id),
-      sb.from("contacts").select("id, nom, prenom").eq("org_id", org_id),
+      // NB : les contacts créés à la dictée n'ont pas d'org_id → ne PAS filtrer
+      // dessus (sinon on ne les retrouve jamais et le lien ne se crée pas).
+      sb.from("contacts").select("id, nom, prenom"),
     ]);
     const memberByNom = new Map((membres ?? []).map((m: any) => [normNom(m.nom), m.id]));
     const contactByNom = new Map<string, string>();
