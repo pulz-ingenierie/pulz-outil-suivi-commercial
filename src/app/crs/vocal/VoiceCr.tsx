@@ -504,6 +504,20 @@ export default function VoiceCr({
   const changementsPhase = ratsNets
     .filter((r) => r.kind === "operation" && r.statut && opNameSet.has(r.name.trim().toLowerCase()))
     .map((r) => ({ operation: r.name.trim(), phase: r.statut as string }));
+  // Rapproche une référence d'affaire (parfois abrégée par l'IA) du LIBELLÉ EXACT
+  // d'une opération (rattachement du CR ou opération connue) : le lien contact ↔
+  // opération se fera ainsi sur un nom exact, fiable.
+  const normL = (s: string | null | undefined) => (s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  const matchOp = (a: string, ref: string) => {
+    const t = normL(a), n = normL(ref);
+    return !!t && !!n && (t === n || t.includes(n) || n.includes(t));
+  };
+  const opExact = (ref: string): string => {
+    const rat = rattachements.find((r) => r.kind === "operation" && r.name.trim() && matchOp(r.name, ref));
+    if (rat) return rat.name.trim();
+    const known = operations.find((o) => matchOp(o.nom, ref));
+    return known ? known.nom : (ref ?? "").trim();
+  };
   const contactsPayload = personnes
     .filter((p) => p.nom.trim())
     .map((p) => ({
@@ -511,7 +525,7 @@ export default function VoiceCr({
       prenom: p.prenom.trim() || null,
       fonction: p.fonction.trim() || null,
       entite: p.entite.trim() || null,
-      operations: Array.isArray(p.operations) ? p.operations : [],
+      operations: Array.from(new Set((p.operations ?? []).map(opExact).filter(Boolean))),
     }));
   const relancesPayload = relances
     .filter((r) => r.objet.trim())
@@ -598,11 +612,7 @@ export default function VoiceCr({
   // (le lien se fait alors sur le nom EXACT de l'affaire, fiable — pas sur un
   // rapprochement de noms hasardeux). On propose les affaires du compte rendu +
   // les affaires connues qui ressemblent à ce que l'IA a rattaché à la personne.
-  const normL = (s: string | null | undefined) => (s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
-  const matchOp = (a: string, ref: string) => {
-    const t = normL(a), n = normL(ref);
-    return !!t && !!n && (t === n || t.includes(n) || n.includes(t));
-  };
+  // (normL / matchOp / opExact sont définis plus haut, avec contactsPayload.)
   const affairesProposees = (p: PersonneEdit): string[] => {
     const m = new Map<string, string>();
     for (const r of rattachements) if (r.kind === "operation" && r.name.trim()) m.set(normL(r.name), r.name.trim());
