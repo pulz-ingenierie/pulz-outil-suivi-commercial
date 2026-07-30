@@ -253,17 +253,20 @@ export async function updateContact(fd: FormData) {
     prenom: strOrNull(fd, "prenom"),
     fonction: capFirst(strOrNull(fd, "fonction")),
   };
-  // Structure : on ne la change que si un nom de structure connu est fourni
-  // (on ne détache pas ici, pour éviter tout souci avant la migration 0004).
-  const entiteNom = str(fd, "entite");
-  if (entiteNom) {
+  // Structure : menu déroulant → identifiant direct. Vide = « Aucune » (on
+  // détache la personne de sa structure). On vérifie que la structure choisie
+  // appartient bien à l'organisation.
+  const entiteId = strOrNull(fd, "entite_id");
+  if (entiteId) {
     const { data } = await supabase
       .from("entites")
       .select("id")
       .eq("org_id", org_id)
-      .ilike("nom", entiteNom)
+      .eq("id", entiteId)
       .maybeSingle();
-    if (data?.id) update.entite_id = data.id;
+    update.entite_id = data?.id ?? null;
+  } else {
+    update.entite_id = null;
   }
 
   const { error } = await supabase.from("contacts").update(update).eq("id", id);
@@ -912,10 +915,46 @@ export async function detacherSignet(fd: FormData) {
     if (e) {
       await sb.from("contacts").update({ entite_id: null }).eq("id", contact_id).eq("entite_id", entite_id);
     }
+  } else if (paire.has("operation") && paire.has("personne")) {
+    // Personne ⇄ affaire (contact du promoteur) : on retire le lien direct
+    // contact_operation (la personne et l'affaire restent dans l'outil).
+    const operation_id = idOf("operation");
+    const contact_id = idOf("personne");
+    const { data: o } = await sb.from("operations").select("id").eq("id", operation_id).eq("org_id", org_id).maybeSingle();
+    if (o) {
+      try {
+        await sb.from("contact_operation").delete().eq("contact_id", contact_id).eq("operation_id", operation_id);
+      } catch { /* migration 0010 non appliquée */ }
+    }
   }
-  // Autres paires (opération ⇄ personne, etc.) : pas de lien direct à retirer.
 
   revalidatePath("/", "layout");
+}
+
+// Associe une PERSONNE à une AFFAIRE (contact du promoteur) : lien direct
+// contact_operation, affiché en signet sur les deux fiches. Réversible par
+// « détacher » (appui long sur le signet).
+export async function associerContactOperation(fd: FormData) {
+  const supabase = requireSupabase();
+  const org_id = await currentOrgId(supabase);
+  const contact_id = str(fd, "contact_id");
+  const operation_id = str(fd, "operation_id");
+  if (!contact_id || !operation_id) throw new Error("Association impossible : contexte manquant.");
+
+  // Vérifie que l'affaire appartient bien à l'organisation.
+  const { data: o } = await supabase.from("operations").select("id").eq("id", operation_id).eq("org_id", org_id).maybeSingle();
+  if (!o) throw new Error("Affaire introuvable.");
+
+  try {
+    await supabase
+      .from("contact_operation")
+      .upsert({ contact_id, operation_id }, { onConflict: "contact_id,operation_id", ignoreDuplicates: true });
+  } catch {
+    throw new Error("Association indisponible (migration à appliquer).");
+  }
+
+  revalidatePath(`/personnes/${contact_id}`);
+  revalidatePath(`/operations/${operation_id}`);
 }
 
 // -----------------------------------------------------------------------------

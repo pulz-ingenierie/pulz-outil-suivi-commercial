@@ -930,3 +930,19 @@ a.sig-d { text-decoration: none; }
 .nouvelle-relance-sect:target { display: block; }
 .rel-group-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .rel-group-h .rel-h { margin-bottom: 0; }
+
+/* Sélecteur d'association d'une affaire à une personne (fiche personne). */
+.assoc-picker { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+.assoc-hint { font-size: 12.5px; color: var(--muted); margin-bottom: 10px; }
+.assoc-search { width: 100%; font: inherit; font-size: 14px; padding: 9px 12px; border: 1px solid var(--line);
+       border-radius: 8px; background: var(--surface); color: var(--ink); margin-bottom: 10px; }
+.assoc-list { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; }
+.assoc-opt-wrap { margin: 0; }
+.assoc-opt { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+       font: inherit; font-size: 14px; text-align: left; padding: 10px 12px; border: 1px solid var(--line);
+       border-radius: 8px; background: var(--surface); color: var(--ink); cursor: pointer;
+       -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.assoc-opt:hover { border-color: var(--c-op); background: color-mix(in srgb, var(--c-op) 6%, var(--surface)); }
+.assoc-opt-nom { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.assoc-opt-plus { flex: none; font-size: 11.5px; font-weight: 600; color: var(--c-op);
+       background: color-mix(in srgb, var(--c-op) 12%, var(--surface)); padding: 3px 9px; border-radius: 5px; }

@@ -12,10 +12,10 @@ export function demanderSuppression(type: string, id: string, nom?: string, pare
   window.dispatchEvent(new CustomEvent("moeia:supprimer", { detail: { type, id, nom, parent } }));
 }
 
-// Appui long (~550 ms) pour ouvrir la suppression — utilisé sur les signets, qui
-// ne peuvent pas révéler de bouton par glissement. Renvoie les gestionnaires à
-// étaler sur l'élément + `consomme()` (pour ignorer le clic qui suit le geste).
-export function useLongPressSuppr(type: string, id: string, nom?: string, parent?: Parent) {
+// Appui long générique (~550 ms) : déclenche `onLong` sans bouger le doigt.
+// Renvoie les gestionnaires à étaler sur l'élément + `consomme()` (pour ignorer
+// le clic parasite qui suit le geste).
+export function useLongPress(onLong: () => void, ms = 550) {
   const geste = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const start = useRef<{ x: number; y: number } | null>(null);
@@ -24,7 +24,7 @@ export function useLongPressSuppr(type: string, id: string, nom?: string, parent
   const arm = () => {
     geste.current = false;
     clear();
-    timer.current = setTimeout(() => { geste.current = true; demanderSuppression(type, id, nom, parent); }, 550);
+    timer.current = setTimeout(() => { geste.current = true; onLong(); }, ms);
   };
 
   const onTouchStart = (e: React.TouchEvent) => { const t = e.touches[0]; start.current = { x: t.clientX, y: t.clientY }; arm(); };
@@ -41,4 +41,10 @@ export function useLongPressSuppr(type: string, id: string, nom?: string, parent
   const consomme = () => { if (geste.current) { geste.current = false; return true; } return false; };
 
   return { onTouchStart, onTouchMove, onTouchEnd, onMouseDown, onMouseUp, onMouseLeave, consomme };
+}
+
+// Appui long pour ouvrir la suppression — utilisé sur les signets, qui ne peuvent
+// pas révéler de bouton par glissement.
+export function useLongPressSuppr(type: string, id: string, nom?: string, parent?: Parent) {
+  return useLongPress(() => demanderSuppression(type, id, nom, parent));
 }

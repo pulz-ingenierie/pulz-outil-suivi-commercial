@@ -6,6 +6,7 @@ import BackButton from "@/components/BackButton";
 import Signet from "@/components/Signet";
 import OperationRow from "@/components/OperationRow";
 import RelanceRow from "@/components/RelanceRow";
+import AssocierAffaire from "@/components/AssocierAffaire";
 import { normNom } from "@/lib/personnes";
 
 export const dynamic = "force-dynamic";
@@ -62,6 +63,17 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
     .filter(Boolean)
     .sort((a: any, b: any) => a.nom.localeCompare(b.nom, "fr"));
 
+  // Affaires dont la personne est le CONTACT (lien direct contact_operation) +
+  // toutes les affaires de l'organisation (pour en associer d'autres).
+  const [{ data: coLiens }, { data: toutesOps }] = await Promise.all([
+    supabase.from("contact_operation").select("operation_id").eq("contact_id", id),
+    supabase.from("operations").select("id, nom, statut").order("nom"),
+  ]);
+  const idsAssociees = new Set(((coLiens ?? []) as any[]).map((l) => l.operation_id).filter(Boolean));
+  const toutes = ((toutesOps ?? []) as any[]).map((o) => ({ id: o.id, nom: o.nom, statut: o.statut }));
+  const affairesAssociees = toutes.filter((o) => idsAssociees.has(o.id));
+  const affairesDisponibles = toutes.filter((o) => !idsAssociees.has(o.id));
+
   const nomComplet = [contact.prenom, contact.nom].filter(Boolean).join(" ") || contact.nom;
 
   // Relances qui concernent cette personne : celles qui la nomment, + celles de
@@ -109,6 +121,13 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
             </div>
           )}
         </div>
+
+        <AssocierAffaire
+          contactId={contact.id}
+          contactNom={nomComplet}
+          associees={affairesAssociees}
+          disponibles={affairesDisponibles}
+        />
 
         <div className="block">
           <div className="eyebrow">Prochaines relances</div>

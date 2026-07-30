@@ -58,12 +58,14 @@ export default function DeleteSheet() {
   if (!cible) return null;
 
   // Détachement possible seulement pour des paires réellement liées :
-  // structure ⇄ opération, ou structure ⇄ personne.
+  // structure ⇄ opération, structure ⇄ personne, ou personne ⇄ affaire.
   const paire = parent ? new Set([parent.type, cible.type]) : new Set<string>();
   const detachable =
     !!parent &&
     parent.id !== cible.id &&
-    ((paire.has("entite") && paire.has("operation")) || (paire.has("entite") && paire.has("personne")));
+    ((paire.has("entite") && paire.has("operation")) ||
+      (paire.has("entite") && paire.has("personne")) ||
+      (paire.has("operation") && paire.has("personne")));
 
   // Objets associés proposés à la suppression — les relances en cours (jamais
   // cochés d'office). On n'y met PAS les structures/opérations partagées.

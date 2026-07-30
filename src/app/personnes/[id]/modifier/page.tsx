@@ -24,9 +24,6 @@ export default async function ModifierPersonne({ params }: { params: Promise<{ i
   ]);
   if (!c) notFound();
   const contact = c as { id: string; nom: string; prenom: string | null; fonction: string | null; entite_id: string | null };
-  const structNom = contact.entite_id
-    ? ((entites ?? []).find((e: any) => e.id === contact.entite_id)?.nom ?? "")
-    : "";
   const nomComplet = [contact.prenom, contact.nom].filter(Boolean).join(" ") || contact.nom;
 
   return (
@@ -38,8 +35,6 @@ export default async function ModifierPersonne({ params }: { params: Promise<{ i
           <h1>{nomComplet}</h1>
         </div>
       </div>
-
-      <datalist id="dl-structures">{(entites ?? []).map((e: any) => <option key={e.id} value={e.nom} />)}</datalist>
 
       <form action={updateContact} className="form">
         <input type="hidden" name="id" value={contact.id} />
@@ -62,7 +57,12 @@ export default async function ModifierPersonne({ params }: { params: Promise<{ i
 
         <label className="field">
           <span className="lab">Structure (facultatif)</span>
-          <input name="entite" list="dl-structures" defaultValue={structNom} placeholder="Sa structure…" />
+          <select name="entite_id" defaultValue={contact.entite_id ?? ""}>
+            <option value="">— Aucune —</option>
+            {(entites ?? []).map((e: any) => (
+              <option key={e.id} value={e.id}>{e.nom}</option>
+            ))}
+          </select>
         </label>
 
         <p className="hint">La correction s'appliquera partout où cette personne est citée.</p>
