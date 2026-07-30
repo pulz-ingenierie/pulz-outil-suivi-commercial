@@ -63,6 +63,32 @@ function capFirst(s: string | null): string | null {
   return t ? t.charAt(0).toUpperCase() + t.slice(1) : null;
 }
 
+// Casse d'un nom propre. Si un libellé est écrit TOUT EN MAJUSCULES (ex.
+// « NOTAIRE », « NACARAT IMMOBILIER »), on le repasse en casse de titre
+// (« Notaire », « Nacarat Immobilier ») — en gardant les sigles courts (2 à 4
+// lettres, hors petits mots) en majuscules (« SCI », « SIGH »). Si le libellé
+// contient déjà une minuscule, c'est une casse voulue : on n'y touche pas.
+const MOTS_MINUSCULES = new Set(["le", "la", "les", "de", "des", "du", "un", "une", "et", "aux", "au", "en", "sur", "à"]);
+function normaliserCasseNom(nom: string): string {
+  const s = (nom ?? "").trim();
+  if (!s || /[a-zà-ÿ]/.test(s)) return s;
+  return s
+    .split(/\s+/)
+    .map((mot) => {
+      const lettres = mot.replace(/[^A-Za-zÀ-ÿ]/g, "");
+      if (lettres.length >= 2 && lettres.length <= 4 && !MOTS_MINUSCULES.has(lettres.toLowerCase())) return mot;
+      return mot.charAt(0).toUpperCase() + mot.slice(1).toLowerCase();
+    })
+    .join(" ");
+}
+
+// Applique la normalisation de casse à chaque segment d'un titre d'opération
+// « Client - Ville - Nature » : seul un segment TOUT EN MAJUSCULES (souvent le
+// client) est repassé en casse normale, les autres restent inchangés.
+function normaliserCasseTitre(titre: string): string {
+  return titre.split(" - ").map((seg) => normaliserCasseNom(seg.trim())).join(" - ");
+}
+
 function strOrNull(fd: FormData, key: string): string | null {
   const v = str(fd, key);
   return v.length ? v : null;
@@ -191,7 +217,7 @@ export async function createEntite(fd: FormData) {
   const supabase = requireSupabase();
   const org_id = await currentOrgId(supabase);
 
-  const nom = str(fd, "nom");
+  const nom = normaliserCasseNom(str(fd, "nom"));
   if (!nom) throw new Error("Le nom de l'entité est obligatoire.");
 
   const type = str(fd, "type");
@@ -320,7 +346,7 @@ async function materialiserCr(
 
   // Nouvelles structures.
   for (const e of jsonArray(fd, "nouvelles_entites_json")) {
-    const nom = typeof e?.nom === "string" ? e.nom.trim() : "";
+    const nom = normaliserCasseNom(typeof e?.nom === "string" ? e.nom.trim() : "");
     if (!nom) continue;
     const type =
       typeof e?.type === "string" && (ENTITE_TYPES as readonly string[]).includes(e.type) ? e.type : "autre";
@@ -332,7 +358,7 @@ async function materialiserCr(
   // direct, le plus fiable — pas de correspondance de noms à deviner).
   const opEntiteNames: { opId: string; entite: string }[] = [];
   for (const o of jsonArray(fd, "nouvelles_operations_json")) {
-    const nom = typeof o?.nom === "string" ? o.nom.trim() : "";
+    const nom = normaliserCasseTitre(typeof o?.nom === "string" ? o.nom.trim() : "");
     if (!nom) continue;
     // Phase proposée par l'IA et éventuellement ajustée par l'utilisateur.
     const statut =
@@ -753,8 +779,11 @@ export async function enregistrerBrouillonDictee(fd: FormData) {
   const transcription = strOrNull(fd, "transcription");
   if (!transcription) throw new Error("Le compte rendu ne peut pas être vide.");
 
+  // On stocke l'instantané complet de l'état édité (rattachements, personnes,
+  // relances, villes…) pour tout restaurer à la réouverture ; à défaut, la
+  // synthèse brute de l'IA.
   let synthese: unknown = null;
-  const synthRaw = str(fd, "synthese_json");
+  const synthRaw = str(fd, "brouillon_synthese_json") || str(fd, "synthese_json");
   if (synthRaw) { try { synthese = JSON.parse(synthRaw); } catch { synthese = null; } }
 
   const { profil } = await getIdentite();

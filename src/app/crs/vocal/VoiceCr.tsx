@@ -570,6 +570,26 @@ export default function VoiceCr({
   const liensPayload = [...liensDesOps, ...liensIA];
   const syntheseOut = { ...(synthese ?? {}), relances: relancesPayload };
 
+  // Instantané complet de l'état ÉDITÉ (rattachements, personnes, relances,
+  // villes, phases…) : stocké tel quel dans un brouillon pour tout restaurer à la
+  // réouverture — sans quoi seules les données brutes de l'IA seraient conservées
+  // et les corrections faites au débrief seraient perdues.
+  const brouillonSnapshot = {
+    ...(synthese ?? {}),
+    type_rdv: typeRdv,
+    date_rdv: dateRdv,
+    entites: ratsNets.filter((r) => r.kind === "structure" && entNameSet.has(r.name.trim().toLowerCase())).map((r) => r.name.trim()),
+    operations: ratsNets.filter((r) => r.kind === "operation" && opNameSet.has(r.name.trim().toLowerCase())).map((r) => r.name.trim()),
+    nouvelles_entites: nouvellesEntites,
+    nouvelles_operations: nouvellesOperations.map((o) => ({ nom: o.nom, entite: o.entite, ville: o.ville, phase: o.statut ?? "piste" })),
+    liens: liensPayload,
+    referents: (synthese as any)?.referents ?? [],
+    changements_phase: changementsPhase,
+    changements_ville: changementsVille,
+    contacts: contactsPayload,
+    relances: relancesPayload,
+  };
+
   const canSave = transcription.trim().length > 0 && ratsNets.length > 0;
 
   // Débrief de fin de dictée : ce qui manque pour que chaque signet soit complet.
@@ -1061,6 +1081,7 @@ export default function VoiceCr({
         <input type="hidden" name="changements_ville_json" value={JSON.stringify(changementsVille)} />
         <input type="hidden" name="contacts_json" value={JSON.stringify(contactsPayload)} />
         <input type="hidden" name="synthese_json" value={JSON.stringify(syntheseOut)} />
+        <input type="hidden" name="brouillon_synthese_json" value={JSON.stringify(brouillonSnapshot)} />
 
         {/* Bloc — le compte rendu (texte). */}
         <div className="bloc">
