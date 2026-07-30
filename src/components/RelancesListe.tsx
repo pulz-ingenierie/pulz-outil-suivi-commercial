@@ -38,11 +38,15 @@ function concerne(r: RelRow, membre: string): boolean {
   const m = membre.trim().toLowerCase();
   return personnesDe(r).some((n) => n.toLowerCase() === m);
 }
+function concerneStructure(r: RelRow, structureId: string): boolean {
+  return (r.structs ?? []).some((s) => s.id === structureId);
+}
 
 export default function RelancesListe({ groupes, membres = [] }: { groupes: Groupe[]; membres?: string[] }) {
   const [ouvert, setOuvert] = useState<string | null>(null);
   const [vue, setVue] = useState<string>("__toutes__");
   const [membre, setMembre] = useState<string | null>(null);
+  const [structure, setStructure] = useState<string | null>(null);
   const toggle = (id: string) => setOuvert((cur) => (cur === id ? null : id));
 
   // Arrivée depuis un lien « #r-<id> » (ex. clic sur une relance dans un volet) :
@@ -64,9 +68,20 @@ export default function RelancesListe({ groupes, membres = [] }: { groupes: Grou
   // Membres du groupement réellement présents dans les relances (options du
   // filtre « par personne du groupement »).
   const membresPresents = membres.filter((m) => groupes.some((g) => g.items.some((r) => concerne(r, m))));
-  // Filtre par membre : on restreint chaque groupe aux relances qui le concernent.
-  const groupesFiltres = membre
-    ? groupes.map((g) => ({ ...g, items: g.items.filter((r) => concerne(r, membre)) }))
+  // Structures présentes dans les relances (options du filtre « par structure »),
+  // dédoublonnées par identifiant et triées par nom.
+  const structuresMap = new Map<string, string>();
+  for (const g of groupes) for (const r of g.items) for (const s of r.structs ?? []) if (s.id) structuresMap.set(s.id, s.nom);
+  const structuresPresentes = [...structuresMap.entries()]
+    .map(([id, nom]) => ({ id, nom }))
+    .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+  // Filtres (personne ET structure) : on restreint chaque groupe aux relances qui
+  // concernent la personne choisie et/ou la structure choisie.
+  const groupesFiltres = (membre || structure)
+    ? groupes.map((g) => ({
+        ...g,
+        items: g.items.filter((r) => (!membre || concerne(r, membre)) && (!structure || concerneStructure(r, structure))),
+      }))
     : groupes;
 
   const total = groupesFiltres.reduce((n, g) => n + g.items.length, 0);
@@ -90,24 +105,43 @@ export default function RelancesListe({ groupes, membres = [] }: { groupes: Grou
           </button>
         ))}
       </div>
-      {membresPresents.length > 0 && (
-        <label className="rel-filtre">
-          <span className="rel-filtre-lab">Personne du groupement</span>
-          <select
-            className="rel-filtre-select"
-            value={membre ?? ""}
-            onChange={(e) => setMembre(e.target.value || null)}
-          >
-            <option value="">Toutes les personnes</option>
-            {membresPresents.map((m) => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
-        </label>
+      {(membresPresents.length > 0 || structuresPresentes.length > 0) && (
+        <div className="rel-filtres">
+          {membresPresents.length > 0 && (
+            <label className="rel-filtre">
+              <span className="rel-filtre-lab">Personne du groupement</span>
+              <select
+                className="rel-filtre-select"
+                value={membre ?? ""}
+                onChange={(e) => setMembre(e.target.value || null)}
+              >
+                <option value="">Toutes les personnes</option>
+                {membresPresents.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </label>
+          )}
+          {structuresPresentes.length > 0 && (
+            <label className="rel-filtre">
+              <span className="rel-filtre-lab">Structure</span>
+              <select
+                className="rel-filtre-select"
+                value={structure ?? ""}
+                onChange={(e) => setStructure(e.target.value || null)}
+              >
+                <option value="">Toutes les structures</option>
+                {structuresPresentes.map((s) => (
+                  <option key={s.id} value={s.id}>{s.nom}</option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
       )}
       <div className="tab-body">
       {total === 0 && (
-        <div className="card"><span className="empty">Aucune relance pour {membre}.</span></div>
+        <div className="card"><span className="empty">Aucune relance pour ce filtre.</span></div>
       )}
       {groupesVisibles.map((g) =>
         g.items.length ? (
