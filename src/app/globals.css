@@ -922,3 +922,11 @@ a.sig-d { text-decoration: none; }
        white-space: nowrap; font-variant-numeric: tabular-nums; }
 .rel-mini-date.crit { color: var(--crit); }
 .rel-mini:hover .rel-mini-obj { color: var(--c-rel); }
+
+/* Formulaire de création de relance : masqué par défaut, révélé par le bouton
+   « + Nouvelle relance » du haut (ancre #nouvelle-relance → :target). « Annuler »
+   renvoie en haut de page (#relances-haut) et le referme. */
+.nouvelle-relance-sect { display: none; }
+.nouvelle-relance-sect:target { display: block; }
+.rel-group-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.rel-group-h .rel-h { margin-bottom: 0; }

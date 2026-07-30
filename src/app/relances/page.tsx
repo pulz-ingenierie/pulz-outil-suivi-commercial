@@ -138,7 +138,7 @@ export default async function Relances({
   return (
     <main className="wrap">
       <HashBack />
-      <div className="fiche-head">
+      <div className="fiche-head" id="relances-haut">
         <div>
           <div className="eyebrow">Suites à donner</div>
           <h1>Relances <span className="count-badge">{list.length}</span></h1>
@@ -185,9 +185,13 @@ export default async function Relances({
         ]}
       />
 
-      {/* Créer une relance à la main */}
-      <section className="rel-group" id="nouvelle-relance" style={{ scrollMarginTop: "calc(var(--topbar-h, 60px) + 12px)" }}>
-        <h2 className="rel-h muted-h">Ajouter une relance</h2>
+      {/* Créer une relance à la main — masqué par défaut, ouvert par le bouton
+          « + Nouvelle relance » du haut (ancre #nouvelle-relance). */}
+      <section className="rel-group nouvelle-relance-sect" id="nouvelle-relance" style={{ scrollMarginTop: "calc(var(--topbar-h, 60px) + 12px)" }}>
+        <div className="rel-group-h">
+          <h2 className="rel-h muted-h">Ajouter une relance</h2>
+          <a className="btn ghost mini" href="#relances-haut">Annuler</a>
+        </div>
         <form action={createRelance} className="form card">
           <label className="field">
             <span className="lab">Objet <em>*</em></span>
