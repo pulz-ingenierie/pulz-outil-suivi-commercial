@@ -98,6 +98,7 @@ export default async function AdminUtilisateurs() {
                   </button>
                 </form>
               )}
+              <Link className="btn ghost mini" href={`/admin/utilisateurs/${u.id}`}>Modifier</Link>
             </span>
           </div>
         ))}

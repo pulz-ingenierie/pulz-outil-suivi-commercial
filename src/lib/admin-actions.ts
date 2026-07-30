@@ -57,6 +57,53 @@ export async function createUtilisateur(fd: FormData) {
   redirect("/admin/utilisateurs");
 }
 
+export async function updateUtilisateur(fd: FormData) {
+  const { supabase, profil } = await requirePilote();
+  const id = str(fd, "id");
+  if (!id) throw new Error("Utilisateur introuvable.");
+
+  const nom = str(fd, "nom");
+  if (!nom) throw new Error("Le nom est obligatoire.");
+
+  const email = str(fd, "email").toLowerCase();
+  if (!email || !email.includes("@")) throw new Error("Adresse e-mail invalide.");
+
+  const societe_label = str(fd, "societe_label") || null;
+  let role = ROLES.includes(str(fd, "role") as any) ? str(fd, "role") : "membre";
+  // Garde-fou : on ne peut pas se retirer à soi-même le rôle pilote.
+  if (id === profil.id) role = "pilote";
+
+  const { error } = await supabase
+    .from("utilisateurs")
+    .update({ nom, email, role, societe_label })
+    .eq("id", id);
+  if (error) {
+    if (error.code === "23505") throw new Error("Cette adresse e-mail est déjà enregistrée.");
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/admin/utilisateurs");
+  redirect("/admin/utilisateurs");
+}
+
+export async function deleteUtilisateur(fd: FormData) {
+  const { supabase, profil } = await requirePilote();
+  const id = str(fd, "id");
+  if (!id) throw new Error("Utilisateur introuvable.");
+  // Garde-fou : on ne peut pas supprimer son propre compte (risque de
+  // verrouillage de l'administration).
+  if (id === profil.id) throw new Error("Vous ne pouvez pas supprimer votre propre compte.");
+
+  // Les enregistrements qui référencent l'utilisateur (comptes rendus, relances,
+  // opérations) sont en « ON DELETE SET NULL » : la suppression les détache
+  // automatiquement, sans erreur de clé étrangère.
+  const { error } = await supabase.from("utilisateurs").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/utilisateurs");
+  redirect("/admin/utilisateurs");
+}
+
 export async function setUtilisateurActif(fd: FormData) {
   const { supabase, profil } = await requirePilote();
   const id = str(fd, "id");
