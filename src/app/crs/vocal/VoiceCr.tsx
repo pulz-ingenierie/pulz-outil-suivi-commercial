@@ -627,31 +627,10 @@ export default function VoiceCr({
     .map((r, i) => ({ r, i }))
     .filter(({ r }) => r.kind === "operation" && r.name.trim() && !(r.ville && r.ville.trim()) &&
       (!ratEnBase(r) || r.name.includes("✕")));
-  // Contact d'une ou plusieurs affaires : on fait CONFIRMER par des cases à cocher
-  // (le lien se fait alors sur le nom EXACT de l'affaire, fiable — pas sur un
-  // rapprochement de noms hasardeux). On propose les affaires du compte rendu +
-  // les affaires connues qui ressemblent à ce que l'IA a rattaché à la personne.
-  // (normL / matchOp / opExact sont définis plus haut, avec contactsPayload.)
-  const affairesProposees = (p: PersonneEdit): string[] => {
-    const m = new Map<string, string>();
-    for (const r of rattachements) if (r.kind === "operation" && r.name.trim()) m.set(normL(r.name), r.name.trim());
-    for (const ref of p.operations ?? []) for (const o of operations) if (matchOp(o.nom, ref)) m.set(normL(o.nom), o.nom);
-    return [...m.values()];
-  };
-  const contactAOp = (p: PersonneEdit, a: string) => (p.operations ?? []).some((ref) => matchOp(a, ref));
-  const basculerContactOp = (pi: number, a: string) =>
-    setPersonnes((prev) => prev.map((x, j) => {
-      if (j !== pi) return x;
-      const cur = x.operations ?? [];
-      const on = cur.some((ref) => matchOp(a, ref));
-      const autres = cur.filter((ref) => !matchOp(a, ref));
-      return { ...x, operations: on ? autres : [...autres, a] };
-    }));
-  // Contacts que l'IA a marqués comme « contact d'une affaire » : à confirmer.
-  const contactsAffaires = personnes
-    .map((p, i) => ({ p, i, affaires: affairesProposees(p) }))
-    .filter(({ p, affaires }) => (p.operations ?? []).length > 0 && affaires.length > 0);
-  const aCompleter = structAPreciser.length > 0 || persAPreciser.length > 0 || opsSansStruct || relSansPersonne.length > 0 || opsSansRelance.length > 0 || pasDeRelanceGenerique || opsSansVille.length > 0 || contactsAffaires.length > 0;
+  // Le lien contact ↔ affaire proposé par l'IA est appliqué directement (via
+  // contactsPayload) : plus de confirmation par signet à cocher au débrief — on
+  // n'en avait pas le besoin.
+  const aCompleter = structAPreciser.length > 0 || persAPreciser.length > 0 || opsSansStruct || relSansPersonne.length > 0 || opsSansRelance.length > 0 || pasDeRelanceGenerique || opsSansVille.length > 0;
 
   // Mises à jour des blocs.
   const majRat = (i: number, patch: Partial<Rattach>) =>
@@ -1247,24 +1226,6 @@ export default function VoiceCr({
                 <span className="precise-q">Où se situe <strong>{r.name}</strong> ? <em className="precise-hint">(commune du projet)</em></span>
                 <input defaultValue={r.ville ?? ""} placeholder="Ex. Poitiers, Roncq…" onBlur={(e) => majVille(i, e.target.value)} />
               </label>
-            ))}
-            {contactsAffaires.map(({ p, i, affaires }) => (
-              <div className="precise-row" key={`co${i}`}>
-                <span className="precise-q">
-                  <strong>{[p.prenom, p.nom].filter(Boolean).join(" ")}</strong> est le contact de quelle(s) affaire(s) ? <em className="precise-hint">(✓ = associé · cliquez seulement pour corriger)</em>
-                </span>
-                <div className="precise-answer">
-                  {affaires.map((a) => {
-                    const on = contactAOp(p, a);
-                    return (
-                      <button type="button" className={`sig-d op${on ? " on" : ""}`} key={a}
-                        onClick={() => basculerContactOp(i, a)}>
-                        <span className="sig-lbl">{on ? "✓ " : ""}{a}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
             ))}
             {relancesAvecObjet.map(({ r, i }) => (
               <div className="precise-row" key={`r${i}`}>

@@ -357,10 +357,15 @@ a.vrow { color: var(--ink); text-decoration: none; }
 /* Sections d'une fiche : pleine largeur, à plat, séparées par une bande de fond
    (façon Réglages iOS). Chaque section touche les bords ; son contenu reste
    aligné sur la marge commune. */
-.blocks { display: grid; grid-template-columns: 1fr; gap: 14px;
+/* minmax(0, 1fr) et non « 1fr » : « 1fr » vaut minmax(auto, 1fr) et le minimum
+   « auto » laisse la colonne s'élargir à la largeur min-content d'un enfant (un
+   long titre ou un signet non coupé) — ce qui débordait l'écran et coupait le
+   contenu. minmax(0, …) autorise la colonne à rétrécir → les libellés se
+   tronquent proprement (…) au lieu de déborder. */
+.blocks { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px;
         margin-inline: calc(-1 * var(--wrap-pad, 16px)); }
 .block { background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
-        padding: 16px var(--wrap-pad, 16px); }
+        padding: 16px var(--wrap-pad, 16px); min-width: 0; }
 .block .eyebrow { margin-bottom: 11px; }
 /* Une liste dans une section garde son débord (le débord vaut la marge commune,
    identique dans .wrap et dans .block) : les lignes touchent le bord, le texte
