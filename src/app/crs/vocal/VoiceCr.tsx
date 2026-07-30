@@ -327,6 +327,15 @@ export default function VoiceCr({
       const n = nom.trim().toLowerCase();
       return membres.some((m) => { const mn = m.toLowerCase(); return p && n && mn.includes(p) && mn.includes(n); });
     };
+    // Vrai si un nom complet (ex. « Florian Colomar ») correspond à un membre du
+    // groupement. Sert à ne garder QUE des membres comme responsable de relance.
+    const estMembreNom = (nom: string) => {
+      const s = nom.trim().toLowerCase();
+      if (!s) return false;
+      if (membreSet.has(s)) return true;
+      const mots = s.split(/\s+/).filter(Boolean);
+      return mots.length > 0 && membres.some((m) => { const mn = m.toLowerCase(); return mots.every((w) => mn.includes(w)); });
+    };
     setPersonnes(
       (s.contacts ?? [])
         .filter((c) => !estMembre(c.prenom ?? "", c.nom))
@@ -344,7 +353,15 @@ export default function VoiceCr({
     setRelances(
       (s.relances ?? [])
         .filter((r) => !((r as any).operation && dejaRelance.has(String((r as any).operation).trim().toLowerCase())))
-        .map((r) => ({ objet: r.objet, date: addDays(today, r.dans_jours), personne: r.personne ?? "", operation: (r as any).operation ?? undefined, entite: (r as any).entite ?? undefined })),
+        .map((r) => ({
+          objet: r.objet,
+          date: addDays(today, r.dans_jours),
+          // Responsable = membre du groupement uniquement : on écarte tout
+          // prospect que l'IA aurait mis là (il est la cible, pas le responsable).
+          personne: (r.personne ?? "").split(",").map((x) => x.trim()).filter((x) => x && estMembreNom(x)).join(", "),
+          operation: (r as any).operation ?? undefined,
+          entite: (r as any).entite ?? undefined,
+        })),
     );
   }
 
@@ -577,7 +594,10 @@ export default function VoiceCr({
   // Exhaustivité des suites à donner : CHAQUE affaire du compte rendu doit avoir
   // une relance. On liste les opérations sans relance qui la concerne (par le
   // champ operation ou par mention dans l'objet), non déjà « ignorées ».
-  const persDefaut = personnes[0] ? [personnes[0].prenom, personnes[0].nom].filter(Boolean).join(" ").trim() : "";
+  // Le responsable d'une relance (« qui doit s'occuper de… ») est TOUJOURS un
+  // membre du groupement (jamais un prospect externe). On ne préremplit donc
+  // aucun prospect par défaut : l'utilisateur choisit le membre au débrief.
+  const persDefaut = "";
   const opsNets = Array.from(
     new Map(
       rattachements.filter((r) => r.kind === "operation" && r.name.trim()).map((r) => [r.name.trim().toLowerCase(), r.name.trim()]),
@@ -609,15 +629,10 @@ export default function VoiceCr({
     const ent = rattachements.find((r) => r.kind === "structure" && r.name.trim())?.name.trim();
     setRelances((rr) => [...rr, { objet, date: addDays(today, jours), personne: persDefaut, entite: ent }]);
   };
-  // Personnes à proposer : celles du compte rendu + l'équipe (Administration).
-  const candidatsPersonne = Array.from(
-    new Set(
-      [
-        ...personnes.map((p) => [p.prenom, p.nom].filter(Boolean).join(" ").trim()),
-        ...membres,
-      ].filter(Boolean),
-    ),
-  );
+  // Personnes à proposer pour « qui doit s'occuper de… » : UNIQUEMENT les membres
+  // du groupement (équipe interne). Un prospect externe ne « s'occupe » jamais
+  // d'une relance — il en est la cible, pas le responsable.
+  const candidatsPersonne = Array.from(new Set(membres.filter(Boolean)));
   // Opérations nouvelles sans commune : on demande où se situe le projet (la
   // ville est un signet à part entière, et complète le titre « Client - Ville - … »).
   // On demande la commune pour : les affaires NOUVELLES sans ville, ET les
