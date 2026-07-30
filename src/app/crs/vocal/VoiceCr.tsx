@@ -305,9 +305,15 @@ export default function VoiceCr({
     for (const c of ((s as any).changements_phase ?? []) as { operation: string; phase: string }[]) {
       if (c?.operation && c?.phase) chgPhase.set(c.operation.trim().toLowerCase(), c.phase);
     }
+    // Ville proposée pour une opération EXISTANTE dont la commune manquait (« ✕ ») :
+    // on l'accroche au rattachement de l'affaire connue (elle complètera le titre).
+    const chgVille = new Map<string, string>();
+    for (const c of ((s as any).changements_ville ?? []) as { operation: string; ville: string }[]) {
+      if (c?.operation && c?.ville) chgVille.set(c.operation.trim().toLowerCase(), c.ville);
+    }
     const rats: Rattach[] = [
       ...(s.entites ?? []).map((n) => ({ kind: "structure" as const, name: n })),
-      ...(s.operations ?? []).map((n) => ({ kind: "operation" as const, name: n, statut: chgPhase.get(n.trim().toLowerCase()) })),
+      ...(s.operations ?? []).map((n) => ({ kind: "operation" as const, name: n, statut: chgPhase.get(n.trim().toLowerCase()), ville: chgVille.get(n.trim().toLowerCase()) ?? null })),
       ...(s.nouvelles_entites ?? []).map((e) => ({ kind: "structure" as const, name: e.nom, type: e.type })),
       ...(s.nouvelles_operations ?? []).map((o) => ({ kind: "operation" as const, name: o.nom, entite: (o as any).entite ?? undefined, statut: (o as any).phase ?? undefined, ville: (o as any).ville ?? null })),
     ];
@@ -504,6 +510,11 @@ export default function VoiceCr({
   const changementsPhase = ratsNets
     .filter((r) => r.kind === "operation" && r.statut && opNameSet.has(r.name.trim().toLowerCase()))
     .map((r) => ({ operation: r.name.trim(), phase: r.statut as string }));
+  // Villes renseignées après coup pour des affaires EXISTANTES (libellé « ✕ ») :
+  // appliquées à la consolidation (mise à jour de la ville + du titre).
+  const changementsVille = ratsNets
+    .filter((r) => r.kind === "operation" && r.ville && r.ville.trim() && opNameSet.has(r.name.trim().toLowerCase()))
+    .map((r) => ({ operation: r.name.trim(), ville: r.ville!.trim() }));
   // Rapproche une référence d'affaire (parfois abrégée par l'IA) du LIBELLÉ EXACT
   // d'une opération (rattachement du CR ou opération connue) : le lien contact ↔
   // opération se fera ainsi sur un nom exact, fiable.
@@ -605,9 +616,12 @@ export default function VoiceCr({
   );
   // Opérations nouvelles sans commune : on demande où se situe le projet (la
   // ville est un signet à part entière, et complète le titre « Client - Ville - … »).
+  // On demande la commune pour : les affaires NOUVELLES sans ville, ET les
+  // affaires EXISTANTES dont le libellé porte encore « ✕ » (ville jamais saisie).
   const opsSansVille = rattachements
     .map((r, i) => ({ r, i }))
-    .filter(({ r }) => r.kind === "operation" && r.name.trim() && !ratEnBase(r) && !(r.ville && r.ville.trim()));
+    .filter(({ r }) => r.kind === "operation" && r.name.trim() && !(r.ville && r.ville.trim()) &&
+      (!ratEnBase(r) || r.name.includes("✕")));
   // Contact d'une ou plusieurs affaires : on fait CONFIRMER par des cases à cocher
   // (le lien se fait alors sur le nom EXACT de l'affaire, fiable — pas sur un
   // rapprochement de noms hasardeux). On propose les affaires du compte rendu +
@@ -645,7 +659,11 @@ export default function VoiceCr({
         if (j !== i) return x;
         const v = ville.trim();
         let name = x.name;
-        if (v) {
+        // Opération EXISTANTE (en base) : on NE renomme PAS le rattachement (son
+        // libellé sert à retrouver l'affaire par son id) — la ville est envoyée à
+        // part (changements_ville) et le titre est complété côté serveur.
+        const existant = x.kind === "operation" && opNameSet.has(x.name.trim().toLowerCase());
+        if (v && !existant) {
           const parts = x.name.split(" - ");
           if (parts.length === 3) { parts[1] = v; name = parts.join(" - "); }
           else if (x.name.includes("✕")) name = x.name.replace("✕", v);
@@ -1042,6 +1060,7 @@ export default function VoiceCr({
         <input type="hidden" name="liens_json" value={JSON.stringify(liensPayload)} />
         <input type="hidden" name="referents_json" value={JSON.stringify((synthese as any)?.referents ?? [])} />
         <input type="hidden" name="changements_phase_json" value={JSON.stringify(changementsPhase)} />
+        <input type="hidden" name="changements_ville_json" value={JSON.stringify(changementsVille)} />
         <input type="hidden" name="contacts_json" value={JSON.stringify(contactsPayload)} />
         <input type="hidden" name="synthese_json" value={JSON.stringify(syntheseOut)} />
 

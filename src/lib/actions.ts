@@ -376,6 +376,24 @@ async function materialiserCr(
     if (opId && phase) await sb.from("operations").update({ statut: phase }).eq("id", opId);
   }
 
+  // Ville renseignée après coup pour une affaire EXISTANTE dont le titre portait
+  // « ✕ » à la place de la commune : on met à jour la ville ET on complète le
+  // libellé « Client - Ville - Nature » (2ᵉ partie).
+  const opNomById = new Map((allOps ?? []).map((o: any) => [o.id, o.nom as string]));
+  for (const c of jsonArray(fd, "changements_ville_json")) {
+    const opId = opByNom.get(normNom(c?.operation));
+    const ville = typeof c?.ville === "string" ? c.ville.trim() : "";
+    if (!opId || !ville) continue;
+    const patch: Record<string, unknown> = { ville };
+    const nom = opNomById.get(opId);
+    if (typeof nom === "string" && nom) {
+      const parts = nom.split(" - ");
+      if (parts.length === 3) { parts[1] = ville; patch.nom = parts.join(" - "); }
+      else if (nom.includes("✕")) patch.nom = nom.replace("✕", ville);
+    }
+    await sb.from("operations").update(patch).eq("id", opId);
+  }
+
   // Lien structure ⇄ opération. Chaque affaire est rattachée à SA structure — via
   // le rattachement direct porté par la nouvelle opération, puis via les liens de
   // l'IA. On NE croise PLUS toutes les structures avec toutes les opérations :

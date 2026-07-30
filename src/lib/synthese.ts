@@ -36,6 +36,8 @@ export interface Synthese {
   referents: { operation: string; referent: string }[];
   // Progression d'une affaire EXISTANTE : nouveau statut proposé, par nom.
   changements_phase: { operation: string; phase: string }[];
+  // Ville (commune) d'une affaire EXISTANTE dont la ville manque, par nom.
+  changements_ville: { operation: string; ville: string }[];
   contacts: ContactExtrait[];
   // Chaque relance précise l'affaire / la structure qu'elle concerne (par nom),
   // pour être rattachée à la bonne opération (et non à la première du CR).
@@ -176,6 +178,16 @@ export function validateSynthese(
         .filter((c) => c.operation && c.phase)
     : [];
 
+  const changements_ville = Array.isArray(o.changements_ville)
+    ? o.changements_ville
+        .map((c) => (c ?? {}) as Record<string, unknown>)
+        .map((c) => ({
+          operation: typeof c.operation === "string" ? c.operation.trim() : "",
+          ville: typeof c.ville === "string" && c.ville.trim() !== "✕" ? c.ville.trim() : "",
+        }))
+        .filter((c) => c.operation && c.ville)
+    : [];
+
   return {
     type_rdv,
     date_rdv,
@@ -188,6 +200,7 @@ export function validateSynthese(
     liens,
     referents,
     changements_phase,
+    changements_ville,
     contacts,
     relances,
   };
