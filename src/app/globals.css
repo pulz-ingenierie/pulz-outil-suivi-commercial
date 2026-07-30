@@ -946,3 +946,11 @@ a.sig-d { text-decoration: none; }
 .assoc-opt-nom { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .assoc-opt-plus { flex: none; font-size: 11.5px; font-weight: 600; color: var(--c-op);
        background: color-mix(in srgb, var(--c-op) 12%, var(--surface)); padding: 3px 9px; border-radius: 5px; }
+
+/* Navigation entre brouillons (flèches ‹ ›, en plus du swipe). */
+.brouillon-nav { display: flex; align-items: center; gap: 10px; }
+.brn-arrow { font: inherit; font-size: 18px; line-height: 1; width: 30px; height: 30px; display: inline-flex;
+       align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 8px;
+       background: var(--surface); color: var(--ink); cursor: pointer; padding: 0; }
+.brn-arrow:hover:not(:disabled) { border-color: var(--muted); }
+.brn-arrow:disabled { opacity: .35; cursor: default; }

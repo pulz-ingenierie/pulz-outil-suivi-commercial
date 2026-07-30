@@ -5,6 +5,7 @@ import { getIdentite } from "@/lib/auth";
 import { releverEmailsMaintenant } from "@/lib/admin-actions";
 import type { Synthese } from "@/lib/synthese";
 import VoiceCr from "../crs/vocal/VoiceCr";
+import BrouillonSwipe from "@/components/BrouillonSwipe";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,7 @@ export default async function Brouillons({
   searchParams,
 }: {
   searchParams: Promise<{
-    releve?: string; lus?: string; br?: string; ign?: string; err?: string; cfg?: string; erreur?: string;
+    releve?: string; lus?: string; br?: string; ign?: string; err?: string; cfg?: string; erreur?: string; d?: string;
   }>;
 }) {
   const sp = await searchParams;
@@ -56,10 +57,13 @@ export default async function Brouillons({
   const today = new Date().toISOString().slice(0, 10);
   const estPilote = profil.role === "pilote";
 
+  // Brouillon affiché : index passé en URL (?d=), borné à la liste.
+  const idx = Math.min(Math.max(0, Number(sp.d) || 0), Math.max(0, list.length - 1));
+
   // Diagnostic pièces jointes du brouillon courant : combien de pièces lisibles
   // ont été conservées, et ce que l'e-mail portait réellement (journal).
   const piecesInfo = (() => {
-    const raw = list[0]?.pieces_ia;
+    const raw = list[idx]?.pieces_ia;
     if (!raw) return null;
     const pieces = Array.isArray(raw) ? raw : Array.isArray(raw?.pieces) ? raw.pieces : [];
     const journal: string[] = Array.isArray(raw?.journal) ? raw.journal : [];
@@ -102,13 +106,13 @@ export default async function Brouillons({
     );
   }
 
-  const current = list[0];
+  const current = list[idx];
   return (
     <main className="wrap">
       <Link className="back" href="/crs/vocal">← Dictée</Link>
       <div className="fiche-head">
         <div>
-          <div className="eyebrow">Brouillon 1 sur {list.length}</div>
+          <BrouillonSwipe index={idx} total={list.length} />
           <h1>À traiter</h1>
         </div>
         {boutonRelever}
@@ -116,11 +120,12 @@ export default async function Brouillons({
       {banniere}
       <p className="muted" style={{ margin: "-8px 0 18px", maxWidth: 720 }}>
         Ce brouillon (dictée mise de côté ou e-mail reçu) est en attente. Relisez, ajustez les
-        rattachements si besoin (ou corrigez au chat), puis <strong>Valider et consolider</strong> — ou
-        <strong> Passer</strong> pour le traiter plus tard.
+        rattachements si besoin (ou corrigez au chat), puis <strong>Valider et consolider</strong>.
+        {list.length > 1 && <> Glissez vers la gauche pour passer au brouillon suivant.</>}
       </p>
 
       <VoiceCr
+        key={current.id}
         entites={entites ?? []}
         operations={operations ?? []}
         contactsBase={contacts}
