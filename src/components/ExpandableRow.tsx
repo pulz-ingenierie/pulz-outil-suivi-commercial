@@ -102,17 +102,14 @@ export default function ExpandableRow({
                 {data.relances && data.relances.length > 0 && (
                   <div className="carte-sect">
                     <div className="carte-sect-h"><CatIcon name="relance" /> Prochaines relances</div>
-                    <div className="fil">
+                    {/* Affichage compact : une ligne par relance (objet tronqué +
+                        échéance). Le détail complet (opération, personne…) s'ouvre
+                        en tapant, sur l'écran Relances — pas de volet imbriqué. */}
+                    <div className="rel-mini-list">
                       {data.relances.map((r) => (
-                        <Link className="rel-card" href={`/relances#r-${r.id}`} key={r.id}>
-                          <div className="rel-card-top">
-                            <span className="rel-card-obj">{r.objet}</span>
-                            <span className={`rel-card-date${r.enRetard ? " crit" : ""}`}>{r.echeance}</span>
-                          </div>
-                          <div className="rel-card-sigs sig-wrap">
-                            {r.operation && r.operation.id !== id && <span className="sig-d op"><span className="sig-lbl">{r.operation.nom}</span></span>}
-                            {r.personne && <span className={`sig-d pers${r.personneMembre ? " membre" : ""}`}><span className="sig-lbl">{r.personne}</span></span>}
-                          </div>
+                        <Link className="rel-mini" href={`/relances#r-${r.id}`} key={r.id}>
+                          <span className="rel-mini-obj">{r.objet}</span>
+                          <span className={`rel-mini-date${r.enRetard ? " crit" : ""}`}>{r.echeance}</span>
                         </Link>
                       ))}
                     </div>

@@ -907,3 +907,16 @@ a.sig-d { text-decoration: none; }
        appearance: none; -webkit-appearance: none;
        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23928C82' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
        background-repeat: no-repeat; background-position: right 10px center; padding-right: 34px; }
+
+/* Relances dans un volet réduit : une ligne compacte par relance (objet tronqué
+   + échéance), tap → écran Relances. Évite la hauteur des cartes à deux lignes. */
+.rel-mini-list { display: flex; flex-direction: column; }
+.rel-mini { display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+       padding: 8px 0; border-top: 1px solid var(--line-2); text-decoration: none; color: var(--ink); }
+.rel-mini:first-child { border-top: none; }
+.rel-mini-obj { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+       font-size: 14px; }
+.rel-mini-date { flex: none; font-size: 12px; font-weight: 560; color: var(--muted);
+       white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rel-mini-date.crit { color: var(--crit); }
+.rel-mini:hover .rel-mini-obj { color: var(--c-rel); }
