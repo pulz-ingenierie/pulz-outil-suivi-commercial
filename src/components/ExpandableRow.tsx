@@ -6,6 +6,7 @@ import SwipeRow from "@/components/SwipeRow";
 import Signet from "@/components/Signet";
 import CatIcon from "@/components/CatIcon";
 import { demanderSuppression } from "@/lib/gestures";
+import { useExclusiveOpen } from "@/lib/useExclusiveOpen";
 
 // Style de volet homogène (comme la relance du compte rendu) : bandeau de
 // catégorie, titre, sections à en-têtes icônés, pied d'actions.
@@ -37,7 +38,7 @@ export default function ExpandableRow({
   nom?: string;
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  const { open, setOpen } = useExclusiveOpen(`${type}:${id}`);
   const [data, setData] = useState<Apercu | null>(null);
   const [loading, setLoading] = useState(false);
 

@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import Signet from "@/components/Signet";
 import CatIcon from "@/components/CatIcon";
+import { useExclusiveOpen } from "@/lib/useExclusiveOpen";
 
 // Relance affichée comme un objet déployable (même volet que partout ailleurs) :
 // tap → volet avec l'opération et la personne concernées, + « Ouvrir la relance »
@@ -27,7 +27,7 @@ export default function RelanceRow({
   personne?: string | null;
   persHref?: string | null;
 }) {
-  const [open, setOpen] = useState(false);
+  const { open, toggle } = useExclusiveOpen(`relance:${id}`);
   return (
     <div className={`lx${open ? " open" : ""}`}>
       <div
@@ -36,8 +36,8 @@ export default function RelanceRow({
         tabIndex={0}
         style={{ cursor: "pointer" }}
         aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((o) => !o); } }}
+        onClick={toggle}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } }}
       >
         <div className="rel-vrow-main">
           <span className="vrow-nom">{objet}</span>
