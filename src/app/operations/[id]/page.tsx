@@ -62,9 +62,6 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
     // identifiants puis les fiches séparément (plus robuste qu'une jointure).
     supabase.from("contact_operation").select("contact_id").eq("operation_id", id),
   ]);
-  // DIAGNOSTIC temporaire : état brut du lien contact ↔ opération.
-  const persLiensErr = (await supabase.from("contact_operation").select("contact_id").eq("operation_id", id)).error;
-  const diagLien = `liens=${(persLiens ?? []).length}${persLiensErr ? ` · ERREUR: ${persLiensErr.message}` : ""}`;
 
   const st = operation.statut;
   const today = new Date().toISOString().slice(0, 10);
@@ -94,10 +91,6 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
           <div className="eyebrow">Fiche opération</div>
           <h1>{operation.nom}</h1>
         </div>
-      </div>
-
-      <div className="card notice" style={{ marginBottom: 14, fontFamily: "monospace", fontSize: 12 }}>
-        DIAGNOSTIC contacts : {diagLien} · op={operation.id.slice(0, 8)}
       </div>
 
       <div className="blocks">
