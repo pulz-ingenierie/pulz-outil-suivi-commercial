@@ -887,3 +887,19 @@ a.sig-d { text-decoration: none; }
 .cr-edit-close:hover { color: var(--ink); }
 .rel-item-wrap { list-style: none; }
 .rel-item.on { border-color: color-mix(in srgb, var(--c-rel) 55%, var(--line)); }
+
+/* iOS Safari zoome automatiquement au focus sur tout champ dont la police fait
+   moins de 16px. Sur écran tactile, on force donc 16px pour empêcher ce zoom
+   (agaçant à la saisie), sans toucher au pinch-zoom manuel (accessibilité
+   préservée). Le bureau garde les tailles de police d'origine, plus compactes. */
+@media (pointer: coarse) {
+  input, select, textarea { font-size: 16px !important; }
+}
+
+/* Filtre « par personne du groupement » de l'écran Relances : un intitulé + des
+   puces membres (sig-d.pers.membre) qu'on active pour ne voir que les relances
+   concernant cette personne. */
+.rel-filtre { display: flex; flex-direction: column; gap: 7px; padding: 12px var(--wrap-pad, 16px);
+       border-bottom: 1px solid var(--line); }
+.rel-filtre-lab { font-size: 11.5px; font-weight: 600; color: var(--faint); letter-spacing: .01em; text-transform: uppercase; }
+.rel-filtre .pers-chips { margin-bottom: 0; }

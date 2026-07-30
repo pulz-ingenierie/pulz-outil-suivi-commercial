@@ -178,6 +178,7 @@ export default async function Relances({
       )}
 
       <RelancesListe
+        membres={(utilisateurs ?? []).map((u: any) => u.nom).filter(Boolean)}
         groupes={[
           { titre: "En retard", classe: "crit", items: enRetard.map((r) => versRow(r, today, personnesIdx, opStructures)) },
           { titre: "À venir", classe: "muted-h", items: aVenir.map((r) => versRow(r, today, personnesIdx, opStructures)) },

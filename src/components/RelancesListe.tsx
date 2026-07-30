@@ -29,9 +29,20 @@ export type RelRow = {
 
 type Groupe = { titre: string; classe: string; items: RelRow[] };
 
-export default function RelancesListe({ groupes }: { groupes: Groupe[] }) {
+// Une relance « concerne » un membre du groupement si son nom figure parmi les
+// personnes de la relance (le champ personne peut en lister plusieurs).
+function personnesDe(r: RelRow): string[] {
+  return (r.personne ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+}
+function concerne(r: RelRow, membre: string): boolean {
+  const m = membre.trim().toLowerCase();
+  return personnesDe(r).some((n) => n.toLowerCase() === m);
+}
+
+export default function RelancesListe({ groupes, membres = [] }: { groupes: Groupe[]; membres?: string[] }) {
   const [ouvert, setOuvert] = useState<string | null>(null);
   const [vue, setVue] = useState<string>("__toutes__");
+  const [membre, setMembre] = useState<string | null>(null);
   const toggle = (id: string) => setOuvert((cur) => (cur === id ? null : id));
 
   // Arrivée depuis un lien « #r-<id> » (ex. clic sur une relance dans un volet) :
@@ -47,13 +58,22 @@ export default function RelancesListe({ groupes }: { groupes: Groupe[] }) {
     return () => clearTimeout(t);
   }, []);
 
-  const total = groupes.reduce((n, g) => n + g.items.length, 0);
+  const totalBrut = groupes.reduce((n, g) => n + g.items.length, 0);
+  if (totalBrut === 0) return null;
+
+  // Membres du groupement réellement présents dans les relances (options du
+  // filtre « par personne du groupement »).
+  const membresPresents = membres.filter((m) => groupes.some((g) => g.items.some((r) => concerne(r, m))));
+  // Filtre par membre : on restreint chaque groupe aux relances qui le concernent.
+  const groupesFiltres = membre
+    ? groupes.map((g) => ({ ...g, items: g.items.filter((r) => concerne(r, membre)) }))
+    : groupes;
+
+  const total = groupesFiltres.reduce((n, g) => n + g.items.length, 0);
   // Onglets secondaires : « Toutes » + un onglet par groupe. Le contenu se filtre
   // sur l'onglet actif (épinglé sous la barre du haut).
-  const onglets = [{ cle: "__toutes__", titre: "Toutes", n: total }, ...groupes.map((g) => ({ cle: g.titre, titre: g.titre, n: g.items.length }))];
-  const groupesVisibles = vue === "__toutes__" ? groupes : groupes.filter((g) => g.titre === vue);
-
-  if (total === 0) return null;
+  const onglets = [{ cle: "__toutes__", titre: "Toutes", n: total }, ...groupesFiltres.map((g) => ({ cle: g.titre, titre: g.titre, n: g.items.length }))];
+  const groupesVisibles = vue === "__toutes__" ? groupesFiltres : groupesFiltres.filter((g) => g.titre === vue);
 
   return (
     <>
@@ -70,7 +90,28 @@ export default function RelancesListe({ groupes }: { groupes: Groupe[] }) {
           </button>
         ))}
       </div>
+      {membresPresents.length > 0 && (
+        <div className="rel-filtre">
+          <span className="rel-filtre-lab">Personne du groupement</span>
+          <div className="pers-chips">
+            {membresPresents.map((m) => (
+              <button
+                key={m}
+                type="button"
+                className={`sig-d pers membre${membre === m ? " on" : ""}`}
+                aria-pressed={membre === m}
+                onClick={() => setMembre((cur) => (cur === m ? null : m))}
+              >
+                <span className="sig-lbl">{m}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="tab-body">
+      {total === 0 && (
+        <div className="card"><span className="empty">Aucune relance pour {membre}.</span></div>
+      )}
       {groupesVisibles.map((g) =>
         g.items.length ? (
           <section className="rel-group" key={g.titre}>
