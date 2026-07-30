@@ -67,7 +67,21 @@ export default async function FicheStructure({ params }: { params: Promise<{ id:
     .map((l: any) => ({ role: l.role_entree, ...(l.operations ?? {}) }))
     .filter((o: any) => o.id)
     .sort((a: any, b: any) => a.nom.localeCompare(b.nom, "fr"));
-  const personnes = (contacts ?? []).sort((a: any, b: any) => a.nom.localeCompare(b.nom, "fr"));
+  // Personnes de la structure = ses contacts directs (entite_id) + les contacts
+  // de ses opérations (lien contact_operation) — un « contact du promoteur »
+  // rattaché à une affaire doit aussi apparaître ici.
+  const persMap = new Map<string, any>();
+  for (const c of (contacts ?? []) as any[]) persMap.set(c.id, c);
+  const opIdsPers = operations.map((o: any) => o.id).filter(Boolean);
+  if (opIdsPers.length) {
+    const { data: co } = await supabase.from("contact_operation").select("contact_id").in("operation_id", opIdsPers);
+    const cids = [...new Set((co ?? []).map((x: any) => x.contact_id).filter(Boolean))].filter((cid) => !persMap.has(cid as string));
+    if (cids.length) {
+      const { data: cts } = await supabase.from("contacts").select("id, nom, prenom, fonction, tel, email").in("id", cids as string[]);
+      for (const c of (cts ?? []) as any[]) persMap.set(c.id, c);
+    }
+  }
+  const personnes = [...persMap.values()].sort((a: any, b: any) => String(a.nom).localeCompare(String(b.nom), "fr"));
   const crs = (crLiens ?? [])
     .map((c: any) => c.crs)
     .filter(Boolean)

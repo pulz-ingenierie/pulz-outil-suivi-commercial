@@ -67,13 +67,29 @@ export async function GET(req: Request) {
         sb.from("contacts").select("id, nom, prenom").eq("entite_id", id),
       ]);
       const ops = (liens ?? []).map((l: any) => l.operations).filter(Boolean);
+      const opIds = ops.map((o: any) => o.id).filter(Boolean);
+      // Personnes de la structure = ses contacts directs (entite_id) + les contacts
+      // de ses opérations (lien contact_operation). Un « contact du promoteur »
+      // rattaché à une affaire doit aussi figurer sur la fiche de sa structure.
+      const persMap = new Map<string, any>();
+      for (const c of (contacts ?? []) as any[]) persMap.set(c.id, c);
+      if (opIds.length) {
+        try {
+          const { data: co } = await sb.from("contact_operation").select("contact_id").in("operation_id", opIds);
+          const cids = [...new Set((co ?? []).map((x: any) => x.contact_id).filter(Boolean))].filter((cid) => !persMap.has(cid as string));
+          if (cids.length) {
+            const { data: cts } = await sb.from("contacts").select("id, nom, prenom").in("id", cids as string[]);
+            for (const c of (cts ?? []) as any[]) persMap.set(c.id, c);
+          }
+        } catch { /* migration 0010 non appliquée */ }
+      }
+      const personnesStruct = [...persMap.values()].sort((a: any, b: any) => String(a.nom).localeCompare(String(b.nom), "fr"));
       const sections = [
         { titre: "Opérations", icon: "operation", items: ops.map((o: any) => ({ type: "operation", id: o.id, cat: "op", label: o.nom })) },
-        { titre: "Personnes à joindre", icon: "personne", items: (contacts ?? []).map((c: any) => ({ type: "personne", id: c.id, cat: "pers", label: [c.prenom, c.nom].filter(Boolean).join(" ") || c.nom })) },
+        { titre: "Personnes à joindre", icon: "personne", items: personnesStruct.map((c: any) => ({ type: "personne", id: c.id, cat: "pers", label: [c.prenom, c.nom].filter(Boolean).join(" ") || c.nom })) },
       ].filter((s) => s.items.length);
       // Relances en cours rattachées à la structure OU à l'une de ses opérations :
       // affichées dépliées, et proposées à la suppression en cascade.
-      const opIds = ops.map((o: any) => o.id).filter(Boolean);
       const orParts = [`entite_id.eq.${id}`];
       if (opIds.length) orParts.push(`operation_id.in.(${opIds.join(",")})`);
       const { data: rel } = await sb

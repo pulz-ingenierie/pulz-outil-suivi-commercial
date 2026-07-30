@@ -1299,7 +1299,10 @@ export default function VoiceCr({
             {persAPreciser.map(({ p, i }) => (
               <label className="precise-row" key={`p${i}`}>
                 <span className="precise-q">Fonction de <strong>{[p.prenom, p.nom].filter(Boolean).join(" ")}</strong> ?</span>
-                <input value={p.fonction} placeholder="Ex. directeur, responsable aménagement…" onChange={(e) => majPers(i, { fonction: e.target.value })} />
+                {/* Champ NON contrôlé (defaultValue + onBlur) : sinon, dès la 1ʳᵉ
+                    lettre saisie la personne quitte la liste « sans fonction » et
+                    le champ disparaît — impossible de taper la suite. */}
+                <input defaultValue={p.fonction} placeholder="Ex. directeur, responsable aménagement…" onBlur={(e) => majPers(i, { fonction: e.target.value })} />
               </label>
             ))}
           </div>
