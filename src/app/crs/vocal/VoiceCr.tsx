@@ -593,7 +593,12 @@ export default function VoiceCr({
     (nom) => !relanceCouvre(nom) && !relancesIgnorees.has(nom.toLowerCase()) && !dejaRelanceSet.has(nom.trim().toLowerCase()),
   );
   const ajouterRelancePourOp = (opName: string, jours: number) => {
-    setRelances((rr) => [...rr, { objet: `Relancer ${opName}`, date: addDays(today, jours), personne: persDefaut, operation: opName }]);
+    // Libellé court et propre pour l'objet : on prend le « Client » (1ʳᵉ partie du
+    // titre « Client - Ville - Nature ») plutôt que le titre complet — évite d'y
+    // figer une croix « ✕ » quand la ville n'est pas encore connue. L'affaire
+    // reste rattachée par son nom exact (champ operation).
+    const client = opName.split(" - ")[0].trim() || opName;
+    setRelances((rr) => [...rr, { objet: `Relancer ${client}`, date: addDays(today, jours), personne: persDefaut, operation: opName }]);
   };
   // Cas sans aucune opération : proposition générique (une seule fois).
   const sujetGenerique =

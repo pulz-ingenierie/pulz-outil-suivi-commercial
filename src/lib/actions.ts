@@ -385,13 +385,26 @@ async function materialiserCr(
     const ville = typeof c?.ville === "string" ? c.ville.trim() : "";
     if (!opId || !ville) continue;
     const patch: Record<string, unknown> = { ville };
-    const nom = opNomById.get(opId);
-    if (typeof nom === "string" && nom) {
-      const parts = nom.split(" - ");
-      if (parts.length === 3) { parts[1] = ville; patch.nom = parts.join(" - "); }
-      else if (nom.includes("✕")) patch.nom = nom.replace("✕", ville);
+    const ancien = opNomById.get(opId);
+    let nouveau: string | null = null;
+    if (typeof ancien === "string" && ancien) {
+      const parts = ancien.split(" - ");
+      if (parts.length === 3) { parts[1] = ville; nouveau = parts.join(" - "); }
+      else if (ancien.includes("✕")) nouveau = ancien.replace("✕", ville);
+      if (nouveau) patch.nom = nouveau;
     }
     await sb.from("operations").update(patch).eq("id", opId);
+    // Le titre de l'affaire a pu être figé dans le texte (« objet ») de ses
+    // relances (ex. « Relancer Spirit - ✕ - … » ajouté au débrief). On y
+    // répercute le nouveau libellé pour que la croix disparaisse aussi là.
+    if (ancien && nouveau && nouveau !== ancien) {
+      const { data: relsOp } = await sb.from("relances").select("id, objet").eq("operation_id", opId);
+      for (const rel of (relsOp ?? []) as any[]) {
+        if (typeof rel.objet === "string" && rel.objet.includes(ancien)) {
+          await sb.from("relances").update({ objet: rel.objet.split(ancien).join(nouveau) }).eq("id", rel.id);
+        }
+      }
+    }
   }
 
   // Lien structure ⇄ opération. Chaque affaire est rattachée à SA structure — via
