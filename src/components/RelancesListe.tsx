@@ -91,22 +91,19 @@ export default function RelancesListe({ groupes, membres = [] }: { groupes: Grou
         ))}
       </div>
       {membresPresents.length > 0 && (
-        <div className="rel-filtre">
+        <label className="rel-filtre">
           <span className="rel-filtre-lab">Personne du groupement</span>
-          <div className="pers-chips">
+          <select
+            className="rel-filtre-select"
+            value={membre ?? ""}
+            onChange={(e) => setMembre(e.target.value || null)}
+          >
+            <option value="">Toutes les personnes</option>
             {membresPresents.map((m) => (
-              <button
-                key={m}
-                type="button"
-                className={`sig-d pers membre${membre === m ? " on" : ""}`}
-                aria-pressed={membre === m}
-                onClick={() => setMembre((cur) => (cur === m ? null : m))}
-              >
-                <span className="sig-lbl">{m}</span>
-              </button>
+              <option key={m} value={m}>{m}</option>
             ))}
-          </div>
-        </div>
+          </select>
+        </label>
       )}
       <div className="tab-body">
       {total === 0 && (

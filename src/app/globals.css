@@ -896,10 +896,14 @@ a.sig-d { text-decoration: none; }
   input, select, textarea { font-size: 16px !important; }
 }
 
-/* Filtre « par personne du groupement » de l'écran Relances : un intitulé + des
-   puces membres (sig-d.pers.membre) qu'on active pour ne voir que les relances
-   concernant cette personne. */
+/* Filtre « par personne du groupement » de l'écran Relances : un intitulé + un
+   menu déroulant (tient à l'échelle, même avec beaucoup de membres) pour ne voir
+   que les relances concernant la personne choisie. */
 .rel-filtre { display: flex; flex-direction: column; gap: 7px; padding: 12px var(--wrap-pad, 16px);
        border-bottom: 1px solid var(--line); }
 .rel-filtre-lab { font-size: 11.5px; font-weight: 600; color: var(--faint); letter-spacing: .01em; text-transform: uppercase; }
-.rel-filtre .pers-chips { margin-bottom: 0; }
+.rel-filtre-select { font: inherit; font-size: 14px; padding: 9px 12px; border: 1px solid var(--line);
+       border-radius: 8px; background: var(--surface); color: var(--ink); width: 100%; max-width: 320px;
+       appearance: none; -webkit-appearance: none;
+       background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23928C82' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+       background-repeat: no-repeat; background-position: right 10px center; padding-right: 34px; }
