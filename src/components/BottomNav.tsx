@@ -23,7 +23,7 @@ export default function BottomNav() {
       <Link className={`bn-item${on("/entites") ? " on" : ""}`} href="/entites"><IcReseau /><span>Réseau</span></Link>
       <Link className="bn-cr" href="/crs/vocal" aria-label="Nouveau compte rendu"><IcPlus /></Link>
       <Link className={`bn-item${on("/relances") ? " on" : ""}`} href="/relances"><IcRelances /><span>Relances</span></Link>
-      <Link className={`bn-item${on("/brouillons") ? " on" : ""}`} href="/brouillons"><IcEmails /><span>E-mails</span></Link>
+      <Link className={`bn-item${on("/brouillons") ? " on" : ""}`} href="/brouillons"><IcEmails /><span>Brouillons</span></Link>
     </nav>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { createCr, finaliserBrouillon, supprimerBrouillon } from "@/lib/actions";
+import { createCr, finaliserBrouillon, supprimerBrouillon, enregistrerBrouillonDictee } from "@/lib/actions";
 import type { Synthese } from "@/lib/synthese";
 import { STATUT_LABELS, STATUT_ORDRE } from "@/lib/types";
 import SubmitButton from "@/components/SubmitButton";
@@ -154,7 +154,6 @@ export default function VoiceCr({
 
   const [typeRdv, setTypeRdv] = useState("autre");
   const [dateRdv, setDateRdv] = useState(today);
-  const [statut, setStatut] = useState("valide");
 
   // Blocs éditables.
   const initRattach: Rattach[] = [];
@@ -1295,16 +1294,6 @@ export default function VoiceCr({
           </div>
         )}
 
-        {!draftId && (
-          <label className="field">
-            <span className="lab">État</span>
-            <select name="statut" value={statut} onChange={(e) => setStatut(e.target.value)}>
-              <option value="valide">Validé (visible dans les fiches)</option>
-              <option value="brouillon">Brouillon (masqué pour l'instant)</option>
-            </select>
-          </label>
-        )}
-
         {draftId ? (
           <div className="form-foot">
             <SubmitButton className="btn ghost" formAction={supprimerBrouillon} formNoValidate pendingLabel="…">Supprimer</SubmitButton>
@@ -1313,8 +1302,12 @@ export default function VoiceCr({
           </div>
         ) : (
           <div className="form-foot">
+            {/* statut=valide : le bouton principal publie (createCr matérialise) ;
+                « Mettre en brouillon » enregistre sans rien matérialiser. */}
+            <input type="hidden" name="statut" value="valide" />
             <Link className="btn ghost" href={prefillOperation ? `/operations/${prefillOperation}` : "/tableau"}>Annuler</Link>
-            <SubmitButton className="btn" disabled={!canSave}>Enregistrer le compte rendu</SubmitButton>
+            <SubmitButton className="btn ghost" formAction={enregistrerBrouillonDictee} formNoValidate disabled={!transcription.trim()} pendingLabel="Brouillon…">Mettre en brouillon</SubmitButton>
+            <SubmitButton className="btn" disabled={!canSave} pendingLabel="Enregistrement…">Enregistrer le compte rendu</SubmitButton>
           </div>
         )}
       </form>

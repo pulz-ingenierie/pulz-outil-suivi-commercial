@@ -91,7 +91,7 @@ export default async function Brouillons({
         <Link className="back" href="/crs/vocal">← Dictée</Link>
         <div className="fiche-head">
           <div>
-            <div className="eyebrow">Boîte de réception</div>
+            <div className="eyebrow">Brouillons</div>
             <h1>Brouillons à traiter</h1>
           </div>
           {boutonRelever}
@@ -115,8 +115,8 @@ export default async function Brouillons({
       </div>
       {banniere}
       <p className="muted" style={{ margin: "-8px 0 18px", maxWidth: 720 }}>
-        Ce brouillon a été préparé à partir d'un e-mail reçu. Relisez, ajustez les rattachements
-        si besoin (ou corrigez au chat), puis <strong>Valider et consolider</strong> — ou
+        Ce brouillon (dictée mise de côté ou e-mail reçu) est en attente. Relisez, ajustez les
+        rattachements si besoin (ou corrigez au chat), puis <strong>Valider et consolider</strong> — ou
         <strong> Passer</strong> pour le traiter plus tard.
       </p>
 

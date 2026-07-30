@@ -738,6 +738,49 @@ export async function createCr(fd: FormData) {
   redirect(operationIds[0] ? `/operations/${operationIds[0]}` : "/tableau");
 }
 
+// Enregistre une dictée EN BROUILLON : on garde le texte et l'analyse, mais on
+// NE matérialise RIEN (aucune opération/relance/personne créée). Le compte rendu
+// reste à consolider plus tard depuis l'onglet Brouillons (« Valider et
+// consolider »). C'est la différence avec createCr, qui publie immédiatement.
+export async function enregistrerBrouillonDictee(fd: FormData) {
+  const supabase = requireSupabase();
+  const org_id = await currentOrgId(supabase);
+
+  const type_rdv = str(fd, "type_rdv") || "autre";
+  if (!(TYPES_RDV as readonly string[]).includes(type_rdv)) throw new Error("Type de RDV invalide.");
+
+  const date_rdv = str(fd, "date_rdv") || new Date().toISOString().slice(0, 10);
+  const transcription = strOrNull(fd, "transcription");
+  if (!transcription) throw new Error("Le compte rendu ne peut pas être vide.");
+
+  let synthese: unknown = null;
+  const synthRaw = str(fd, "synthese_json");
+  if (synthRaw) { try { synthese = JSON.parse(synthRaw); } catch { synthese = null; } }
+
+  const { profil } = await getIdentite();
+
+  // Anti-doublon (double-clic) : même texte en brouillon il y a moins d'une minute.
+  const seuilDoublon = new Date(Date.now() - 60000).toISOString();
+  const { data: dejaCree } = await supabase
+    .from("crs")
+    .select("id")
+    .eq("org_id", org_id)
+    .eq("transcription", transcription)
+    .eq("statut", "brouillon")
+    .gte("created_at", seuilDoublon)
+    .limit(1)
+    .maybeSingle();
+  if (!dejaCree?.id) {
+    const { error } = await supabase
+      .from("crs")
+      .insert({ org_id, date_rdv, type_rdv, transcription, statut: "brouillon", synthese, auteur_id: profil?.id ?? null });
+    if (error) throw new Error(error.message);
+  }
+
+  revalidatePath("/brouillons");
+  redirect("/brouillons");
+}
+
 // -----------------------------------------------------------------------------
 // Brouillons (issus des e-mails) — validation / suppression
 // -----------------------------------------------------------------------------
