@@ -80,7 +80,9 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
   // sa structure / de ses affaires. Les relances sont triées par échéance.
   const today = new Date().toISOString().slice(0, 10);
   const nomNorm = normNom(nomComplet);
-  const opIds = new Set(operations.map((o: any) => o.id));
+  // Affaires de la personne = celles de sa structure + celles dont elle est le
+  // contact direct (contact_operation) : ses relances portent sur les deux.
+  const opIds = new Set<string>([...operations.map((o: any) => o.id), ...idsAssociees]);
   const rlist = (relances ?? []) as any[];
   const mesRelances = rlist.filter(
     (r) =>

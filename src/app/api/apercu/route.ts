@@ -148,25 +148,48 @@ export async function GET(req: Request) {
       if (!c) return NextResponse.json({ error: "introuvable" }, { status: 404 });
       const cc = c as any;
       let structSection: any = null;
-      let opsSection: any = null;
+      const opById = new Map<string, string>(); // affaires liées à la personne (id → nom)
+      const structOpIds: string[] = [];
       if (cc.entite_id) {
         const [{ data: st }, { data: liens }] = await Promise.all([
           sb.from("entites").select("id, nom").eq("id", cc.entite_id).maybeSingle(),
           sb.from("entite_operation").select("operations(id, nom)").eq("entite_id", cc.entite_id),
         ]);
         if (st) structSection = { titre: "Structure", icon: "structure", items: [{ type: "entite", id: (st as any).id, cat: "struct", label: (st as any).nom }] };
-        const ops = (liens ?? []).map((l: any) => l.operations).filter(Boolean);
-        if (ops.length) opsSection = { titre: "Opérations", icon: "operation", items: ops.map((o: any) => ({ type: "operation", id: o.id, cat: "op", label: o.nom })) };
+        for (const o of (liens ?? []).map((l: any) => l.operations).filter(Boolean)) { opById.set(o.id, o.nom); structOpIds.push(o.id); }
       }
+      // Affaires dont la personne est le CONTACT direct (lien contact_operation).
+      let contactOpIds: string[] = [];
+      try {
+        const { data: co } = await sb.from("contact_operation").select("operation_id").eq("contact_id", id);
+        contactOpIds = [...new Set((co ?? []).map((x: any) => x.operation_id).filter(Boolean))] as string[];
+        const manquants = contactOpIds.filter((oid) => !opById.has(oid));
+        if (manquants.length) {
+          const { data: cops } = await sb.from("operations").select("id, nom").in("id", manquants);
+          for (const o of (cops ?? []) as any[]) opById.set(o.id, o.nom);
+        }
+      } catch { /* migration 0010 non appliquée */ }
+
+      const opsSection = opById.size
+        ? { titre: "Opérations", icon: "operation", items: [...opById.entries()].map(([oid, nom]) => ({ type: "operation", id: oid, cat: "op", label: nom })) }
+        : null;
       const sections = [structSection, opsSection].filter(Boolean);
-      // Relances en cours qui nomment cette personne (champ « personne » libre).
+
+      // Relances de la personne : celles qui la nomment (champ libre), celles de sa
+      // structure, et celles de ses affaires (portées OU dont elle est le contact).
       const nomComplet = [cc.prenom, cc.nom].filter(Boolean).join(" ") || cc.nom;
-      const { data: rel } = await sb
-        .from("relances")
-        .select("id, objet, date_echeance, personne, operation_id, operations(nom)")
-        .eq("statut", "a_faire")
-        .ilike("personne", `%${cc.nom}%`);
-      const relances = formatRelances(rel, membreSet);
+      const opIdsPersonne = [...new Set([...structOpIds, ...contactOpIds])];
+      const SEL = "id, objet, date_echeance, personne, entite_id, operation_id, operations(nom)";
+      const requetes: any[] = [
+        sb.from("relances").select(SEL).eq("statut", "a_faire").ilike("personne", `%${cc.nom}%`),
+      ];
+      if (cc.entite_id) requetes.push(sb.from("relances").select(SEL).eq("statut", "a_faire").eq("entite_id", cc.entite_id));
+      if (opIdsPersonne.length) requetes.push(sb.from("relances").select(SEL).eq("statut", "a_faire").in("operation_id", opIdsPersonne));
+      const res = await Promise.all(requetes);
+      const vus = new Set<string>();
+      const relRows: any[] = [];
+      for (const r of res) for (const row of ((r?.data ?? []) as any[])) { if (!vus.has(row.id)) { vus.add(row.id); relRows.push(row); } }
+      const relances = formatRelances(relRows, membreSet);
       return NextResponse.json({
         cat: "pers", catLabel: "Personne", nom: nomComplet,
         meta: cc.fonction ?? "", href: `/personnes/${id}`, sections, relances,
