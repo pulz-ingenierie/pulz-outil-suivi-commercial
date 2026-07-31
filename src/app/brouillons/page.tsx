@@ -6,6 +6,7 @@ import { releverEmailsMaintenant } from "@/lib/admin-actions";
 import type { Synthese } from "@/lib/synthese";
 import VoiceCr from "../crs/vocal/VoiceCr";
 import BrouillonSwipe from "@/components/BrouillonSwipe";
+import BrouillonCarte from "@/components/BrouillonCarte";
 
 export const dynamic = "force-dynamic";
 
@@ -124,19 +125,20 @@ export default async function Brouillons({
         {list.length > 1 && <> Glissez vers la gauche pour passer au brouillon suivant.</>}
       </p>
 
-      <VoiceCr
-        key={current.id}
-        entites={entites ?? []}
-        operations={operations ?? []}
-        contactsBase={contacts}
-        membres={membres}
-        opsAvecRelance={opsAvecRelance}
-        today={today}
-        draftId={current.id}
-        initialTranscription={current.transcription ?? ""}
-        initialSynthese={(current.synthese as Synthese) ?? null}
-        piecesInfo={piecesInfo}
-      />
+      <BrouillonCarte key={current.id} index={idx} total={list.length}>
+        <VoiceCr
+          entites={entites ?? []}
+          operations={operations ?? []}
+          contactsBase={contacts}
+          membres={membres}
+          opsAvecRelance={opsAvecRelance}
+          today={today}
+          draftId={current.id}
+          initialTranscription={current.transcription ?? ""}
+          initialSynthese={(current.synthese as Synthese) ?? null}
+          piecesInfo={piecesInfo}
+        />
+      </BrouillonCarte>
     </main>
   );
 }
