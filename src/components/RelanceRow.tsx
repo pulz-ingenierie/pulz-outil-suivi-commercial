@@ -4,10 +4,11 @@ import Link from "next/link";
 import Signet from "@/components/Signet";
 import CatIcon from "@/components/CatIcon";
 import { useExclusiveOpen } from "@/lib/useExclusiveOpen";
+import type { PersonneSignet } from "@/lib/personnes";
 
 // Relance affichée comme un objet déployable (même volet que partout ailleurs) :
-// tap → volet avec l'opération et la personne concernées, + « Ouvrir la relance »
-// (bascule sur l'écran Relances, la relance déjà ouverte).
+// tap → volet avec l'opération et la/les personne(s) concernées, + « Ouvrir la
+// relance » (bascule sur l'écran Relances, la relance déjà ouverte).
 export default function RelanceRow({
   id,
   objet,
@@ -15,8 +16,7 @@ export default function RelanceRow({
   enRetard,
   op = null,
   structs = [],
-  personne = null,
-  persHref = null,
+  personnes = [],
 }: {
   id: string;
   objet: string;
@@ -24,8 +24,7 @@ export default function RelanceRow({
   enRetard: boolean;
   op?: { id: string; nom: string } | null;
   structs?: { id: string; nom: string }[];
-  personne?: string | null;
-  persHref?: string | null;
+  personnes?: PersonneSignet[];
 }) {
   const { open, toggle } = useExclusiveOpen(`relance:${id}`);
   return (
@@ -68,18 +67,28 @@ export default function RelanceRow({
                 <div className="sig-wrap">{structs.map((s) => <Signet key={s.id} type="entite" id={s.id} cat="struct" label={s.nom} />)}</div>
               </div>
             )}
-            {personne && (() => {
-              const membre = !!persHref && persHref.startsWith("/membres/");
-              const cls = `sig-d pers${membre ? " membre" : ""}`;
-              return (
-                <div className="carte-sect">
-                  <div className="carte-sect-h"><CatIcon name="personne" /> {membre ? "Personne concernée (groupement)" : "Personne à relancer"}</div>
-                  <div className="sig-wrap">
-                    {persHref
-                      ? <Link className={cls} href={persHref}><span className="sig-lbl">{personne}</span></Link>
-                      : <span className={cls}><span className="sig-lbl">{personne}</span></span>}
+            {personnes.length > 0 && (() => {
+              const concernees = personnes.filter((p) => !p.membre);
+              const responsables = personnes.filter((p) => p.membre);
+              const bloc = (titre: string, list: PersonneSignet[]) =>
+                list.length ? (
+                  <div className="carte-sect">
+                    <div className="carte-sect-h"><CatIcon name="personne" /> {titre}</div>
+                    <div className="sig-wrap">
+                      {list.map((p) => {
+                        const cls = `sig-d pers${p.membre ? " membre" : ""}`;
+                        return p.href
+                          ? <Link key={p.nom} className={cls} href={p.href}><span className="sig-lbl">{p.nom}</span></Link>
+                          : <span key={p.nom} className={cls}><span className="sig-lbl">{p.nom}</span></span>;
+                      })}
+                    </div>
                   </div>
-                </div>
+                ) : null;
+              return (
+                <>
+                  {bloc(concernees.length > 1 ? "Personnes concernées" : "Personne concernée", concernees)}
+                  {bloc(responsables.length > 1 ? "Responsables (groupement)" : "Responsable (groupement)", responsables)}
+                </>
               );
             })()}
             <div className="carte-foot">

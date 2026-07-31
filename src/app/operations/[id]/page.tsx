@@ -7,7 +7,7 @@ import PhaseSelect from "./PhaseSelect";
 import BackButton from "@/components/BackButton";
 import Signet from "@/components/Signet";
 import RelanceRow from "@/components/RelanceRow";
-import { indexerLiens, lienPersonne } from "@/lib/personnes";
+import { indexerLiens, personnesDeRelance } from "@/lib/personnes";
 
 export const dynamic = "force-dynamic";
 
@@ -159,8 +159,7 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
                   echeance={dateFr(r.date_echeance)}
                   enRetard={r.date_echeance < today}
                   structs={entites.map((e: any) => ({ id: e.id, nom: e.nom }))}
-                  personne={r.personne ?? null}
-                  persHref={r.personne ? lienPersonne(liensPersonnes, r.personne) : null}
+                  personnes={personnesDeRelance(r.personne, liensPersonnes)}
                 />
               ))}
             </div>

@@ -9,6 +9,7 @@ import SwipeRow from "@/components/SwipeRow";
 import CatIcon from "@/components/CatIcon";
 import PhaseAffaire from "@/components/PhaseAffaire";
 import { type OperationStatut } from "@/lib/types";
+import type { PersonneSignet } from "@/lib/personnes";
 
 // Une relance = une ligne qui se DÉPLIE sur place (comme le reste de l'outil) :
 // signets associés + actions (Nouveau CR, Fait, Reporter, Abandonner). Glisser
@@ -21,8 +22,7 @@ export type RelRow = {
   enRetard: boolean;
   op: { id: string; nom: string; statut: string } | null;
   structs: { id: string; nom: string }[];
-  personne: string | null;
-  persHref: string | null;
+  personnes: PersonneSignet[];
   crHref: string;
   reporterDefault: string;
 };
@@ -31,12 +31,9 @@ type Groupe = { titre: string; classe: string; items: RelRow[] };
 
 // Une relance « concerne » un membre du groupement si son nom figure parmi les
 // personnes de la relance (le champ personne peut en lister plusieurs).
-function personnesDe(r: RelRow): string[] {
-  return (r.personne ?? "").split(",").map((s) => s.trim()).filter(Boolean);
-}
 function concerne(r: RelRow, membre: string): boolean {
   const m = membre.trim().toLowerCase();
-  return personnesDe(r).some((n) => n.toLowerCase() === m);
+  return (r.personnes ?? []).some((p) => p.nom.toLowerCase() === m);
 }
 function concerneStructure(r: RelRow, structureId: string): boolean {
   return (r.structs ?? []).some((s) => s.id === structureId);
@@ -199,18 +196,28 @@ export default function RelancesListe({ groupes, membres = [] }: { groupes: Grou
                               </div>
                             </div>
                           )}
-                          {r.personne && (() => {
-                            const membre = !!r.persHref && r.persHref.startsWith("/membres/");
-                            const cls = `sig-d pers${membre ? " membre" : ""}`;
-                            return (
-                              <div className="carte-sect">
-                                <div className="carte-sect-h"><CatIcon name="personne" /> {membre ? "Personne concernée (groupement)" : "Personne à relancer"}</div>
-                                <div className="sig-wrap">
-                                  {r.persHref
-                                    ? <Link className={cls} href={r.persHref}><span className="sig-lbl">{r.personne}</span></Link>
-                                    : <span className={cls}><span className="sig-lbl">{r.personne}</span></span>}
+                          {r.personnes.length > 0 && (() => {
+                            const concernees = r.personnes.filter((p) => !p.membre);
+                            const responsables = r.personnes.filter((p) => p.membre);
+                            const bloc = (titre: string, list: PersonneSignet[]) =>
+                              list.length ? (
+                                <div className="carte-sect">
+                                  <div className="carte-sect-h"><CatIcon name="personne" /> {titre}</div>
+                                  <div className="sig-wrap">
+                                    {list.map((p) => {
+                                      const cls = `sig-d pers${p.membre ? " membre" : ""}`;
+                                      return p.href
+                                        ? <Link key={p.nom} className={cls} href={p.href}><span className="sig-lbl">{p.nom}</span></Link>
+                                        : <span key={p.nom} className={cls}><span className="sig-lbl">{p.nom}</span></span>;
+                                    })}
+                                  </div>
                                 </div>
-                              </div>
+                              ) : null;
+                            return (
+                              <>
+                                {bloc(concernees.length > 1 ? "Personnes concernées" : "Personne concernée", concernees)}
+                                {bloc(responsables.length > 1 ? "Responsables (groupement)" : "Responsable (groupement)", responsables)}
+                              </>
                             );
                           })()}
                           <div className="rel-acts">

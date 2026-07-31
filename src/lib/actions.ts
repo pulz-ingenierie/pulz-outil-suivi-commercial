@@ -675,13 +675,25 @@ async function materialiserCr(
       const suitesFiltre = suites.filter((_: any, i: number) => baseFiltre.includes(base[i]));
 
       if (baseFiltre.length) {
-        // Personne du rappel : celle extraite par l'IA si explicite, sinon
-        // l'auteur (il n'apparaît que si l'action n'est attribuée à personne).
+        // Le champ « personne » liste les personnes de la relance : le(s)
+        // contact(s) CONCERNÉ(s) (externe, ex. « Jean-François Turpin ») ET le
+        // membre RESPONSABLE. On garde ce que l'IA/le débrief a fourni, et si
+        // AUCUN membre du groupement n'y figure, on ajoute l'auteur comme
+        // responsable (celui qui doit provoquer l'action).
+        const { data: membresRows2 } = await sb.from("utilisateurs").select("nom");
+        const membreNoms = (membresRows2 ?? []).map((m: any) => normNom(m.nom)).filter(Boolean);
+        const aUnMembre = (p: string) => p.split(",").map((s) => normNom(s)).some((n) => n && membreNoms.includes(n));
+        const personneFinale = (p: string | null | undefined): string | null => {
+          const base = (p ?? "").trim();
+          if (base && aUnMembre(base)) return base; // déjà un responsable
+          if (authorNom) return base ? `${base}, ${authorNom}` : authorNom;
+          return base || null;
+        };
         // La colonne « personne » peut ne pas encore exister (migration 0003) :
         // on tente avec, et on retombe proprement sans elle en cas d'échec.
         const { error: relErr } = await sb
           .from("relances")
-          .insert(baseFiltre.map((row: any, i: number) => ({ ...row, personne: suitesFiltre[i].personne || authorNom || null })));
+          .insert(baseFiltre.map((row: any, i: number) => ({ ...row, personne: personneFinale(suitesFiltre[i].personne) })));
         if (relErr) await sb.from("relances").insert(baseFiltre);
       }
     }

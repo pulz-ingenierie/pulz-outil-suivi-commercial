@@ -7,7 +7,7 @@ import BackButton from "@/components/BackButton";
 import Signet from "@/components/Signet";
 import OperationRow from "@/components/OperationRow";
 import RelanceRow from "@/components/RelanceRow";
-import { indexerLiens, lienPersonne } from "@/lib/personnes";
+import { indexerLiens, personnesDeRelance } from "@/lib/personnes";
 
 export const dynamic = "force-dynamic";
 
@@ -158,8 +158,7 @@ export default async function FicheStructure({ params }: { params: Promise<{ id:
                   echeance={dateFr(r.date_echeance)}
                   enRetard={r.date_echeance < today}
                   op={r.operation_id && r.operations?.nom ? { id: r.operation_id, nom: r.operations.nom } : null}
-                  personne={r.personne ?? null}
-                  persHref={r.personne ? lienPersonne(liensPersonnes, r.personne) : null}
+                  personnes={personnesDeRelance(r.personne, liensPersonnes)}
                 />
               ))}
             </div>

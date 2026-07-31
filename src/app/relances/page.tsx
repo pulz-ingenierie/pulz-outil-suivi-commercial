@@ -2,7 +2,7 @@ import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
 import { createRelance } from "@/lib/actions";
 import { envoyerRappelsMaintenant } from "@/lib/admin-actions";
 import { getIdentite } from "@/lib/auth";
-import { indexerLiens, lienPersonne } from "@/lib/personnes";
+import { indexerLiens, personnesDeRelance } from "@/lib/personnes";
 import RelancesListe, { type RelRow } from "@/components/RelancesListe";
 import HashBack from "@/components/HashBack";
 
@@ -41,7 +41,7 @@ function versRow(
   personnesIdx: Record<string, string>,
   opStructures: Record<string, { id: string; nom: string }[]>,
 ): RelRow {
-  const persHref = r.personne ? lienPersonne(personnesIdx, r.personne) : null;
+  const personnes = personnesDeRelance(r.personne, personnesIdx);
   const op = r.operation_id && r.operations?.nom
     ? { id: r.operation_id, nom: r.operations.nom, statut: r.operations.statut }
     : null;
@@ -70,8 +70,7 @@ function versRow(
     enRetard: r.date_echeance < today,
     op,
     structs,
-    personne: r.personne,
-    persHref,
+    personnes,
     crHref,
     reporterDefault: plusJours(7),
   };

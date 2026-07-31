@@ -7,7 +7,7 @@ import Signet from "@/components/Signet";
 import OperationRow from "@/components/OperationRow";
 import RelanceRow from "@/components/RelanceRow";
 import AssocierAffaire from "@/components/AssocierAffaire";
-import { normNom } from "@/lib/personnes";
+import { normNom, indexerLiens, personnesDeRelance } from "@/lib/personnes";
 
 export const dynamic = "force-dynamic";
 
@@ -46,8 +46,9 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
     tel: string | null; email: string | null; entite_id: string | null;
   };
 
-  // Sa structure + les affaires de cette structure (contexte) + les relances.
-  const [{ data: structure }, { data: liens }, { data: relances }] = await Promise.all([
+  // Sa structure + les affaires de cette structure (contexte) + les relances +
+  // les index de personnes (pour rendre cliquables les signets des relances).
+  const [{ data: structure }, { data: liens }, { data: relances }, { data: tousContacts }, { data: membres }] = await Promise.all([
     contact.entite_id
       ? supabase.from("entites").select("id, nom, type").eq("id", contact.entite_id).maybeSingle()
       : Promise.resolve({ data: null }),
@@ -55,7 +56,10 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
       ? supabase.from("entite_operation").select("operations(id, nom, statut, montant_estime)").eq("entite_id", contact.entite_id)
       : Promise.resolve({ data: [] as any[] }),
     supabase.from("relances").select("*, operations(nom)").eq("statut", "a_faire").order("date_echeance", { ascending: true }),
+    supabase.from("contacts").select("id, nom, prenom"),
+    supabase.from("utilisateurs").select("id, nom"),
   ]);
+  const liensPersonnes = indexerLiens((tousContacts ?? []) as any, (membres ?? []) as any);
 
   const struct = structure as { id: string; nom: string; type: string } | null;
   const operations = ((liens ?? []) as any[])
@@ -143,7 +147,7 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
                   echeance={dateFr(r.date_echeance)}
                   enRetard={r.date_echeance < today}
                   op={r.operation_id && r.operations?.nom ? { id: r.operation_id, nom: r.operations.nom } : null}
-                  personne={r.personne ?? null}
+                  personnes={personnesDeRelance(r.personne, liensPersonnes)}
                 />
               ))}
             </div>

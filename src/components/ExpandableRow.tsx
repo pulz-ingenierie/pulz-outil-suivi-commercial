@@ -24,7 +24,7 @@ const CATS = {
 type Item = { type: "entite" | "operation" | "personne"; id: string; cat: string; label: string };
 type SectionIcon = "structure" | "operation" | "personne" | "relance" | "ville";
 type Section = { titre: string; icon?: SectionIcon; items: Item[] };
-type Relance = { id: string; objet: string; echeance: string; enRetard: boolean; personne: string | null; personneMembre?: boolean; operation?: { id: string; nom: string } | null };
+type Relance = { id: string; objet: string; echeance: string; enRetard: boolean; personnes?: { nom: string; membre: boolean }[]; operation?: { id: string; nom: string } | null };
 type Apercu = { cat: string; catLabel: string; nom: string; meta?: string; ville?: string | null; href: string; sections: Section[]; relances?: Relance[] };
 
 export default function ExpandableRow({

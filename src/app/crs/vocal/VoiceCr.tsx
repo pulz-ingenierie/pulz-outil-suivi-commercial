@@ -327,15 +327,6 @@ export default function VoiceCr({
       const n = nom.trim().toLowerCase();
       return membres.some((m) => { const mn = m.toLowerCase(); return p && n && mn.includes(p) && mn.includes(n); });
     };
-    // Vrai si un nom complet (ex. « Florian Colomar ») correspond à un membre du
-    // groupement. Sert à ne garder QUE des membres comme responsable de relance.
-    const estMembreNom = (nom: string) => {
-      const s = nom.trim().toLowerCase();
-      if (!s) return false;
-      if (membreSet.has(s)) return true;
-      const mots = s.split(/\s+/).filter(Boolean);
-      return mots.length > 0 && membres.some((m) => { const mn = m.toLowerCase(); return mots.every((w) => mn.includes(w)); });
-    };
     setPersonnes(
       (s.contacts ?? [])
         .filter((c) => !estMembre(c.prenom ?? "", c.nom))
@@ -356,9 +347,10 @@ export default function VoiceCr({
         .map((r) => ({
           objet: r.objet,
           date: addDays(today, r.dans_jours),
-          // Responsable = membre du groupement uniquement : on écarte tout
-          // prospect que l'IA aurait mis là (il est la cible, pas le responsable).
-          personne: (r.personne ?? "").split(",").map((x) => x.trim()).filter((x) => x && estMembreNom(x)).join(", "),
+          // On garde les personnes de l'IA (contact concerné par la relance, ex.
+          // « Jean-François Turpin »). Le membre RESPONSABLE s'ajoute au débrief
+          // (« qui doit s'occuper »), sans écraser le contact concerné.
+          personne: r.personne ?? "",
           operation: (r as any).operation ?? undefined,
           entite: (r as any).entite ?? undefined,
         })),

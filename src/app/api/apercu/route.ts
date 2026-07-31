@@ -38,9 +38,13 @@ function formatRelances(rows: any[] | null, membreSet: Set<string> = new Set()):
       objet: r.objet,
       echeance: dateFr(r.date_echeance),
       enRetard: !!r.date_echeance && r.date_echeance < today,
-      personne: r.personne ?? null,
-      // Membre du groupement (interne) plutôt qu'un contact externe.
-      personneMembre: !!r.personne && membreSet.has(normP(r.personne)),
+      // Personnes de la relance (plusieurs possibles) : contact(s) concerné(s) +
+      // membre(s) responsable(s), distingués pour l'affichage.
+      personnes: (r.personne ?? "")
+        .split(",")
+        .map((s: string) => s.trim())
+        .filter(Boolean)
+        .map((nom: string) => ({ nom, membre: membreSet.has(normP(nom)) })),
       operation: r.operation_id && r.operations?.nom ? { id: r.operation_id, nom: r.operations.nom } : null,
     }));
 }

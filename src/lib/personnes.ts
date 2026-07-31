@@ -56,3 +56,24 @@ export function lienPersonne(idx: Record<string, string>, name: string | null | 
   const k = normNom(name);
   return k && idx[k] ? idx[k] : null;
 }
+
+export type PersonneSignet = { nom: string; href: string | null; membre: boolean };
+
+// Découpe le champ « personne » d'une relance (texte libre, éventuellement
+// plusieurs noms séparés par des virgules) en signets résolus : chacun avec son
+// lien de carte et l'indication membre du groupement (interne) vs contact
+// externe (concerné par la relance).
+export function personnesDeRelance(
+  personne: string | null | undefined,
+  idx: Record<string, string>,
+): PersonneSignet[] {
+  const vus = new Set<string>();
+  return (personne ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => { const k = s.toLowerCase(); if (!s || vus.has(k)) return false; vus.add(k); return true; })
+    .map((nom) => {
+      const href = lienPersonne(idx, nom);
+      return { nom, href, membre: !!href && href.startsWith("/membres/") };
+    });
+}
