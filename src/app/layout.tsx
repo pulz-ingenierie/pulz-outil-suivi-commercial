@@ -14,6 +14,10 @@ const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"], 
 const grotesk = Space_Grotesk({ subsets: ["latin"], weight: ["600", "700"], variable: "--font-display", display: "swap" });
 const mono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-mono", display: "swap" });
 
+// Région d'exécution des fonctions serveur : Dublin (dub1), au plus près de la
+// base Supabase (Ireland). Évite un aller-retour transatlantique par requête.
+export const preferredRegion = "dub1";
+
 export const metadata: Metadata = {
   title: "moeïa · Suivi commercial",
   description: "Suivi commercial — module moeïa.",
