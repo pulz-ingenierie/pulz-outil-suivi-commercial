@@ -134,19 +134,6 @@ export default async function FicheStructure({ params }: { params: Promise<{ id:
         </div>
 
         <div className="block">
-          <div className="eyebrow">Opérations — toutes les affaires de cette structure</div>
-          {operations.length ? (
-            <div className="vlist2">
-              {operations.map((o: any) => (
-                <OperationRow key={o.id} id={o.id} nom={o.nom} statut={o.statut as OperationStatut} montant={o.montant_estime} role={o.role} />
-              ))}
-            </div>
-          ) : (
-            <div className="empty">Aucune opération rattachée — piste du réseau.</div>
-          )}
-        </div>
-
-        <div className="block">
           <div className="eyebrow">Prochaines relances</div>
           {relances.length ? (
             <div className="vlist2">
@@ -164,6 +151,19 @@ export default async function FicheStructure({ params }: { params: Promise<{ id:
             </div>
           ) : (
             <div className="empty">Aucune relance planifiée pour cette structure.</div>
+          )}
+        </div>
+
+        <div className="block">
+          <div className="eyebrow">Opérations — toutes les affaires de cette structure</div>
+          {operations.length ? (
+            <div className="vlist2">
+              {operations.map((o: any) => (
+                <OperationRow key={o.id} id={o.id} nom={o.nom} statut={o.statut as OperationStatut} montant={o.montant_estime} role={o.role} />
+              ))}
+            </div>
+          ) : (
+            <div className="empty">Aucune opération rattachée — piste du réseau.</div>
           )}
         </div>
 

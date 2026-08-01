@@ -954,3 +954,25 @@ a.sig-d { text-decoration: none; }
        background: var(--surface); color: var(--ink); cursor: pointer; padding: 0; }
 .brn-arrow:hover:not(:disabled) { border-color: var(--muted); }
 .brn-arrow:disabled { opacity: .35; cursor: default; }
+
+/* Fil des CR — frise verticale repliable : une ligne verticale, un point par CR,
+   chaque CR replié (date + type + aperçu) se déploie au clic. Lisible même avec
+   beaucoup de comptes rendus. */
+.fil-tl { position: relative; padding-left: 20px; }
+.fil-tl::before { content: ""; position: absolute; left: 5px; top: 8px; bottom: 8px; width: 2px; background: var(--line); }
+.fil-tl-item { position: relative; }
+.fil-tl-item + .fil-tl-item { border-top: 1px solid var(--line-2); }
+.fil-tl-sum { display: flex; align-items: center; gap: 9px; padding: 11px 0; cursor: pointer; list-style: none;
+       -webkit-tap-highlight-color: transparent; }
+.fil-tl-sum::-webkit-details-marker { display: none; }
+.fil-tl-dot { position: absolute; left: -19px; top: 15px; width: 10px; height: 10px; border-radius: 50%;
+       background: var(--surface); border: 2px solid var(--muted); box-sizing: border-box; }
+.fil-tl-item[open] > .fil-tl-sum .fil-tl-dot { background: var(--signal); border-color: var(--signal); }
+.fil-tl-sum .fil-date { flex: none; }
+.fil-tl-apercu { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+       color: var(--muted); font-size: 13px; }
+.fil-tl-chev { flex: none; color: var(--faint); font-size: 17px; line-height: 1; transition: transform .15s; }
+.fil-tl-item[open] > .fil-tl-sum .fil-tl-chev { transform: rotate(90deg); }
+.fil-tl-body { padding: 0 0 14px; }
+.fil-tl-body .fil-resume { margin: 0 0 6px; }
+.fil-tl-foot { margin-top: 8px; }

@@ -148,13 +148,6 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
           )}
         </div>
 
-        <AssocierAffaire
-          contactId={contact.id}
-          contactNom={nomComplet}
-          associees={affairesAssociees}
-          disponibles={affairesDisponibles}
-        />
-
         <div className="block">
           <div className="eyebrow">Prochaines relances</div>
           {mesRelances.length ? (
@@ -175,6 +168,13 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
             <div className="empty">Aucune relance planifiée pour cette personne.</div>
           )}
         </div>
+
+        <AssocierAffaire
+          contactId={contact.id}
+          contactNom={nomComplet}
+          associees={affairesAssociees}
+          disponibles={affairesDisponibles}
+        />
 
         {struct && (
           <div className="block">

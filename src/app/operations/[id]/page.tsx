@@ -118,6 +118,25 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
         </div>
 
         <div className="block">
+          <div className="eyebrow">Prochaines relances</div>
+          {rels.length ? (
+            <div className="vlist2">
+              {rels.map((r: any) => (
+                <RelanceRow
+                  key={r.id}
+                  id={r.id}
+                  objet={r.objet}
+                  echeance={dateFr(r.date_echeance)}
+                  enRetard={r.date_echeance < today}
+                  structs={entites.map((e: any) => ({ id: e.id, nom: e.nom }))}
+                  personnes={personnesDeRelance(r.personne, liensPersonnes)}
+                />
+              ))}
+            </div>
+          ) : <div className="empty">Aucune relance planifiée.</div>}
+        </div>
+
+        <div className="block">
           <div className="eyebrow">Structures — portes d'entrée</div>
           {entites.length ? (
             <div className="sig-wrap">{entites.map((e: any) => (
@@ -145,25 +164,6 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
         <div className="block">
           <div className="eyebrow">Fil des comptes rendus</div>
           <FilCr crs={crs} liens={liensPersonnes} />
-        </div>
-
-        <div className="block">
-          <div className="eyebrow">Prochaines relances</div>
-          {rels.length ? (
-            <div className="vlist2">
-              {rels.map((r: any) => (
-                <RelanceRow
-                  key={r.id}
-                  id={r.id}
-                  objet={r.objet}
-                  echeance={dateFr(r.date_echeance)}
-                  enRetard={r.date_echeance < today}
-                  structs={entites.map((e: any) => ({ id: e.id, nom: e.nom }))}
-                  personnes={personnesDeRelance(r.personne, liensPersonnes)}
-                />
-              ))}
-            </div>
-          ) : <div className="empty">Aucune relance planifiée.</div>}
         </div>
       </div>
     </main>
