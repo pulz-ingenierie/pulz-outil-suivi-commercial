@@ -120,6 +120,7 @@ export default function VoiceCr({
   contactsBase = [],
   membres = [],
   opsAvecRelance = [],
+  relancesOuvertes = [],
   prefillEntite,
   prefillOperation,
   relanceId,
@@ -134,6 +135,7 @@ export default function VoiceCr({
   contactsBase?: ContactBase[];
   membres?: string[];
   opsAvecRelance?: string[];
+  relancesOuvertes?: { id: string; objet: string; personne: string | null; echeance: string | null; operationNom: string | null; entiteNom: string | null }[];
   prefillEntite?: string;
   prefillOperation?: string;
   relanceId?: string;
@@ -172,6 +174,11 @@ export default function VoiceCr({
   // nécessaire » à la proposition de relance — pour ne plus l'ennuyer.
   const [relancesIgnorees, setRelancesIgnorees] = useState<Set<string>>(new Set());
   const ignorerRelance = (cle: string) => setRelancesIgnorees((s) => new Set(s).add(cle));
+  // Relances EN COURS que ce compte rendu clôture (« le repas a eu lieu / est
+  // fixé ») : cochées par l'utilisateur au débrief, fermées à la consolidation.
+  const [relancesAClore, setRelancesAClore] = useState<Set<string>>(new Set());
+  const basculerClore = (relId: string) =>
+    setRelancesAClore((s) => { const n = new Set(s); if (n.has(relId)) n.delete(relId); else n.add(relId); return n; });
   // Carte ouverte au clic sur un signet (overlay). S'ouvre en AFFICHAGE ;
   // on passe en édition via le bouton « Modifier ».
   const [openCard, setOpenCard] = useState<{ cat: "rat" | "pers" | "rel" | "reperes"; i: number } | null>(null);
@@ -656,7 +663,21 @@ export default function VoiceCr({
   // Le lien contact ↔ affaire proposé par l'IA est appliqué directement (via
   // contactsPayload) : plus de confirmation par signet à cocher au débrief — on
   // n'en avait pas le besoin.
-  const aCompleter = structAPreciser.length > 0 || persAPreciser.length > 0 || opsSansStruct || relSansPersonne.length > 0 || opsSansRelance.length > 0 || pasDeRelanceGenerique || opsSansVille.length > 0;
+
+  // Relances EN COURS que ce compte rendu semble traiter : on propose de les
+  // clôturer. Une relance est « liée » si son affaire, sa structure OU sa
+  // personne est présente dans ce compte rendu. On exclut celle déjà clôturée
+  // via le lien direct (relanceId).
+  const contactsNoms = personnes.map((p) => normL([p.prenom, p.nom].filter(Boolean).join(" "))).filter(Boolean);
+  const relancesLiees = relancesOuvertes.filter((rel) => {
+    if (relanceId && rel.id === relanceId) return false;
+    const opMatch = rel.operationNom && rattachements.some((r) => r.kind === "operation" && matchOp(r.name, rel.operationNom!));
+    const entMatch = rel.entiteNom && rattachements.some((r) => r.kind === "structure" && normL(r.name) === normL(rel.entiteNom));
+    const persMatch = rel.personne && rel.personne.split(",").some((n) => contactsNoms.includes(normL(n)));
+    return !!(opMatch || entMatch || persMatch);
+  });
+
+  const aCompleter = structAPreciser.length > 0 || persAPreciser.length > 0 || opsSansStruct || relSansPersonne.length > 0 || opsSansRelance.length > 0 || pasDeRelanceGenerique || opsSansVille.length > 0 || relancesLiees.length > 0;
 
   // Mises à jour des blocs.
   const majRat = (i: number, patch: Partial<Rattach>) =>
@@ -1071,6 +1092,7 @@ export default function VoiceCr({
         <input type="hidden" name="referents_json" value={JSON.stringify((synthese as any)?.referents ?? [])} />
         <input type="hidden" name="changements_phase_json" value={JSON.stringify(changementsPhase)} />
         <input type="hidden" name="changements_ville_json" value={JSON.stringify(changementsVille)} />
+        <input type="hidden" name="relances_a_clore_json" value={JSON.stringify([...relancesAClore])} />
         <input type="hidden" name="contacts_json" value={JSON.stringify(contactsPayload)} />
         <input type="hidden" name="synthese_json" value={JSON.stringify(syntheseOut)} />
         <input type="hidden" name="brouillon_synthese_json" value={JSON.stringify(brouillonSnapshot)} />
@@ -1254,6 +1276,22 @@ export default function VoiceCr({
                 <input defaultValue={r.ville ?? ""} placeholder="Ex. Poitiers, Roncq…" onBlur={(e) => majVille(i, e.target.value)} />
               </label>
             ))}
+            {relancesLiees.map((rel) => {
+              const on = relancesAClore.has(rel.id);
+              return (
+                <div className="precise-row" key={`clore-${rel.id}`}>
+                  <span className="precise-q">
+                    Une relance en cours porte sur ce compte rendu : <strong>{rel.objet}</strong>. Est-elle traitée ?
+                    <em className="precise-hint">(cochez pour la marquer comme faite)</em>
+                  </span>
+                  <div className="precise-answer">
+                    <button type="button" className={`sig-d rel${on ? " on" : ""}`} onClick={() => basculerClore(rel.id)}>
+                      <span className="sig-lbl">{on ? "✓ Traitée" : "Marquer comme faite"}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
             {relancesAvecObjet.map(({ r, i }) => (
               <div className="precise-row" key={`r${i}`}>
                 <span className="precise-q">Qui doit s'occuper de <strong>{r.objet || "cette relance"}</strong> ? <em className="precise-hint">(plusieurs possibles)</em></span>

@@ -48,10 +48,20 @@ export default async function Brouillons({
   const contacts = (contactsBase ?? []).map((c: any) => ({
     nom: c.nom, prenom: c.prenom ?? null, entiteNom: c.entites?.nom ?? null,
   }));
-  const { data: relancesEnCours } = await supabase.from("relances").select("operation_id").eq("statut", "a_faire");
-  const opNomById = new Map((operations ?? []).map((o: any) => [o.id, o.nom as string]));
+  const { data: relancesEnCours } = await supabase
+    .from("relances")
+    .select("id, objet, personne, date_echeance, operation_id, entite_id, operations(nom), entites(nom)")
+    .eq("statut", "a_faire");
+  const relancesOuvertes = ((relancesEnCours ?? []) as any[]).map((r) => ({
+    id: r.id,
+    objet: r.objet ?? "",
+    personne: r.personne ?? null,
+    echeance: r.date_echeance ?? null,
+    operationNom: r.operations?.nom ?? null,
+    entiteNom: r.entites?.nom ?? null,
+  }));
   const opsAvecRelance = Array.from(
-    new Set((relancesEnCours ?? []).map((r: any) => r.operation_id).filter(Boolean).map((id: string) => opNomById.get(id)).filter(Boolean)),
+    new Set(relancesOuvertes.map((r) => r.operationNom).filter(Boolean)),
   ) as string[];
 
   const list = (drafts ?? []) as { id: string; transcription: string | null; synthese: any; pieces_ia?: any }[];
@@ -132,6 +142,7 @@ export default async function Brouillons({
           contactsBase={contacts}
           membres={membres}
           opsAvecRelance={opsAvecRelance}
+          relancesOuvertes={relancesOuvertes}
           today={today}
           draftId={current.id}
           initialTranscription={current.transcription ?? ""}

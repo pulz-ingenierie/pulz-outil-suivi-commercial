@@ -699,6 +699,13 @@ async function materialiserCr(
     }
   }
 
+  // Relances EN COURS que ce compte rendu clôture (cochées au débrief « est-elle
+  // traitée ? ») : on les passe « faite » et on les relie au CR qui les résout.
+  const aClore = jsonArray(fd, "relances_a_clore_json").filter((x) => typeof x === "string") as string[];
+  if (aClore.length) {
+    await sb.from("relances").update({ statut: "faite", cr_resultat_id: crId }).in("id", aClore).eq("statut", "a_faire");
+  }
+
   return { entiteIds, operationIds };
 }
 

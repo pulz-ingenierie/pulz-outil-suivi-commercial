@@ -7,6 +7,7 @@ import Signet from "@/components/Signet";
 import OperationRow from "@/components/OperationRow";
 import RelanceRow from "@/components/RelanceRow";
 import AssocierAffaire from "@/components/AssocierAffaire";
+import FilCr from "@/components/FilCr";
 import { normNom, indexerLiens, personnesDeRelance } from "@/lib/personnes";
 
 export const dynamic = "force-dynamic";
@@ -95,6 +96,25 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
       (r.operation_id && opIds.has(r.operation_id)),
   );
 
+  // Fil des comptes rendus de la personne : ceux de sa structure + ceux de ses
+  // affaires (les CR sont rattachés aux structures/opérations, pas aux contacts).
+  const SELCR = "crs(id, date_rdv, type_rdv, transcription, synthese, auteur:utilisateurs(nom))";
+  const opIdsArr = [...opIds];
+  const [{ data: crEnt }, { data: crOps }] = await Promise.all([
+    contact.entite_id
+      ? supabase.from("cr_entites").select(SELCR).eq("entite_id", contact.entite_id)
+      : Promise.resolve({ data: [] as any[] }),
+    opIdsArr.length
+      ? supabase.from("cr_operations").select(SELCR).in("operation_id", opIdsArr)
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
+  const crMap = new Map<string, any>();
+  for (const row of [...((crEnt ?? []) as any[]), ...((crOps ?? []) as any[])]) {
+    const cr = row.crs;
+    if (cr?.id) crMap.set(cr.id, cr);
+  }
+  const crs = [...crMap.values()].sort((a: any, b: any) => (a.date_rdv < b.date_rdv ? 1 : -1));
+
   return (
     <main className="wrap">
       <BackButton />
@@ -170,6 +190,11 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
             )}
           </div>
         )}
+
+        <div className="block">
+          <div className="eyebrow">Fil des comptes rendus</div>
+          <FilCr crs={crs} liens={liensPersonnes} />
+        </div>
       </div>
     </main>
   );
