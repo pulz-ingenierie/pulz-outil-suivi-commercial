@@ -92,19 +92,17 @@ export default function ExpandableRow({
                     </div>
                   </div>
                 )}
-                {data.cat === "pers" && (
+                {/* Coordonnées : affichées SEULEMENT si on en a. Dans cet aperçu
+                    replié, un « ✕ à compléter » ajouterait du bruit sur chaque
+                    personne sans numéro. Le rappel reste sur la fiche complète,
+                    où il y a la place et le bouton « Modifier » à côté. */}
+                {data.cat === "pers" && (data.tel || data.email) && (
                   <div className="carte-sect">
                     <div className="carte-sect-h"><CatIcon name="personne" /> Coordonnées</div>
-                    {data.tel || data.email ? (
-                      <div className="carte-coord">
-                        {data.tel && <a className="btn ghost mini" href={`tel:${data.tel}`} onClick={(e) => e.stopPropagation()}>{data.tel}</a>}
-                        {data.email && <a className="btn ghost mini" href={`mailto:${data.email}`} onClick={(e) => e.stopPropagation()}>{data.email}</a>}
-                      </div>
-                    ) : (
-                      <div className="sig-wrap">
-                        <span className="sig-d ville vide"><span className="sig-lbl">✕ à compléter</span></span>
-                      </div>
-                    )}
+                    <div className="carte-coord">
+                      {data.tel && <a className="btn ghost mini" href={`tel:${data.tel}`} onClick={(e) => e.stopPropagation()}>{data.tel}</a>}
+                      {data.email && <a className="btn ghost mini" href={`mailto:${data.email}`} onClick={(e) => e.stopPropagation()}>{data.email}</a>}
+                    </div>
                   </div>
                 )}
                 {data.sections.map((s, i) => (
@@ -131,7 +129,7 @@ export default function ExpandableRow({
                     </div>
                   </div>
                 )}
-                {data.cat !== "pers" && data.sections.length === 0 && !(data.relances && data.relances.length) && <p className="hint" style={{ margin: 0 }}>Aucun élément associé pour l'instant.</p>}
+                {data.sections.length === 0 && !(data.tel || data.email) && !(data.relances && data.relances.length) && <p className="hint" style={{ margin: 0 }}>Aucun élément associé pour l'instant.</p>}
                 <div className="carte-foot">
                   <button type="button" className="btn ghost mini danger" onClick={() => demanderSuppression(type, id, data?.nom ?? nom)}>Supprimer</button>
                   <Link className="btn" href={data.href}>Ouvrir la fiche</Link>
