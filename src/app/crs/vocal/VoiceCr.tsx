@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createCr, finaliserBrouillon, supprimerBrouillon, enregistrerBrouillonDictee } from "@/lib/actions";
 import type { Synthese } from "@/lib/synthese";
 import { STATUT_LABELS, STATUT_ORDRE } from "@/lib/types";
+import { titreOperation, titreAvecVille } from "@/lib/titres";
 import SubmitButton from "@/components/SubmitButton";
 
 // Couleur d'étape (variables CSS de globals.css), pour le signet de phase.
@@ -13,7 +14,7 @@ const STATUT_VAR_CR: Record<string, string> = {
   offre_remise: "--s-offre", nego: "--s-nego", gagne: "--s-gagne", perdu: "--s-perdu",
 };
 
-type Opt = { id: string; nom: string };
+type Opt = { id: string; nom: string; ville?: string | null };
 type Ent = { id: string; nom: string; type?: string };
 type ContactBase = { nom: string; prenom: string | null; entiteNom?: string | null };
 
@@ -662,11 +663,14 @@ export default function VoiceCr({
   // Opérations nouvelles sans commune : on demande où se situe le projet (la
   // ville est un signet à part entière, et complète le titre « Client - Ville - … »).
   // On demande la commune pour : les affaires NOUVELLES sans ville, ET les
-  // affaires EXISTANTES dont le libellé porte encore « ✕ » (ville jamais saisie).
+  // affaires EXISTANTES dont la ville n'est pas renseignée en base.
+  // NB : on se fonde sur la DONNÉE (colonne ville), plus sur un « ✕ » dans le
+  // libellé — ce marqueur disparaît des titres au fil des corrections.
+  const villeEnBase = new Map(operations.map((o) => [o.nom.trim().toLowerCase(), (o.ville ?? "").trim()]));
   const opsSansVille = rattachements
     .map((r, i) => ({ r, i }))
     .filter(({ r }) => r.kind === "operation" && r.name.trim() && !(r.ville && r.ville.trim()) &&
-      (!ratEnBase(r) || r.name.includes("✕")));
+      (!ratEnBase(r) || !villeEnBase.get(r.name.trim().toLowerCase())));
   // Le lien contact ↔ affaire proposé par l'IA est appliqué directement (via
   // contactsPayload) : plus de confirmation par signet à cocher au débrief — on
   // n'en avait pas le besoin.
@@ -702,8 +706,8 @@ export default function VoiceCr({
         // part (changements_ville) et le titre est complété côté serveur.
         const existant = x.kind === "operation" && opNameSet.has(x.name.trim().toLowerCase());
         if (v && !existant) {
-          const parts = x.name.split(" - ");
-          if (parts.length === 3) { parts[1] = v; name = parts.join(" - "); }
+          const propose = titreAvecVille(x.name, v);
+          if (propose !== x.name) name = propose;
           else if (x.name.includes("✕")) name = x.name.replace("✕", v);
         }
         return { ...x, ville: v || null, name };
@@ -809,7 +813,10 @@ export default function VoiceCr({
           <span className={`carte-cat ${structure ? "struct" : "op"}`}>
             <Icon name={structure ? "structure" : "operation"} /> {structure ? "Structure" : "Opération"}{structure ? ` · ${typeLbl}` : ""} · {enBase ? "en base" : "à créer"}
           </span>
-          <h2 className="carte-nom-view">{r.name.trim() || "(à nommer)"}</h2>
+          {/* Le nom d'une affaire s'affiche NETTOYÉ : une partie inconnue est
+              omise. Le libellé brut (avec son éventuel « ✕ ») reste la clé de
+              rattachement en interne — il ne sert jamais d'affichage. */}
+          <h2 className="carte-nom-view">{(structure ? r.name.trim() : titreOperation(r.name)) || "(à nommer)"}</h2>
         </div>
       );
       if (!edit) {
@@ -825,7 +832,7 @@ export default function VoiceCr({
               )}
               {structure && opsDeLaStruct(r.name).length > 0 && (
                 <SectionAssoc titre="Opérations" icon="operation">
-                  {opsDeLaStruct(r.name).map(({ r: o, idx }) => <AssocSignet key={idx} kind="op" label={o.name} onClick={() => ouvrirCarte("rat", idx)} />)}
+                  {opsDeLaStruct(r.name).map(({ r: o, idx }) => <AssocSignet key={idx} kind="op" label={titreOperation(o.name)} onClick={() => ouvrirCarte("rat", idx)} />)}
                 </SectionAssoc>
               )}
               {!structure && structsDeLop(r.name).length > 0 && (
@@ -833,14 +840,14 @@ export default function VoiceCr({
                   {structsDeLop(r.name).map(({ r: s, idx }) => <AssocSignet key={idx} kind="struct" label={s.name} onClick={() => ouvrirCarte("rat", idx)} />)}
                 </SectionAssoc>
               )}
-              {/* Ville (commune) de l'affaire : signet à part entière ; ✕ si à compléter. */}
-              {!structure && (
+              {/* Ville (commune) de l'affaire : signet affiché seulement si elle
+                  est connue. Quand elle manque, rien ne s'affiche ici — c'est le
+                  débrief de fin (« Quelle est la ville de… ? ») qui la réclame. */}
+              {!structure && r.ville && r.ville.trim() && (
                 <div className="carte-sect">
                   <div className="carte-sect-h"><Icon name="structure" /> Ville</div>
                   <div className="sig-wrap">
-                    <span className={`sig-d ville${r.ville && r.ville.trim() ? "" : " vide"}`}>
-                      <span className="sig-lbl">{r.ville && r.ville.trim() ? r.ville : "✕ à compléter"}</span>
-                    </span>
+                    <span className="sig-d ville"><span className="sig-lbl">{r.ville}</span></span>
                   </div>
                 </div>
               )}
@@ -925,7 +932,7 @@ export default function VoiceCr({
               )}
               {opsRat.length > 0 && (
                 <SectionAssoc titre="Opérations évoquées" icon="operation">
-                  {opsRat.map(({ r: o, idx }) => <AssocSignet key={idx} kind="op" label={o.name} onClick={() => ouvrirCarte("rat", idx)} />)}
+                  {opsRat.map(({ r: o, idx }) => <AssocSignet key={idx} kind="op" label={titreOperation(o.name)} onClick={() => ouvrirCarte("rat", idx)} />)}
                 </SectionAssoc>
               )}
               <div className="carte-foot">
@@ -1000,7 +1007,7 @@ export default function VoiceCr({
                     )}
                     {relOps.length > 0 && (
                       <SectionAssoc titre="Opération" icon="operation">
-                        {relOps.map(({ r: o, idx }) => <AssocSignet key={idx} kind="op" label={o.name} onClick={() => ouvrirCarte("rat", idx)} />)}
+                        {relOps.map(({ r: o, idx }) => <AssocSignet key={idx} kind="op" label={titreOperation(o.name)} onClick={() => ouvrirCarte("rat", idx)} />)}
                       </SectionAssoc>
                     )}
                   </>
@@ -1187,7 +1194,7 @@ export default function VoiceCr({
               const enBase = ratEnBase(r);
               return (
                 <button type="button" className={`sig-d op${openCard?.cat === "rat" && openCard.i === i ? " on" : ""}`} key={i} onClick={() => basculerCarte("rat", i)}>
-                  <span className="sig-lbl">{r.name.trim() || "(à nommer)"}</span>
+                  <span className="sig-lbl">{titreOperation(r.name) || "(à nommer)"}</span>
                   <span className={`sig-badge ${enBase ? "base" : "new"}`}>{enBase ? "en base" : "à créer"}</span>
                 </button>
               );

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
 import { STATUT_LABELS } from "@/lib/types";
+import { titreOperation } from "@/lib/titres";
 
 // Aperçu d'un objet (structure / opération / personne) pour le volet global qui
 // se déploie au clic sur un signet, partout dans l'outil. Renvoie le nom, une
@@ -45,7 +46,7 @@ function formatRelances(rows: any[] | null, membreSet: Set<string> = new Set()):
         .map((s: string) => s.trim())
         .filter(Boolean)
         .map((nom: string) => ({ nom, membre: membreSet.has(normP(nom)) })),
-      operation: r.operation_id && r.operations?.nom ? { id: r.operation_id, nom: r.operations.nom } : null,
+      operation: r.operation_id && r.operations?.nom ? { id: r.operation_id, nom: titreOperation(r.operations.nom) } : null,
     }));
 }
 
@@ -89,7 +90,7 @@ export async function GET(req: Request) {
       }
       const personnesStruct = [...persMap.values()].sort((a: any, b: any) => String(a.nom).localeCompare(String(b.nom), "fr"));
       const sections = [
-        { titre: "Opérations", icon: "operation", items: ops.map((o: any) => ({ type: "operation", id: o.id, cat: "op", label: o.nom })) },
+        { titre: "Opérations", icon: "operation", items: ops.map((o: any) => ({ type: "operation", id: o.id, cat: "op", label: titreOperation(o.nom) })) },
         { titre: "Personnes à joindre", icon: "personne", items: personnesStruct.map((c: any) => ({ type: "personne", id: c.id, cat: "pers", label: [c.prenom, c.nom].filter(Boolean).join(" ") || c.nom })) },
       ].filter((s) => s.items.length);
       // Relances en cours rattachées à la structure OU à l'une de ses opérations :
@@ -140,7 +141,7 @@ export async function GET(req: Request) {
       const relances = formatRelances(rel, membreSet);
       const aSupprimer = (rel ?? []).map((r: any) => ({ type: "relance", id: r.id, cat: "rel", label: r.objet }));
       return NextResponse.json({
-        cat: "op", catLabel: "Opération", nom: (o as any).nom,
+        cat: "op", catLabel: "Opération", nom: titreOperation((o as any).nom),
         meta: STATUT_LABELS[(o as any).statut as keyof typeof STATUT_LABELS] ?? (o as any).statut,
         ville: (o as any).ville ?? null,
         href: `/operations/${id}`, sections, relances, aSupprimer,
@@ -175,7 +176,7 @@ export async function GET(req: Request) {
       } catch { /* migration 0010 non appliquée */ }
 
       const opsSection = opById.size
-        ? { titre: "Opérations", icon: "operation", items: [...opById.entries()].map(([oid, nom]) => ({ type: "operation", id: oid, cat: "op", label: nom })) }
+        ? { titre: "Opérations", icon: "operation", items: [...opById.entries()].map(([oid, nom]) => ({ type: "operation", id: oid, cat: "op", label: titreOperation(nom) })) }
         : null;
       const sections = [structSection, opsSection].filter(Boolean);
 

@@ -3,6 +3,7 @@ import { createRelance } from "@/lib/actions";
 import { envoyerRappelsMaintenant } from "@/lib/admin-actions";
 import { getIdentite } from "@/lib/auth";
 import { indexerLiens, personnesDeRelance } from "@/lib/personnes";
+import { titreOperation } from "@/lib/titres";
 import RelancesListe, { type RelRow } from "@/components/RelancesListe";
 import HashBack from "@/components/HashBack";
 
@@ -214,7 +215,7 @@ export default async function Relances({
               <span className="lab">Opération liée</span>
               <select name="operation_id" defaultValue="">
                 <option value="">— Aucune —</option>
-                {(operations ?? []).map((o: any) => <option key={o.id} value={o.id}>{o.nom}</option>)}
+                {(operations ?? []).map((o: any) => <option key={o.id} value={o.id}>{titreOperation(o.nom)}</option>)}
               </select>
             </label>
             <label className="field">

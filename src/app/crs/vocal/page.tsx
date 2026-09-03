@@ -23,7 +23,7 @@ export default async function VocalPage({
   const supabase = getServerSupabase()!;
   const [{ data: entites }, { data: operations }, { data: contactsBase }, { data: membresRows }, { data: relancesEnCours }] = await Promise.all([
     supabase.from("entites").select("id, nom, type").order("nom"),
-    supabase.from("operations").select("id, nom").order("created_at", { ascending: false }),
+    supabase.from("operations").select("id, nom, ville").order("created_at", { ascending: false }),
     supabase.from("contacts").select("nom, prenom, entites(nom)"),
     supabase.from("utilisateurs").select("nom").eq("actif", true),
     supabase.from("relances").select("id, objet, personne, date_echeance, operation_id, entite_id, operations(nom), entites(nom)").eq("statut", "a_faire"),

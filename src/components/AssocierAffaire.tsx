@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import Signet from "@/components/Signet";
+import { titreOperation } from "@/lib/titres";
 import { associerContactOperation } from "@/lib/actions";
 import { useLongPress } from "@/lib/gestures";
 
@@ -28,7 +29,7 @@ function OptionAffaire({ contactId, op }: { contactId: string; op: Op }) {
         onMouseUp={g.onMouseUp}
         onMouseLeave={g.onMouseLeave}
       >
-        <span className="assoc-opt-nom">{op.nom}</span>
+        <span className="assoc-opt-nom">{titreOperation(op.nom)}</span>
         <span className="assoc-opt-plus">Associer</span>
       </button>
     </form>
@@ -71,7 +72,7 @@ export default function AssocierAffaire({
               type="operation"
               id={o.id}
               cat="op"
-              label={o.nom}
+              label={titreOperation(o.nom)}
               parent={{ type: "personne", id: contactId, nom: contactNom }}
             />
           ))}

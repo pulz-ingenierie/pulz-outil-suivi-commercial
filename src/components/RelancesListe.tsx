@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { updateRelance } from "@/lib/actions";
 import ReporterRelance from "@/components/ReporterRelance";
 import Signet from "@/components/Signet";
+import { titreOperation } from "@/lib/titres";
 import SwipeRow from "@/components/SwipeRow";
 import CatIcon from "@/components/CatIcon";
 import PhaseAffaire from "@/components/PhaseAffaire";
@@ -180,7 +181,7 @@ export default function RelancesListe({ groupes, membres = [] }: { groupes: Grou
                             <div className="carte-sect">
                               <div className="carte-sect-h"><CatIcon name="operation" /> Opération</div>
                               <div className="sig-wrap">
-                                <Signet type="operation" id={r.op.id} cat="op" label={r.op.nom} />
+                                <Signet type="operation" id={r.op.id} cat="op" label={titreOperation(r.op.nom)} />
                               </div>
                               <div className="rel-phase">
                                 <span className="rel-phase-lab">Faire avancer l'affaire&nbsp;:</span>

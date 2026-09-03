@@ -1,6 +1,7 @@
 import "server-only";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { sendEmail, isEmailConfigured } from "@/lib/email";
+import { titreOperation } from "@/lib/titres";
 
 // Prépare et envoie, à chaque responsable, le récapitulatif de ses relances
 // « à faire » dont l'échéance est atteinte (en retard ou pour aujourd'hui).
@@ -39,7 +40,7 @@ function corps(nom: string, rels: Rel[], today: string): string {
   const lignes = rels
     .map((r) => {
       const retard = r.date_echeance < today;
-      const cible = r.operations?.nom ?? r.entites?.nom ?? "";
+      const cible = (r.operations?.nom ? titreOperation(r.operations.nom) : null) ?? r.entites?.nom ?? "";
       const quand = retard
         ? `<span style="color:#B24A4A;font-weight:600">en retard · ${dateFr(r.date_echeance)}</span>`
         : `pour aujourd'hui`;

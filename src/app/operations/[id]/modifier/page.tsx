@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
 import { STATUT_LABELS, STATUT_ORDRE, type Operation } from "@/lib/types";
 import { updateOperation } from "@/lib/actions";
+import { titreOperation } from "@/lib/titres";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ export default async function ModifierOperation({ params }: { params: Promise<{ 
       <div className="fiche-head">
         <div>
           <div className="eyebrow">Modifier l'opération</div>
-          <h1>{operation.nom}</h1>
+          <h1>{titreOperation(operation.nom)}</h1>
         </div>
       </div>
 
@@ -41,7 +42,10 @@ export default async function ModifierOperation({ params }: { params: Promise<{ 
 
         <label className="field">
           <span className="lab">Nom de l'opération <em>*</em></span>
-          <input name="nom" required defaultValue={operation.nom} />
+          {/* Le champ propose le titre NETTOYÉ : on ne fait pas retaper un
+              « ✕ » à l'utilisateur. Renseigner la ville ci-dessous réinsère la
+              commune au bon endroit (voir updateOperation). */}
+          <input name="nom" required defaultValue={titreOperation(operation.nom)} />
           <small className="hint">Format : « Client - Ville - Nature » (ex. « Spirit - Poitiers - Construction de 80 logements »).</small>
         </label>
 

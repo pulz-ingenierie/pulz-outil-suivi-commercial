@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Signet from "@/components/Signet";
+import { titreOperation } from "@/lib/titres";
 import CatIcon from "@/components/CatIcon";
 import { useExclusiveOpen } from "@/lib/useExclusiveOpen";
 import type { PersonneSignet } from "@/lib/personnes";
@@ -41,7 +42,7 @@ export default function RelanceRow({
         <div className="rel-vrow-main">
           <span className="vrow-nom">{objet}</span>
           <div className="rel-vrow-sub">
-            {op && <span className="sig-d op rel-op-chip"><span className="sig-lbl">{op.nom}</span></span>}
+            {op && <span className="sig-d op rel-op-chip"><span className="sig-lbl">{titreOperation(op.nom)}</span></span>}
             <span className={`vrow-rel${enRetard ? " crit" : ""}`}>{echeance}{enRetard ? " · en retard" : ""}</span>
           </div>
         </div>
@@ -58,7 +59,7 @@ export default function RelanceRow({
             {op && (
               <div className="carte-sect">
                 <div className="carte-sect-h"><CatIcon name="operation" /> Opération</div>
-                <div className="sig-wrap"><Signet type="operation" id={op.id} cat="op" label={op.nom} /></div>
+                <div className="sig-wrap"><Signet type="operation" id={op.id} cat="op" label={titreOperation(op.nom)} /></div>
               </div>
             )}
             {structs.length > 0 && (

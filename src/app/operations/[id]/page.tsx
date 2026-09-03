@@ -8,6 +8,7 @@ import BackButton from "@/components/BackButton";
 import Signet from "@/components/Signet";
 import RelanceRow from "@/components/RelanceRow";
 import { indexerLiens, personnesDeRelance } from "@/lib/personnes";
+import { titreOperation } from "@/lib/titres";
 
 export const dynamic = "force-dynamic";
 
@@ -89,7 +90,7 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
       <div className="fiche-head">
         <div>
           <div className="eyebrow">Fiche opération</div>
-          <h1>{operation.nom}</h1>
+          <h1>{titreOperation(operation.nom)}</h1>
         </div>
       </div>
 
@@ -102,10 +103,17 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
             </div>
             <PhaseSelect id={operation.id} statut={st} />
           </div>
-          <div className="kv"><span className="k">Référent</span><span>{referent?.nom ?? "—"}</span></div>
-          <div className="kv"><span className="k">Ville</span>
-            <span className={`sig-d ville${operation.ville ? "" : " vide"}`}><span className="sig-lbl">{operation.ville || "✕ à compléter"}</span></span>
-          </div>
+          {/* Référent : ligne omise s'il n'y en a pas — un « — » n'apprend rien. */}
+          {referent?.nom && (
+            <div className="kv"><span className="k">Référent</span><span>{referent.nom}</span></div>
+          )}
+          {/* Ville : la ligne n'apparaît que si la commune est connue. Une
+              information absente ne s'affiche pas — pas de croix, pas de tiret. */}
+          {operation.ville && (
+            <div className="kv"><span className="k">Ville</span>
+              <span className="sig-d ville"><span className="sig-lbl">{operation.ville}</span></span>
+            </div>
+          )}
           {operation.montant_estime != null && (
             <div className="kv"><span className="k">Montant estimé</span><span>{euro(operation.montant_estime)}</span></div>
           )}

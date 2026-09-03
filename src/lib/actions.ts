@@ -14,6 +14,7 @@ import { STATUT_ORDRE, type OperationStatut } from "@/lib/types";
 // Mêmes contrôles de forme que pour les sorties de l'IA : une coordonnée
 // mal formée est écartée, qu'elle vienne d'une dictée ou d'un formulaire.
 import { normTel, normEmail } from "@/lib/synthese";
+import { titreAvecVille } from "@/lib/titres";
 
 const ENTITE_TYPES = ["MOA", "archi", "promoteur", "bet", "confrere", "autre"] as const;
 const STATUT_VIE = ["actif", "dormant"] as const;
@@ -205,13 +206,12 @@ export async function updateOperation(fd: FormData) {
   if (!nom) throw new Error("Le nom de l'opération est obligatoire.");
   const statut = pickStatut(fd);
 
-  // Titre « Client - Ville - Nature » : si une ville est saisie, on synchronise
-  // le 2ᵉ segment du titre (remplace notamment le « ✕ » d'une ville à compléter).
+  // Titre « Client - Ville - Nature » : si une ville est saisie, on la place au
+  // 2ᵉ segment. Le formulaire propose désormais un titre NETTOYÉ (sans « ✕ ») :
+  // titreAvecVille sait donc aussi bien remplacer un segment existant
+  // qu'INSÉRER la commune dans un titre qui n'en a que deux.
   const ville = strOrNull(fd, "ville");
-  if (ville) {
-    const parts = nom.split(" - ");
-    if (parts.length === 3) { parts[1] = ville; nom = parts.join(" - "); }
-  }
+  if (ville) nom = titreAvecVille(nom, ville);
 
   const { error } = await supabase
     .from("operations")
@@ -444,8 +444,8 @@ async function materialiserCr(
     const ancien = opNomById.get(opId);
     let nouveau: string | null = null;
     if (typeof ancien === "string" && ancien) {
-      const parts = ancien.split(" - ");
-      if (parts.length === 3) { parts[1] = ville; nouveau = parts.join(" - "); }
+      const propose = titreAvecVille(ancien, ville);
+      if (propose && propose !== ancien) nouveau = propose;
       else if (ancien.includes("✕")) nouveau = ancien.replace("✕", ville);
       if (nouveau) patch.nom = nouveau;
     }

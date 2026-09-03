@@ -40,7 +40,7 @@ export default async function Brouillons({
       .eq("auteur_id", profil.id)
       .order("created_at", { ascending: true }),
     supabase.from("entites").select("id, nom, type").order("nom"),
-    supabase.from("operations").select("id, nom").order("created_at", { ascending: false }),
+    supabase.from("operations").select("id, nom, ville").order("created_at", { ascending: false }),
     supabase.from("contacts").select("nom, prenom, entites(nom)"),
     supabase.from("utilisateurs").select("nom").eq("actif", true),
   ]);

@@ -84,11 +84,13 @@ export default function ExpandableRow({
                 {data.meta ? <div className="carte-meta">{data.meta}</div> : null}
               </div>
               <div className="carte-body">
-                {data.cat === "op" && (
+                {/* Ville : affichée seulement si la commune est connue. Une
+                    partie d'affaire absente ne laisse aucune trace à l'écran. */}
+                {data.cat === "op" && data.ville && (
                   <div className="carte-sect">
                     <div className="carte-sect-h"><CatIcon name="ville" /> Ville</div>
                     <div className="sig-wrap">
-                      <span className={`sig-d ville${data.ville ? "" : " vide"}`}><span className="sig-lbl">{data.ville || "✕ à compléter"}</span></span>
+                      <span className="sig-d ville"><span className="sig-lbl">{data.ville}</span></span>
                     </div>
                   </div>
                 )}
@@ -129,7 +131,7 @@ export default function ExpandableRow({
                     </div>
                   </div>
                 )}
-                {data.sections.length === 0 && !(data.tel || data.email) && !(data.relances && data.relances.length) && <p className="hint" style={{ margin: 0 }}>Aucun élément associé pour l'instant.</p>}
+                {data.sections.length === 0 && !data.ville && !(data.tel || data.email) && !(data.relances && data.relances.length) && <p className="hint" style={{ margin: 0 }}>Aucun élément associé pour l'instant.</p>}
                 <div className="carte-foot">
                   <button type="button" className="btn ghost mini danger" onClick={() => demanderSuppression(type, id, data?.nom ?? nom)}>Supprimer</button>
                   <Link className="btn" href={data.href}>Ouvrir la fiche</Link>
