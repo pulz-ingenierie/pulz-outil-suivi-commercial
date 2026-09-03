@@ -147,8 +147,11 @@ function VuePersonnes({ personnes }: { personnes: PersonneListe[] }) {
             return (
               <ExpandableRow type="personne" id={p.id} nom={nomComplet} key={p.id}>
                 <span className="vrow-nom">{nomComplet}</span>
+                {/* La FONCTION ne s'affiche pas ici : sur un écran étroit, un
+                    titre long (« directeur du développement immobilier ») pousse
+                    le nom hors de la ligne — or c'est le nom qu'on cherche dans
+                    une liste. Elle reste sur le volet déplié et sur la fiche. */}
                 <span className="vrow-meta">
-                  {p.fonction && <span>{p.fonction}</span>}
                   {p.entiteNom && <span className="vrow-type">{p.entiteNom}</span>}
                   {p.incomplet && <span className="ac-dot" title="Fiche à compléter" aria-label="Fiche à compléter" />}
                 </span>

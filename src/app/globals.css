@@ -235,10 +235,23 @@ a.vrow { color: var(--ink); text-decoration: none; }
        -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: pan-y; }
 .swrow-del { position: absolute; top: 0; right: 0; height: 100%; width: 88px; border: none;
        background: var(--crit); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; letter-spacing: .01em; }
-.vrow-nom { font-weight: 400; font-size: 14px; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.vrow-meta { display: flex; align-items: center; gap: var(--gap-sig, 6px); flex: none; color: var(--muted); font-size: 12px; }
+/* Une ligne de liste, c'est d'abord un NOM. Le contexte à droite (société,
+   type, étape, montant) cède la place avant lui : le nom conserve un plancher
+   et n'est jamais tronqué jusqu'à disparaître. */
+.vrow-nom { font-weight: 400; font-size: 14px; flex: 1 1 auto; min-width: 6em;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Pas de min-width:0 ici : le bloc de contexte ne doit jamais se comprimer sous
+   son propre contenu (sinon l'étape ou les pastilles débordent de la ligne).
+   Sa largeur minimale se déduit de ses enfants — et .vrow-type, seul enfant
+   abrégeable, n'y contribue pas. */
+.vrow-meta { display: flex; align-items: center; gap: var(--gap-sig, 6px); flex: 0 1 auto;
+             color: var(--muted); font-size: 12px; }
+/* Les repères courts (étape, montant, pastilles, anneau) ne se compriment pas… */
+.vrow-meta > *:not(.vrow-type) { flex: none; }
+/* …seul le libellé de contexte s'abrège, avec ses points de suspension. */
+.vrow-type { letter-spacing: .01em; font-size: 12px; color: var(--faint);
+             flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vrow-meta .amt { font-size: 11.5px; color: var(--muted); }
-.vrow-type { letter-spacing: .01em; font-size: 12px; color: var(--faint); }
 .vrow-rel { color: var(--c-rel); font-weight: 560; }
 .vrow-rel.crit { color: var(--crit); }
 .vrow.late { box-shadow: inset 3px 0 0 var(--crit); }
