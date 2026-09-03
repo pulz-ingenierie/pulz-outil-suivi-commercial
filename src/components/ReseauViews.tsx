@@ -18,6 +18,7 @@ type Structure = {
   dormant: boolean;
   ops: Op[];
   prochaineRelance: string | null;
+  incomplet?: boolean;
 };
 
 type PersonneListe = {
@@ -27,6 +28,7 @@ type PersonneListe = {
   fonction: string | null;
   entiteId: string | null;
   entiteNom: string | null;
+  incomplet?: boolean;
 };
 
 function dateCourt(d: string): string {
@@ -38,6 +40,22 @@ function dateCourt(d: string): string {
 }
 
 type Vue = "structure" | "personne";
+
+// Filtre « à compléter » : présent seulement s'il y a quelque chose à compléter.
+// Deux pastilles, comme les autres barres d'outils de l'outil.
+function FiltreCompleter({ n, actif, onToggle }: { n: number; actif: boolean; onToggle: (v: boolean) => void }) {
+  if (!n) return null;
+  return (
+    <div className="filtres">
+      <button type="button" className={`fchip${actif ? " on" : ""}`} aria-pressed={actif} onClick={() => onToggle(!actif)}>
+        À compléter <span className="tnum">{n}</span>
+      </button>
+      <button type="button" className={`fchip${actif ? "" : " on"}`} aria-pressed={!actif} onClick={() => onToggle(false)}>
+        Toutes
+      </button>
+    </div>
+  );
+}
 
 export default function ReseauViews({ reseau, personnes }: { reseau: Structure[]; personnes: PersonneListe[] }) {
   const [vue, setVue] = useState<Vue>("structure");
@@ -74,14 +92,17 @@ export default function ReseauViews({ reseau, personnes }: { reseau: Structure[]
 
 function VueStructures({ reseau }: { reseau: Structure[] }) {
   const [q, setQ] = useState("");
+  const [aCompleter, setACompleter] = useState(false);
   const terme = q.trim().toLowerCase();
-  const list = terme ? reseau.filter((s) => s.nom.toLowerCase().includes(terme)) : reseau;
+  let list = terme ? reseau.filter((s) => s.nom.toLowerCase().includes(terme)) : reseau;
+  if (aCompleter) list = list.filter((s) => s.incomplet);
   if (!reseau.length) {
     return <div className="card"><span className="empty">Aucune structure enregistrée pour le moment.</span></div>;
   }
   return (
     <>
       <input className="search" type="search" placeholder="Rechercher une structure…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Rechercher une structure" />
+      <FiltreCompleter n={reseau.filter((s) => s.incomplet).length} actif={aCompleter} onToggle={setACompleter} />
       {list.length ? (
         <div className="vlist2">
           {list.map((s) => (
@@ -92,12 +113,13 @@ function VueStructures({ reseau }: { reseau: Structure[] }) {
                 {s.dormant && <span className="pill dormant">sommeil</span>}
                 {s.silencieux && s.ops.length === 0 && <span className="pill silence">à réchauffer</span>}
                 <span className="vrow-type">{s.type}</span>
+                {s.incomplet && <span className="ac-dot" title="Fiche à compléter" aria-label="Fiche à compléter" />}
               </span>
             </ExpandableRow>
           ))}
         </div>
       ) : (
-        <div className="card"><span className="empty">Aucune structure ne correspond à votre recherche.</span></div>
+        <div className="card"><span className="empty">{aCompleter ? "Aucune structure à compléter — tout est renseigné." : "Aucune structure ne correspond à votre recherche."}</span></div>
       )}
     </>
   );
@@ -105,16 +127,19 @@ function VueStructures({ reseau }: { reseau: Structure[] }) {
 
 function VuePersonnes({ personnes }: { personnes: PersonneListe[] }) {
   const [q, setQ] = useState("");
+  const [aCompleter, setACompleter] = useState(false);
   const terme = q.trim().toLowerCase();
-  const list = terme
+  let list = terme
     ? personnes.filter((p) => `${p.prenom ?? ""} ${p.nom} ${p.entiteNom ?? ""}`.toLowerCase().includes(terme))
     : personnes;
+  if (aCompleter) list = list.filter((p) => p.incomplet);
   if (!personnes.length) {
     return <div className="card"><span className="empty">Aucune personne enregistrée pour le moment.</span></div>;
   }
   return (
     <>
       <input className="search" type="search" placeholder="Rechercher une personne…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Rechercher une personne" />
+      <FiltreCompleter n={personnes.filter((p) => p.incomplet).length} actif={aCompleter} onToggle={setACompleter} />
       {list.length ? (
         <div className="vlist2">
           {list.map((p) => {
@@ -125,13 +150,14 @@ function VuePersonnes({ personnes }: { personnes: PersonneListe[] }) {
                 <span className="vrow-meta">
                   {p.fonction && <span>{p.fonction}</span>}
                   {p.entiteNom && <span className="vrow-type">{p.entiteNom}</span>}
+                  {p.incomplet && <span className="ac-dot" title="Fiche à compléter" aria-label="Fiche à compléter" />}
                 </span>
               </ExpandableRow>
             );
           })}
         </div>
       ) : (
-        <div className="card"><span className="empty">Aucune personne ne correspond à votre recherche.</span></div>
+        <div className="card"><span className="empty">{aCompleter ? "Aucune personne à compléter — tout est renseigné." : "Aucune personne ne correspond à votre recherche."}</span></div>
       )}
     </>
   );

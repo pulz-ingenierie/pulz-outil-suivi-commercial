@@ -52,13 +52,13 @@ export default async function ModifierStructure({ params }: { params: Promise<{ 
         <div className="row2">
           <label className="field">
             <span className="lab">Type</span>
-            <select name="type" defaultValue={entite.type}>
+            <select id="f-type" name="type" defaultValue={entite.type}>
               {TYPES.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
             </select>
           </label>
           <label className="field">
             <span className="lab">Ville (facultatif)</span>
-            <input name="ville" defaultValue={entite.ville ?? ""} />
+            <input id="f-ville" name="ville" defaultValue={entite.ville ?? ""} />
           </label>
         </div>
 

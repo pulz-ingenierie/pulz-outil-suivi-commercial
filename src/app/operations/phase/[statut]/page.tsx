@@ -8,6 +8,7 @@ import {
   type OperationStatut,
 } from "@/lib/types";
 import OperationRow from "@/components/OperationRow";
+import { manquesOperation } from "@/lib/completude";
 
 export const dynamic = "force-dynamic";
 
@@ -42,11 +43,11 @@ export default async function PhasePage({ params }: { params: Promise<{ statut: 
   }
 
   const supabase = getServerSupabase()!;
-  const { data: ops, error } = await supabase
-    .from("operations")
-    .select("*")
-    .eq("statut", st)
-    .order("created_at", { ascending: false });
+  const [{ data: ops, error }, { data: liensEnt }] = await Promise.all([
+    supabase.from("operations").select("*").eq("statut", st).order("created_at", { ascending: false }),
+    supabase.from("entite_operation").select("operation_id"),
+  ]);
+  const avecStructure = new Set(((liensEnt ?? []) as any[]).map((l) => l.operation_id));
 
   if (error) {
     return (
@@ -89,7 +90,8 @@ export default async function PhasePage({ params }: { params: Promise<{ statut: 
       {operations.length ? (
         <div className="vlist2">
           {operations.map((o) => (
-            <OperationRow key={o.id} id={o.id} nom={o.nom} statut={o.statut} montant={o.montant_estime} />
+            <OperationRow key={o.id} id={o.id} nom={o.nom} statut={o.statut} montant={o.montant_estime}
+              incomplet={manquesOperation({ id: o.id, ville: o.ville, referent_id: o.referent_id, aStructure: avecStructure.has(o.id) }).length > 0} />
           ))}
         </div>
       ) : (

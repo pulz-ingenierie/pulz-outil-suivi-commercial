@@ -213,6 +213,20 @@ export async function updateOperation(fd: FormData) {
   const ville = strOrNull(fd, "ville");
   if (ville) nom = titreAvecVille(nom, ville);
 
+  // Rattachement d'une structure choisie dans le formulaire (relation N-N : on
+  // ajoute, on ne remplace pas). Le détachement se fait depuis le signet.
+  const ajout = strOrNull(fd, "ajouter_entite_id");
+  if (ajout) {
+    const org_id = await currentOrgId(supabase);
+    const { data: e } = await supabase
+      .from("entites").select("id").eq("org_id", org_id).eq("id", ajout).maybeSingle();
+    if (e?.id) {
+      await supabase
+        .from("entite_operation")
+        .upsert({ entite_id: e.id, operation_id: id }, { onConflict: "entite_id,operation_id", ignoreDuplicates: true });
+    }
+  }
+
   const { error } = await supabase
     .from("operations")
     .update({

@@ -9,6 +9,8 @@ import Signet from "@/components/Signet";
 import RelanceRow from "@/components/RelanceRow";
 import { indexerLiens, personnesDeRelance } from "@/lib/personnes";
 import { titreOperation } from "@/lib/titres";
+import { manquesOperation } from "@/lib/completude";
+import ACompleter from "@/components/ACompleter";
 
 export const dynamic = "force-dynamic";
 
@@ -103,7 +105,8 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
             </div>
             <PhaseSelect id={operation.id} statut={st} />
           </div>
-          {/* Référent : ligne omise s'il n'y en a pas — un « — » n'apprend rien. */}
+          {/* Référent : ligne omise s'il n'y en a pas — un « — » n'apprend rien.
+              Ce qui manque est rappelé une seule fois, en pied de bloc. */}
           {referent?.nom && (
             <div className="kv"><span className="k">Référent</span><span>{referent.nom}</span></div>
           )}
@@ -123,6 +126,12 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
           {st === "perdu" && operation.raison_perte && (
             <div className="kv"><span className="k">Raison de la perte</span><span style={{ maxWidth: "60%", textAlign: "right" }}>{operation.raison_perte}</span></div>
           )}
+          <ACompleter manques={manquesOperation({
+            id: operation.id,
+            ville: operation.ville,
+            referent_id: operation.referent_id,
+            aStructure: entites.length > 0,
+          })} />
         </div>
 
         <div className="block">

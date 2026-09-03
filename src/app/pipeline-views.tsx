@@ -26,6 +26,7 @@ type Op = {
   nom: string;
   statut: OperationStatut;
   montant_estime: number | null;
+  incomplet?: boolean;
 };
 
 type Props = { operations: Op[] };
@@ -86,7 +87,7 @@ function VuePhase({ operations }: { operations: Op[] }) {
             {ouvert && (
               <div className="phase-body">
                 <div className="vlist2">
-                  {list.slice(0, MAX_APERCU).map((o) => <OperationRow key={o.id} id={o.id} nom={o.nom} statut={o.statut} montant={o.montant_estime} />)}
+                  {list.slice(0, MAX_APERCU).map((o) => <OperationRow key={o.id} id={o.id} nom={o.nom} statut={o.statut} montant={o.montant_estime} incomplet={o.incomplet} />)}
                 </div>
                 {list.length > MAX_APERCU && (
                   <Link className="voir-tout" href={`/operations/phase/${statut}`}>
@@ -106,8 +107,13 @@ function VuePhase({ operations }: { operations: Op[] }) {
 // avec une recherche par nom pour rester lisible quand il y en a beaucoup.
 function VueOperation({ operations }: { operations: Op[] }) {
   const [q, setQ] = useState("");
+  // Filtre « à compléter » : le point d'entrée pour vider le stock de trous.
+  // Il ne s'affiche que s'il y a quelque chose à compléter.
+  const [seulesIncompletes, setSeulesIncompletes] = useState(false);
+  const nbIncompletes = operations.filter((o) => o.incomplet).length;
   const terme = q.trim().toLowerCase();
-  const list = terme ? operations.filter((o) => o.nom.toLowerCase().includes(terme)) : operations;
+  let list = terme ? operations.filter((o) => o.nom.toLowerCase().includes(terme)) : operations;
+  if (seulesIncompletes) list = list.filter((o) => o.incomplet);
 
   return (
     <>
@@ -119,14 +125,30 @@ function VueOperation({ operations }: { operations: Op[] }) {
         onChange={(e) => setQ(e.target.value)}
         aria-label="Rechercher une affaire"
       />
+      {nbIncompletes > 0 && (
+        <div className="filtres">
+          <button type="button" className={`fchip${seulesIncompletes ? " on" : ""}`}
+            aria-pressed={seulesIncompletes} onClick={() => setSeulesIncompletes((v) => !v)}>
+            À compléter <span className="tnum">{nbIncompletes}</span>
+          </button>
+          <button type="button" className={`fchip${seulesIncompletes ? "" : " on"}`}
+            aria-pressed={!seulesIncompletes} onClick={() => setSeulesIncompletes(false)}>
+            Toutes
+          </button>
+        </div>
+      )}
       {list.length ? (
         <div className="vlist2">
-          {list.map((o) => <OperationRow key={o.id} id={o.id} nom={o.nom} statut={o.statut} montant={o.montant_estime} />)}
+          {list.map((o) => <OperationRow key={o.id} id={o.id} nom={o.nom} statut={o.statut} montant={o.montant_estime} incomplet={o.incomplet} />)}
         </div>
       ) : (
         <div className="card">
           <span className="empty">
-            {operations.length ? "Aucune affaire ne correspond à votre recherche." : "Aucune opération pour le moment."}
+            {!operations.length
+              ? "Aucune opération pour le moment."
+              : seulesIncompletes
+                ? "Aucune affaire à compléter — tout est renseigné."
+                : "Aucune affaire ne correspond à votre recherche."}
           </span>
         </div>
       )}

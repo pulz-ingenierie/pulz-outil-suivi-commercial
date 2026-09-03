@@ -9,6 +9,8 @@ import RelanceRow from "@/components/RelanceRow";
 import AssocierAffaire from "@/components/AssocierAffaire";
 import FilCr from "@/components/FilCr";
 import { normNom, indexerLiens, personnesDeRelance } from "@/lib/personnes";
+import ACompleter from "@/components/ACompleter";
+import { manquesContact } from "@/lib/completude";
 
 export const dynamic = "force-dynamic";
 
@@ -137,29 +139,24 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
             <div className="eyebrow">Repères</div>
             {struct && <Signet type="entite" id={struct.id} cat="struct" label={struct.nom} parent={{ type: "personne", id: contact.id, nom: nomComplet }} />}
           </div>
-          <div className="kv"><span className="k">Fonction</span><span>{contact.fonction || "—"}</span></div>
-          {/* Coordonnées TOUJOURS affichées, même vides : le « ✕ à compléter »
-              signale l'information manquante (même repère que la ville d'une
-              affaire). Elles se remplissent seules quand un compte rendu les
-              mentionne, sinon d'un tap sur « Modifier ». */}
-          <div className="kv">
-            <span className="k">Téléphone</span>
-            {contact.tel
-              ? <a href={`tel:${contact.tel}`}>{contact.tel}</a>
-              : <Link className="kv-vide" href={`/personnes/${contact.id}/modifier`}>✕ à compléter</Link>}
-          </div>
-          <div className="kv">
-            <span className="k">E-mail</span>
-            {contact.email
-              ? <a href={`mailto:${contact.email}`}>{contact.email}</a>
-              : <Link className="kv-vide" href={`/personnes/${contact.id}/modifier`}>✕ à compléter</Link>}
-          </div>
+          {/* Une valeur absente ne s'affiche pas : ce qui manque est rappelé une
+              seule fois, en pied de bloc, comme sur les fiches opération et
+              structure. Ces champs se remplissent aussi tout seuls quand un
+              compte rendu les mentionne. */}
+          {contact.fonction && <div className="kv"><span className="k">Fonction</span><span>{contact.fonction}</span></div>}
+          {contact.tel && (
+            <div className="kv"><span className="k">Téléphone</span><a href={`tel:${contact.tel}`}>{contact.tel}</a></div>
+          )}
+          {contact.email && (
+            <div className="kv"><span className="k">E-mail</span><a href={`mailto:${contact.email}`}>{contact.email}</a></div>
+          )}
           {(contact.tel || contact.email) && (
             <div className="contact-acts" style={{ marginTop: 12 }}>
               {contact.tel && <a className="btn ghost mini" href={`tel:${contact.tel}`}>Appeler</a>}
               {contact.email && <a className="btn ghost mini" href={`mailto:${contact.email}`}>E-mail</a>}
             </div>
           )}
+          <ACompleter manques={manquesContact(contact)} />
         </div>
 
         <div className="block">

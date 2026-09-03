@@ -4,7 +4,14 @@ import { createContact } from "@/lib/actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function NouvellePersonne() {
+export default async function NouvellePersonne({
+  searchParams,
+}: {
+  searchParams: Promise<{ entite?: string }>;
+}) {
+  // Arrivée depuis le rappel « personne à joindre » d'une fiche structure :
+  // la structure est déjà choisie, il ne reste que le nom à saisir.
+  const { entite: entitePre } = await searchParams;
   if (!isSupabaseConfigured()) {
     return (
       <main className="wrap">
@@ -46,7 +53,7 @@ export default async function NouvellePersonne() {
 
         <label className="field">
           <span className="lab">Structure (facultatif)</span>
-          <select name="entite_id" defaultValue="">
+          <select id="f-structure" name="entite_id" defaultValue={entitePre ?? ""}>
             <option value="">— Aucune —</option>
             {(entites ?? []).map((e: any) => (
               <option key={e.id} value={e.id}>{e.nom}</option>

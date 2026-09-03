@@ -345,10 +345,32 @@ a.vrow { color: var(--ink); text-decoration: none; }
 .carte-coord { display: flex; gap: 7px; flex-wrap: wrap; margin: 2px 0 4px; }
 .carte-coord .btn { font-variant-numeric: tabular-nums; }
 
-/* Coordonnée manquante sur une fiche : même repère que le « ✕ » d'une ville
-   non renseignée — ça se voit, et ça mène directement au formulaire. */
-.kv-vide { color: var(--crit); text-decoration: none; }
-.kv-vide:hover { text-decoration: underline; }
+/* --- Fiche incomplète ------------------------------------------------------
+   Rappel des informations manquantes, en pied du bloc « Repères ». Sourd par
+   principe : pierre et pointillés, jamais une couleur d'alerte — une fiche
+   incomplète n'est pas une erreur. Le cyan reste réservé aux 5 usages de la DA. */
+.ac { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+      padding-top: 11px; margin-top: 9px; border-top: 1px dashed var(--line); }
+.ac-lab { font-size: 11.5px; font-weight: 600; letter-spacing: .03em; color: var(--faint);
+          text-transform: uppercase; }
+.ac-chip { font-size: 12.5px; color: var(--muted); text-decoration: none; background: transparent;
+           border: 1px dashed var(--line); border-radius: 6px; padding: 2px 9px; display: inline-block; }
+.ac-chip:hover { border-style: solid; border-color: var(--accent-border);
+                 color: var(--accent-ink); background: var(--accent-soft); }
+
+/* Anneau creux en fin de ligne de liste : on repère les trous en balayant,
+   sans rien lire. Volontairement plus discret qu'une pastille pleine. */
+.ac-dot { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--faint);
+          display: inline-block; flex: none; }
+
+/* Barre de filtres d'une liste (pastilles) — actif : fond encre ; inactif :
+   papier bordé (anatomie de liste de la DA). */
+.filtres { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 10px; }
+.fchip { font-size: 12px; padding: 4px 10px; border-radius: 99px; cursor: pointer;
+         border: 1px solid var(--line); background: var(--surface); color: var(--muted); }
+.fchip:hover { border-color: var(--faint); }
+.fchip.on { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+.fchip .tnum { margin-left: 4px; opacity: .8; }
 
 /* En-tête d'une page dédiée (retour + titre). */
 .page-head { margin-bottom: 16px; }

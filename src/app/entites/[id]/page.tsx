@@ -8,6 +8,8 @@ import Signet from "@/components/Signet";
 import OperationRow from "@/components/OperationRow";
 import RelanceRow from "@/components/RelanceRow";
 import { indexerLiens, personnesDeRelance } from "@/lib/personnes";
+import ACompleter from "@/components/ACompleter";
+import { manquesEntite } from "@/lib/completude";
 
 export const dynamic = "force-dynamic";
 
@@ -124,13 +126,23 @@ export default async function FicheStructure({ params }: { params: Promise<{ id:
         <div className="block">
           <div className="block-h">
             <div className="eyebrow">Repères</div>
-            <span className="sig-d type"><span className="sig-lbl">{typeLbl}</span></span>
+            {/* « autre » est la valeur par défaut : ce n'est pas un type, c'est
+                l'absence de type — le signet ne s'affiche donc pas. */}
+            {entite.type && entite.type !== "autre" && (
+              <span className="sig-d type"><span className="sig-lbl">{typeLbl}</span></span>
+            )}
           </div>
-          <div className="kv"><span className="k">Ville</span><span>{entite.ville || "—"}</span></div>
+          {entite.ville && <div className="kv"><span className="k">Ville</span><span>{entite.ville}</span></div>}
           <div className="kv"><span className="k">Dernier contact</span><span>{dateFr(dernierContact)}</span></div>
           {entite.statut_vie === "dormant" && (
             <div className="kv"><span className="k">État</span><span><span className="pill dormant">en sommeil</span></span></div>
           )}
+          <ACompleter manques={manquesEntite({
+            id: entite.id,
+            ville: entite.ville,
+            type: entite.type,
+            aPersonne: (contacts ?? []).length > 0,
+          })} />
         </div>
 
         <div className="block">

@@ -17,9 +17,12 @@ const STATUT_VAR: Record<string, string> = {
 
 // Ligne d'affaire dans une liste : nom + étape (+ montant). Tap → se déplie.
 export default function OperationRow({
-  id, nom, statut, montant, role,
+  id, nom, statut, montant, role, incomplet = false,
 }: {
   id: string; nom: string; statut: OperationStatut; montant?: number | null; role?: string | null;
+  // Fiche à compléter : anneau creux en fin de ligne, sans texte. On repère les
+  // trous en balayant une liste ; le détail est sur la fiche.
+  incomplet?: boolean;
 }) {
   // Titre nettoyé : une partie inconnue est omise, sans symbole ni séparateur
   // orphelin (le « ✕ » du stockage ne sort jamais à l'écran).
@@ -32,6 +35,7 @@ export default function OperationRow({
         {role ? <span className="vrow-type">{role}</span> : null}
         <span className="phase-tag"><span className="dot" style={{ background: `var(${STATUT_VAR[statut]})` }} />{STATUT_LABELS[statut] ?? statut}</span>
         {m ? <span className="amt tnum">{m}</span> : null}
+        {incomplet && <span className="ac-dot" title="Fiche à compléter" aria-label="Fiche à compléter" />}
       </span>
     </ExpandableRow>
   );

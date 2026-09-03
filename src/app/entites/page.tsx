@@ -1,6 +1,7 @@
 import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
 import { type Operation } from "@/lib/types";
 import ReseauViews from "@/components/ReseauViews";
+import { manquesEntite, manquesContact } from "@/lib/completude";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ export default async function Reseau() {
     supabase.from("relances").select("*").eq("statut", "a_faire"),
     supabase.from("entite_operation").select("entite_id, operation_id"),
     supabase.from("cr_entites").select("entite_id, crs(date_rdv)"),
-    supabase.from("contacts").select("id, nom, prenom, fonction, entite_id"),
+    supabase.from("contacts").select("id, nom, prenom, fonction, tel, email, entite_id"),
     supabase.from("operations").select("*"),
   ]);
 
@@ -93,6 +94,11 @@ export default async function Reseau() {
   type Ent = { id: string; nom: string; type: string; ville: string | null; statut_vie: string | null; created_at: string | null };
   const toutesEntites = (entites ?? []) as Ent[];
 
+  // Structures ayant au moins une personne rattachée (pour « personne à joindre »).
+  const avecPersonne = new Set(
+    ((contactsRaw ?? []) as any[]).map((c) => c.entite_id).filter(Boolean),
+  );
+
   const reseau = toutesEntites
     .map((e) => ({
       id: e.id,
@@ -103,6 +109,9 @@ export default async function Reseau() {
       dormant: e.statut_vie === "dormant",
       ops: entiteOps[e.id] ?? [],
       prochaineRelance: prochaineRelanceParEntite[e.id] ?? null,
+      incomplet: manquesEntite({
+        id: e.id, ville: e.ville, type: e.type, aPersonne: avecPersonne.has(e.id),
+      }).length > 0,
     }))
     .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
 
@@ -115,6 +124,7 @@ export default async function Reseau() {
       fonction: c.fonction ?? null,
       entiteId: c.entite_id ?? null,
       entiteNom: c.entite_id ? nomStructById.get(c.entite_id) ?? null : null,
+      incomplet: manquesContact(c).length > 0,
     }))
     .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
 

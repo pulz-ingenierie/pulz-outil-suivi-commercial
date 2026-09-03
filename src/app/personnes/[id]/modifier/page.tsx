@@ -55,12 +55,12 @@ export default async function ModifierPersonne({ params }: { params: Promise<{ i
 
         <label className="field">
           <span className="lab">Fonction (facultatif)</span>
-          <input name="fonction" defaultValue={contact.fonction ?? ""} placeholder="Ex. directeur, responsable aménagement…" />
+          <input id="f-fonction" name="fonction" defaultValue={contact.fonction ?? ""} placeholder="Ex. directeur, responsable aménagement…" />
         </label>
 
         <label className="field">
           <span className="lab">Structure (facultatif)</span>
-          <select name="entite_id" defaultValue={contact.entite_id ?? ""}>
+          <select id="f-structure" name="entite_id" defaultValue={contact.entite_id ?? ""}>
             <option value="">— Aucune —</option>
             {(entites ?? []).map((e: any) => (
               <option key={e.id} value={e.id}>{e.nom}</option>
@@ -71,11 +71,11 @@ export default async function ModifierPersonne({ params }: { params: Promise<{ i
         <div className="row2">
           <label className="field">
             <span className="lab">Téléphone (facultatif)</span>
-            <input name="tel" type="tel" inputMode="tel" defaultValue={contact.tel ?? ""} placeholder="Ex. 06 12 34 56 78" />
+            <input id="f-tel" name="tel" type="tel" inputMode="tel" defaultValue={contact.tel ?? ""} placeholder="Ex. 06 12 34 56 78" />
           </label>
           <label className="field">
             <span className="lab">E-mail (facultatif)</span>
-            <input name="email" type="email" inputMode="email" autoCapitalize="none" spellCheck={false} defaultValue={contact.email ?? ""} placeholder="Ex. b.massy@…" />
+            <input id="f-email" name="email" type="email" inputMode="email" autoCapitalize="none" spellCheck={false} defaultValue={contact.email ?? ""} placeholder="Ex. b.massy@…" />
           </label>
         </div>
 
