@@ -43,6 +43,14 @@ ${listePersonnes}
 - STRUCTURE D'UNE PERSONNE CONNUE (TRÈS IMPORTANT) : si une personne connue a une structure indiquée ci-dessus (après le « — ») et qu'elle est évoquée dans la dictée, alors sa structure est CONCERNÉE par l'échange, MÊME si son nom n'est pas prononcé. Tu DOIS : (1) l'ajouter dans "entites" (libellé exact) ; (2) la rattacher à l'affaire évoquée dans "liens" — elle en est le client / donneur d'ordre, donc c'est aussi le « Client » du titre et le "entite" de la nouvelle opération ; (3) la renseigner comme "entite" de la relance correspondante. Exemple : dictée « Florian relance Béatrice Massy sur une nouvelle opération de 35 lots », avec « Béatrice Massy — Pichet Promotion » connue → entites: ["Pichet Promotion"] ; nouvelles_operations: [{nom:"Pichet Promotion - ✕ - Construction de 35 lots", entite:"Pichet Promotion", ville:null}] ; liens: [{operation:"Pichet Promotion - ✕ - Construction de 35 lots", entite:"Pichet Promotion"}] ; relances: [{objet:"Relancer sur la nouvelle opération de 35 lots", personne:"Florian …", entite:"Pichet Promotion", operation:"Pichet Promotion - ✕ - Construction de 35 lots"}].
 - SENS UNIQUE — NE DÉDUIS JAMAIS une PERSONNE à partir d'une STRUCTURE : la règle ci-dessus va de la personne vers sa structure, JAMAIS l'inverse. Ce n'est pas parce qu'une structure est concernée (ex. Spirit) qu'il faut lui attribuer un de ses contacts connus (ex. « Benjamin Lepot — Spirit »). N'ajoute une personne dans "contacts", et ne la mets comme "personne" d'une relance, QUE si elle est explicitement nommée (ou clairement l'acteur/la cible de l'action) dans la dictée. Si aucune personne n'est nommée pour une relance, laisse "personne" à null — ne choisis PAS un contact de la structure par défaut.
 
+COORDONNÉES D'UNE PERSONNE (téléphone, e-mail) — champs "tel" et "email" d'un contact :
+- Renseigne-les UNIQUEMENT si le numéro ou l'adresse est RÉELLEMENT présent : prononcé dans la dictée (« son portable c'est le 06 12 34 56 78 », « il m'a donné son mail, b.massy arobase pichet point fr ») ou LISIBLE sur une pièce jointe (carte de visite, signature d'e-mail, capture d'écran).
+- N'INVENTE JAMAIS une coordonnée. Ne DÉDUIS jamais une adresse e-mail à partir du nom de la personne et de sa structure (« prenom.nom@structure.fr » est une invention, pas une information). Si tu n'as ni numéro ni adresse, mets null.
+- Une dictée épelle souvent une adresse : « arobase » = « @ », « point » = « . », « tiret » = « - », « underscore » = « _ ». Reconstitue l'adresse en symboles, en minuscules, sans espace (« b point massy arobase pichet point fr » → "b.massy@pichet.fr").
+- Un numéro dicté par blocs (« zéro six, douze, trente-quatre… ») se réécrit en chiffres. Format français : 10 chiffres commençant par 0 (ex. "06 12 34 56 78"). Format international : garde le « + » et l'indicatif (ex. "+33 6 12 34 56 78").
+- Ne confonds pas un numéro de téléphone avec un autre nombre du compte rendu (nombre de lots, surface, montant, numéro de rue, référence d'affaire) : dans le doute, mets null.
+- N'attribue une coordonnée qu'à la personne à qui elle appartient. Un standard ou une adresse générique de structure (« contact@… », « accueil@… ») n'est PAS la coordonnée d'une personne : ne la mets sur aucun contact.
+
 ÉQUIPE INTERNE (Administration PULZ) — NE JAMAIS mettre dans "contacts" :
 ${listeMembres}
 - Ces personnes sont des COLLÈGUES internes (dont l'auteur/l'expéditeur du compte rendu), PAS des interlocuteurs externes. Ne les mets JAMAIS dans "contacts" et ne propose JAMAIS de les créer. Si l'une d'elles est mentionnée par son seul prénom (ex. « Florian »), reconnais-la mais NE la liste PAS comme contact.
@@ -109,7 +117,7 @@ Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, de la forme :
   "referents": [{ "operation": "nom exact d'une opération (connue ou nouvelle)", "referent": "« Prénom Nom » du MEMBRE INTERNE (équipe) qui pilote l'affaire — jamais un contact externe" }],
   "changements_phase": [{ "operation": "nom EXACT d'une opération CONNUE qui progresse", "phase": "piste|qualifie|concours|a_chiffrer|offre_remise|nego|gagne|perdu" }],
   "changements_ville": [{ "operation": "nom EXACT d'une opération CONNUE (avec son « ✕ ») dont on précise la commune", "ville": "nom de la commune seul (ex. Poitiers)" }],
-  "contacts": [{ "nom": "nom de famille", "prenom": "prénom ou null", "fonction": "fonction ou null", "entite": "libellé de sa structure (connue ou nouvelle) ou null", "operations": ["noms exacts des affaires dont cette personne est LE CONTACT, ou []"] }],
+  "contacts": [{ "nom": "nom de famille", "prenom": "prénom ou null", "fonction": "fonction ou null", "entite": "libellé de sa structure (connue ou nouvelle) ou null", "operations": ["noms exacts des affaires dont cette personne est LE CONTACT, ou []"], "tel": "téléphone RÉELLEMENT dicté ou lu sur une pièce (ex. 06 12 34 56 78), sinon null", "email": "adresse e-mail RÉELLEMENT dictée ou lue sur une pièce, en minuscules, sinon null — JAMAIS déduite du nom" }],
   "relances": [{ "objet": "action de suivi à faire, à l'impératif, SANS nom de personne", "personne": "personne concernée (nom ou « Prénom Nom ») ou null", "operation": "nom de l'affaire concernée (connue ou nouvelle) ou null", "entite": "nom de la structure concernée ou null", "dans_jours": 14 }]
 }`;
 }
@@ -139,6 +147,7 @@ Règles absolues :
 - Pour les rattachements, n'utilise que les libellés EXACTS existants ci-dessous ; si la consigne demande de retirer un rattachement, enlève-le de la liste.
 - Une STRUCTURE (organisation) va dans "entites" ; une PERSONNE physique (nom, prénom, fonction) va dans "contacts" — jamais l'inverse.
 - Relances : "objet" = l'action seule, à l'impératif, SANS nom de personne (« Rappeler… », pas « Maxence doit rappeler… ») ; la personne concernée va dans "personne".
+- COORDONNÉES ("tel", "email" d'un contact) : conserve celles qui sont déjà là ; ne les renseigne ou ne les corrige que si la consigne les donne (« son portable c'est le 06 12 34 56 78 », « son mail c'est b.massy arobase pichet point fr »). N'INVENTE ni ne DÉDUIS jamais une adresse à partir du nom et de la structure. « arobase » = « @ », « point » = « . » : reconstitue l'adresse en symboles, minuscules, sans espace. Si la consigne demande de retirer une coordonnée, mets null.
 
 Entités connues :
 ${listeEntites}
@@ -163,7 +172,7 @@ Réponds UNIQUEMENT par l'objet JSON complet et corrigé, sans texte autour, de 
   "referents": [{ "operation": "nom exact d'une opération", "referent": "« Prénom Nom » du membre INTERNE (équipe) — jamais un contact externe" }],
   "changements_phase": [{ "operation": "nom exact d'une opération connue qui progresse", "phase": "piste|qualifie|concours|a_chiffrer|offre_remise|nego|gagne|perdu" }],
   "changements_ville": [{ "operation": "nom exact d'une opération connue (avec son « ✕ ») dont on précise la commune", "ville": "nom de la commune seul" }],
-  "contacts": [{ "nom": "…", "prenom": "… ou null", "fonction": "… ou null", "entite": "structure ou null", "operations": ["affaires dont la personne est le contact, ou []"] }],
+  "contacts": [{ "nom": "…", "prenom": "… ou null", "fonction": "… ou null", "entite": "structure ou null", "operations": ["affaires dont la personne est le contact, ou []"], "tel": "téléphone ou null", "email": "e-mail ou null" }],
   "relances": [{ "objet": "action à l'impératif, SANS nom de personne", "personne": "personne concernée ou null", "operation": "nom de l'affaire concernée ou null", "entite": "nom de la structure concernée ou null", "dans_jours": 14 }]
 }`;
 }

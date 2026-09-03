@@ -25,7 +25,7 @@ type Item = { type: "entite" | "operation" | "personne"; id: string; cat: string
 type SectionIcon = "structure" | "operation" | "personne" | "relance" | "ville";
 type Section = { titre: string; icon?: SectionIcon; items: Item[] };
 type Relance = { id: string; objet: string; echeance: string; enRetard: boolean; personnes?: { nom: string; membre: boolean }[]; operation?: { id: string; nom: string } | null };
-type Apercu = { cat: string; catLabel: string; nom: string; meta?: string; ville?: string | null; href: string; sections: Section[]; relances?: Relance[] };
+type Apercu = { cat: string; catLabel: string; nom: string; meta?: string; ville?: string | null; tel?: string | null; email?: string | null; href: string; sections: Section[]; relances?: Relance[] };
 
 export default function ExpandableRow({
   type,
@@ -92,6 +92,21 @@ export default function ExpandableRow({
                     </div>
                   </div>
                 )}
+                {data.cat === "pers" && (
+                  <div className="carte-sect">
+                    <div className="carte-sect-h"><CatIcon name="personne" /> Coordonnées</div>
+                    {data.tel || data.email ? (
+                      <div className="carte-coord">
+                        {data.tel && <a className="btn ghost mini" href={`tel:${data.tel}`} onClick={(e) => e.stopPropagation()}>{data.tel}</a>}
+                        {data.email && <a className="btn ghost mini" href={`mailto:${data.email}`} onClick={(e) => e.stopPropagation()}>{data.email}</a>}
+                      </div>
+                    ) : (
+                      <div className="sig-wrap">
+                        <span className="sig-d ville vide"><span className="sig-lbl">✕ à compléter</span></span>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {data.sections.map((s, i) => (
                   <div className="carte-sect" key={i}>
                     <div className="carte-sect-h"><CatIcon name={s.icon ?? "structure"} /> {s.titre}</div>
@@ -116,7 +131,7 @@ export default function ExpandableRow({
                     </div>
                   </div>
                 )}
-                {data.sections.length === 0 && !(data.relances && data.relances.length) && <p className="hint" style={{ margin: 0 }}>Aucun élément associé pour l'instant.</p>}
+                {data.cat !== "pers" && data.sections.length === 0 && !(data.relances && data.relances.length) && <p className="hint" style={{ margin: 0 }}>Aucun élément associé pour l'instant.</p>}
                 <div className="carte-foot">
                   <button type="button" className="btn ghost mini danger" onClick={() => demanderSuppression(type, id, data?.nom ?? nom)}>Supprimer</button>
                   <Link className="btn" href={data.href}>Ouvrir la fiche</Link>

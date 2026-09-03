@@ -11,6 +11,9 @@ import { redirect } from "next/navigation";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { getIdentite } from "@/lib/auth";
 import { STATUT_ORDRE, type OperationStatut } from "@/lib/types";
+// Mêmes contrôles de forme que pour les sorties de l'IA : une coordonnée
+// mal formée est écartée, qu'elle vienne d'une dictée ou d'un formulaire.
+import { normTel, normEmail } from "@/lib/synthese";
 
 const ENTITE_TYPES = ["MOA", "archi", "promoteur", "bet", "confrere", "autre"] as const;
 const STATUT_VIE = ["actif", "dormant"] as const;
@@ -92,6 +95,25 @@ function normaliserCasseTitre(titre: string): string {
 function strOrNull(fd: FormData, key: string): string | null {
   const v = str(fd, key);
   return v.length ? v : null;
+}
+
+// Coordonnées saisies dans un formulaire. Champ vide = on efface la valeur.
+// Champ rempli mais mal formé = on refuse, avec un message clair : mieux vaut
+// une correction immédiate qu'un numéro ou une adresse inutilisables en base.
+function champTel(fd: FormData, key: string): string | null {
+  const v = str(fd, key);
+  if (!v) return null;
+  const t = normTel(v);
+  if (!t) throw new Error("Le numéro de téléphone n'est pas valide (ex. 06 12 34 56 78).");
+  return t;
+}
+
+function champEmail(fd: FormData, key: string): string | null {
+  const v = str(fd, key);
+  if (!v) return null;
+  const e = normEmail(v);
+  if (!e) throw new Error("L'adresse e-mail n'est pas valide (ex. prenom.nom@societe.fr).");
+  return e;
 }
 
 // Montant saisi librement (« 12 000 », « 12000,50 ») → nombre ou null.
@@ -278,6 +300,11 @@ export async function updateContact(fd: FormData) {
     nom,
     prenom: strOrNull(fd, "prenom"),
     fonction: capFirst(strOrNull(fd, "fonction")),
+    // Coordonnées : la saisie manuelle fait foi. Vider le champ efface la
+    // valeur ; une saisie mal formée est refusée plutôt que silencieusement
+    // enregistrée (un numéro faux est pire qu'un champ vide).
+    tel: champTel(fd, "tel"),
+    email: champEmail(fd, "email"),
   };
   // Structure : menu déroulant → identifiant direct. Vide = « Aucune » (on
   // détache la personne de sa structure). On vérifie que la structure choisie
@@ -490,13 +517,18 @@ async function materialiserCr(
         nom: typeof p?.nom === "string" ? p.nom.trim() : "",
         prenom: typeof p?.prenom === "string" && p.prenom.trim() ? p.prenom.trim() : null,
         fonction: typeof p?.fonction === "string" && p.fonction.trim() ? capFirst(p.fonction.trim()) : null,
+        // Coordonnées repérées dans la dictée / sur une pièce jointe (ou saisies
+        // au débrief). Revalidées ici : une valeur mal formée devient null.
+        tel: normTel(p?.tel),
+        email: normEmail(p?.email),
         entite_id:
           typeof p?.entite === "string" && p.entite.trim()
             ? idByNom.get(p.entite.trim().toLowerCase()) ?? null
             : null,
       }))
       .filter((p) => p.nom) as {
-      nom: string; prenom: string | null; fonction: string | null; entite_id: string | null;
+      nom: string; prenom: string | null; fonction: string | null;
+      tel: string | null; email: string | null; entite_id: string | null;
     }[];
     // Ne PAS dupliquer un membre de l'équipe (Administration) en contact : il est
     // reconnu par son nom mais reste géré côté utilisateurs.
@@ -512,36 +544,62 @@ async function materialiserCr(
     if (netsHorsMembres.length) {
       const key = (eid: string | null, nom: string, prenom: string | null) =>
         `${eid ?? "∅"}|${nom.toLowerCase()}|${(prenom ?? "").toLowerCase()}`;
-      const seen = new Set<string>();
-      // Doublons éventuels : contacts existants (avec structure concernée + sans structure).
+      // Personnes déjà en base (structure concernée + sans structure). On garde
+      // leur identifiant et leurs coordonnées actuelles : une personne déjà
+      // connue n'est pas recréée, mais peut être ENRICHIE (voir plus bas).
+      type Existant = { id: string; tel: string | null; email: string | null };
+      const dejaLa = new Map<string, Existant>();
+      const SELC = "id, nom, prenom, entite_id, tel, email";
       const entIds = [...new Set(netsHorsMembres.map((p) => p.entite_id).filter(Boolean))] as string[];
       if (entIds.length) {
-        const { data: ex1 } = await sb.from("contacts").select("nom, prenom, entite_id").in("entite_id", entIds);
-        for (const c of (ex1 ?? []) as any[]) seen.add(key(c.entite_id, c.nom ?? "", c.prenom ?? null));
+        const { data: ex1 } = await sb.from("contacts").select(SELC).in("entite_id", entIds);
+        for (const c of (ex1 ?? []) as any[]) {
+          dejaLa.set(key(c.entite_id, c.nom ?? "", c.prenom ?? null), { id: c.id, tel: c.tel ?? null, email: c.email ?? null });
+        }
       }
-      const { data: ex2 } = await sb.from("contacts").select("nom, prenom").is("entite_id", null);
-      for (const c of (ex2 ?? []) as any[]) seen.add(key(null, c.nom ?? "", c.prenom ?? null));
+      const { data: ex2 } = await sb.from("contacts").select(SELC).is("entite_id", null);
+      for (const c of (ex2 ?? []) as any[]) {
+        dejaLa.set(key(null, c.nom ?? "", c.prenom ?? null), { id: c.id, tel: c.tel ?? null, email: c.email ?? null });
+      }
 
+      // ENRICHISSEMENT des personnes déjà connues : on ne remplit QUE les
+      // coordonnées encore vides. Une valeur saisie dans l'outil fait toujours
+      // foi — un compte rendu ne l'écrase jamais (une erreur de transcription
+      // ne doit pas effacer un numéro vérifié).
+      const aEnrichir = new Map<string, { tel?: string; email?: string }>();
+      const vusInsert = new Set<string>();
       const toInsert = netsHorsMembres.filter((p) => {
         const k = key(p.entite_id, p.nom, p.prenom);
-        if (seen.has(k)) return false;
-        seen.add(k);
+        const ex = dejaLa.get(k);
+        if (ex) {
+          const patch = aEnrichir.get(ex.id) ?? {};
+          if (p.tel && !ex.tel && !patch.tel) patch.tel = p.tel;
+          if (p.email && !ex.email && !patch.email) patch.email = p.email;
+          if (Object.keys(patch).length) aEnrichir.set(ex.id, patch);
+          return false;
+        }
+        if (vusInsert.has(k)) return false;
+        vusInsert.add(k);
         return true;
       });
+      for (const [contactId, patch] of aEnrichir) {
+        await sb.from("contacts").update(patch).eq("id", contactId);
+      }
+
       const avecStruct = toInsert.filter((p) => p.entite_id);
       const sansStruct = toInsert.filter((p) => !p.entite_id);
+      const ligne = (p: (typeof toInsert)[number], entite_id: string | null) => ({
+        entite_id, nom: p.nom, prenom: p.prenom, fonction: p.fonction,
+        tel: p.tel, email: p.email, source: "vocal",
+      });
       if (avecStruct.length) {
-        await sb.from("contacts").insert(
-          avecStruct.map((p) => ({ entite_id: p.entite_id, nom: p.nom, prenom: p.prenom, fonction: p.fonction, source: "vocal" })),
-        );
+        await sb.from("contacts").insert(avecStruct.map((p) => ligne(p, p.entite_id)));
       }
       // Personnes sans structure : possible seulement une fois la migration 0004
       // appliquée (entite_id nullable). Défensif : un échec n'interrompt pas la
       // sauvegarde du compte rendu.
       if (sansStruct.length) {
-        await sb.from("contacts").insert(
-          sansStruct.map((p) => ({ entite_id: null, nom: p.nom, prenom: p.prenom, fonction: p.fonction, source: "vocal" })),
-        );
+        await sb.from("contacts").insert(sansStruct.map((p) => ligne(p, null)));
       }
     }
   }
@@ -1086,16 +1144,32 @@ export async function createContact(fd: FormData) {
   const nom = str(fd, "nom");
   if (!nom) throw new Error("Le nom de la personne est obligatoire.");
 
+  // Structure facultative : on ne retient l'identifiant que s'il appartient
+  // bien à l'organisation courante (même contrôle que updateContact).
+  const choisie = strOrNull(fd, "entite_id");
+  let entiteId: string | null = null;
+  if (choisie) {
+    const { data: e } = await supabase
+      .from("entites")
+      .select("id")
+      .eq("org_id", org_id)
+      .eq("id", choisie)
+      .maybeSingle();
+    entiteId = e?.id ?? null;
+  }
+
   const { data, error } = await supabase
     .from("contacts")
+    // NB : la table `contacts` n'a pas de colonne org_id — l'organisation d'une
+    // personne se déduit de sa structure (entite_id). On vérifie donc que la
+    // structure choisie appartient bien à l'organisation courante.
     .insert({
-      org_id,
       nom,
       prenom: strOrNull(fd, "prenom"),
       fonction: capFirst(strOrNull(fd, "fonction")),
-      tel: strOrNull(fd, "tel"),
-      email: strOrNull(fd, "email"),
-      entite_id: strOrNull(fd, "entite_id"),
+      tel: champTel(fd, "tel"),
+      email: champEmail(fd, "email"),
+      entite_id: entiteId,
     })
     .select("id")
     .single();

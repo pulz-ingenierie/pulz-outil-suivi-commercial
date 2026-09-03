@@ -148,7 +148,7 @@ export async function GET(req: Request) {
     }
 
     if (type === "personne") {
-      const { data: c } = await sb.from("contacts").select("id, nom, prenom, fonction, entite_id").eq("id", id).maybeSingle();
+      const { data: c } = await sb.from("contacts").select("id, nom, prenom, fonction, tel, email, entite_id").eq("id", id).maybeSingle();
       if (!c) return NextResponse.json({ error: "introuvable" }, { status: 404 });
       const cc = c as any;
       let structSection: any = null;
@@ -196,6 +196,8 @@ export async function GET(req: Request) {
       const relances = formatRelances(relRows, membreSet);
       return NextResponse.json({
         cat: "pers", catLabel: "Personne", nom: nomComplet,
+        // Coordonnées : affichées en boutons d'appel direct dans le volet.
+        tel: cc.tel ?? null, email: cc.email ?? null,
         meta: cc.fonction ?? "", href: `/personnes/${id}`, sections, relances,
       });
     }

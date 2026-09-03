@@ -15,6 +15,8 @@ export interface ContactExtrait {
   fonction: string | null;
   entite: string | null; // structure de rattachement (libellé)
   operations: string[]; // affaires dont cette personne est LE CONTACT (par nom)
+  tel: string | null; // téléphone dicté/lu sur une pièce jointe, sinon null
+  email: string | null; // e-mail dicté/lu sur une pièce jointe, sinon null
 }
 
 export interface NouvelleEntite {
@@ -45,6 +47,39 @@ export interface Synthese {
 }
 
 const ENTITE_TYPES = ["MOA", "archi", "promoteur", "bet", "confrere", "autre"];
+
+// -----------------------------------------------------------------------------
+// Coordonnées d'une personne (téléphone, e-mail) extraites d'une dictée ou d'une
+// pièce jointe. Règle anti-invention : on n'accepte QUE ce qui a bien la FORME
+// d'une coordonnée. Une valeur douteuse est jetée — un champ vide vaut mieux
+// qu'un numéro ou une adresse faux, qu'on croirait vrais.
+// -----------------------------------------------------------------------------
+const RE_EMAIL = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
+
+export function normEmail(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  // La dictée écrit parfois « arobase » / « point » : Whisper les rend déjà en
+  // symboles la plupart du temps. On se contente de nettoyer les évidences.
+  const s = v.trim().toLowerCase().replace(/^mailto:/, "").replace(/\s+/g, "");
+  return s.length <= 254 && RE_EMAIL.test(s) ? s : null;
+}
+
+// Téléphone : on ne garde que les chiffres (plus un « + » international de tête).
+// 8 à 15 chiffres = plage de la norme E.164 ; en deçà/au-delà, ce n'est pas un
+// numéro (un montant, une surface, un nombre de lots dicté par erreur…).
+// Mise en forme française par paires pour un 0X à 10 chiffres.
+export function normTel(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const brut = v.trim();
+  if (!brut) return null;
+  const international = brut.startsWith("+") || brut.startsWith("00");
+  const chiffres = brut.replace(/\D/g, "");
+  if (chiffres.length < 8 || chiffres.length > 15) return null;
+  if (chiffres.length === 10 && chiffres.startsWith("0") && !brut.startsWith("+")) {
+    return chiffres.replace(/(\d{2})(?=\d)/g, "$1 ").trim();
+  }
+  return international ? `+${chiffres.replace(/^00/, "")}` : chiffres;
+}
 
 // Date au format AAAA-MM-JJ ? (contrôle simple, anti-invention.)
 export function isIsoDate(v: unknown): v is string {
@@ -109,6 +144,8 @@ export function validateSynthese(
           fonction: typeof c.fonction === "string" && c.fonction.trim() ? c.fonction.trim() : null,
           entite: typeof c.entite === "string" && c.entite.trim() ? c.entite.trim() : null,
           operations: asStringArray(c.operations),
+          tel: normTel(c.tel),
+          email: normEmail(c.email),
         }))
         .filter((c) => c.nom.length > 0)
     : [];

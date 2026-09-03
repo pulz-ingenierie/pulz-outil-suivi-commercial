@@ -19,11 +19,14 @@ export default async function ModifierPersonne({ params }: { params: Promise<{ i
 
   const supabase = getServerSupabase()!;
   const [{ data: c }, { data: entites }] = await Promise.all([
-    supabase.from("contacts").select("id, nom, prenom, fonction, entite_id").eq("id", id).maybeSingle(),
+    supabase.from("contacts").select("id, nom, prenom, fonction, tel, email, entite_id").eq("id", id).maybeSingle(),
     supabase.from("entites").select("id, nom").order("nom"),
   ]);
   if (!c) notFound();
-  const contact = c as { id: string; nom: string; prenom: string | null; fonction: string | null; entite_id: string | null };
+  const contact = c as {
+    id: string; nom: string; prenom: string | null; fonction: string | null;
+    tel: string | null; email: string | null; entite_id: string | null;
+  };
   const nomComplet = [contact.prenom, contact.nom].filter(Boolean).join(" ") || contact.nom;
 
   return (
@@ -65,6 +68,22 @@ export default async function ModifierPersonne({ params }: { params: Promise<{ i
           </select>
         </label>
 
+        <div className="row2">
+          <label className="field">
+            <span className="lab">Téléphone (facultatif)</span>
+            <input name="tel" type="tel" inputMode="tel" defaultValue={contact.tel ?? ""} placeholder="Ex. 06 12 34 56 78" />
+          </label>
+          <label className="field">
+            <span className="lab">E-mail (facultatif)</span>
+            <input name="email" type="email" inputMode="email" autoCapitalize="none" spellCheck={false} defaultValue={contact.email ?? ""} placeholder="Ex. b.massy@…" />
+          </label>
+        </div>
+
+        <p className="hint">
+          Les coordonnées se remplissent aussi toutes seules quand un compte rendu
+          les mentionne (numéro dicté, carte de visite, signature d'e-mail). Ce que
+          vous saisissez ici fait foi : une dictée ne l'écrasera jamais.
+        </p>
         <p className="hint">La correction s'appliquera partout où cette personne est citée.</p>
 
         <div className="form-foot">

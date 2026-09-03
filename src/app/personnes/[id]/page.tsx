@@ -138,8 +138,22 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
             {struct && <Signet type="entite" id={struct.id} cat="struct" label={struct.nom} parent={{ type: "personne", id: contact.id, nom: nomComplet }} />}
           </div>
           <div className="kv"><span className="k">Fonction</span><span>{contact.fonction || "—"}</span></div>
-          {contact.tel && <div className="kv"><span className="k">Téléphone</span><span>{contact.tel}</span></div>}
-          {contact.email && <div className="kv"><span className="k">E-mail</span><span>{contact.email}</span></div>}
+          {/* Coordonnées TOUJOURS affichées, même vides : le « ✕ à compléter »
+              signale l'information manquante (même repère que la ville d'une
+              affaire). Elles se remplissent seules quand un compte rendu les
+              mentionne, sinon d'un tap sur « Modifier ». */}
+          <div className="kv">
+            <span className="k">Téléphone</span>
+            {contact.tel
+              ? <a href={`tel:${contact.tel}`}>{contact.tel}</a>
+              : <Link className="kv-vide" href={`/personnes/${contact.id}/modifier`}>✕ à compléter</Link>}
+          </div>
+          <div className="kv">
+            <span className="k">E-mail</span>
+            {contact.email
+              ? <a href={`mailto:${contact.email}`}>{contact.email}</a>
+              : <Link className="kv-vide" href={`/personnes/${contact.id}/modifier`}>✕ à compléter</Link>}
+          </div>
           {(contact.tel || contact.email) && (
             <div className="contact-acts" style={{ marginTop: 12 }}>
               {contact.tel && <a className="btn ghost mini" href={`tel:${contact.tel}`}>Appeler</a>}

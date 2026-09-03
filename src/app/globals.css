@@ -340,6 +340,16 @@ a.vrow { color: var(--ink); text-decoration: none; }
 .contact-main .cfn { color: var(--muted); font-size: 12.5px; margin-top: 3px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .contact-acts { display: flex; gap: 7px; flex-wrap: wrap; }
 
+/* Coordonnées d'une personne dans une carte / un volet dépliable : le numéro et
+   l'adresse sont eux-mêmes les boutons d'action (appeler, écrire). */
+.carte-coord { display: flex; gap: 7px; flex-wrap: wrap; margin: 2px 0 4px; }
+.carte-coord .btn { font-variant-numeric: tabular-nums; }
+
+/* Coordonnée manquante sur une fiche : même repère que le « ✕ » d'une ville
+   non renseignée — ça se voit, et ça mène directement au formulaire. */
+.kv-vide { color: var(--crit); text-decoration: none; }
+.kv-vide:hover { text-decoration: underline; }
+
 /* En-tête d'une page dédiée (retour + titre). */
 .page-head { margin-bottom: 16px; }
 .backlink { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px;

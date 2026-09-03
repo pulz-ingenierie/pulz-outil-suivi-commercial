@@ -43,7 +43,7 @@ function Icon({ name }: { name: "structure" | "operation" | "personne" | "relanc
     return <svg {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></svg>;
   return <svg {...p}><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6" /><path d="M10 20a2 2 0 0 0 4 0" /></svg>;
 }
-type PersonneEdit = { prenom: string; nom: string; fonction: string; entite: string; operations?: string[] };
+type PersonneEdit = { prenom: string; nom: string; fonction: string; entite: string; tel: string; email: string; operations?: string[] };
 type RelanceEdit = { objet: string; date: string; personne: string; operation?: string; entite?: string };
 
 const TYPES_RDV = [
@@ -342,6 +342,8 @@ export default function VoiceCr({
           nom: c.nom,
           fonction: c.fonction ?? "",
           entite: c.entite ?? "",
+          tel: (c as any).tel ?? "",
+          email: (c as any).email ?? "",
           operations: Array.isArray((c as any).operations) ? (c as any).operations : [],
         })),
     );
@@ -551,6 +553,11 @@ export default function VoiceCr({
       prenom: p.prenom.trim() || null,
       fonction: p.fonction.trim() || null,
       entite: p.entite.trim() || null,
+      // Coordonnées : proposées par l'IA (dictée / carte de visite) ou saisies
+      // ici. Elles ENRICHISSENT la fiche personne, sans jamais écraser une
+      // coordonnée déjà renseignée en base (voir consolidation).
+      tel: p.tel.trim() || null,
+      email: p.email.trim() || null,
       operations: Array.from(new Set((p.operations ?? []).map(opExact).filter(Boolean))),
     }));
   const relancesPayload = relances
@@ -910,6 +917,12 @@ export default function VoiceCr({
                   </SectionAssoc>
                 );
               })()}
+              {(p.tel.trim() || p.email.trim()) && (
+                <div className="carte-coord">
+                  {p.tel.trim() && <a className="btn ghost mini" href={`tel:${p.tel.trim()}`}>{p.tel}</a>}
+                  {p.email.trim() && <a className="btn ghost mini" href={`mailto:${p.email.trim()}`}>{p.email}</a>}
+                </div>
+              )}
               {opsRat.length > 0 && (
                 <SectionAssoc titre="Opérations évoquées" icon="operation">
                   {opsRat.map(({ r: o, idx }) => <AssocSignet key={idx} kind="op" label={o.name} onClick={() => ouvrirCarte("rat", idx)} />)}
@@ -934,6 +947,10 @@ export default function VoiceCr({
               <input value={p.fonction} placeholder="Fonction…" onChange={(e) => majPers(i, { fonction: e.target.value })} /></label>
             <label className="field"><span className="lab">Structure</span>
               <input list="dl-structures" value={p.entite} placeholder="Sa structure…" onChange={(e) => majPers(i, { entite: e.target.value })} /></label>
+            <label className="field"><span className="lab">Téléphone</span>
+              <input type="tel" inputMode="tel" value={p.tel} placeholder="Ex. 06 12 34 56 78" onChange={(e) => majPers(i, { tel: e.target.value })} /></label>
+            <label className="field"><span className="lab">E-mail</span>
+              <input type="email" inputMode="email" autoCapitalize="none" spellCheck={false} value={p.email} placeholder="Ex. b.massy@…" onChange={(e) => majPers(i, { email: e.target.value })} /></label>
             <div className="carte-foot"><button type="button" className="btn" onClick={() => setCardMode("view")}>OK</button></div>
           </div>
         </>
@@ -1195,7 +1212,7 @@ export default function VoiceCr({
                 </button>
               );
             })}
-            <button type="button" className="sig-add" onClick={() => { setPersonnes((pp) => [...pp, { prenom: "", nom: "", fonction: "", entite: "" }]); ouvrirCarte("pers", personnes.length, "edit"); }}>＋ Ajouter</button>
+            <button type="button" className="sig-add" onClick={() => { setPersonnes((pp) => [...pp, { prenom: "", nom: "", fonction: "", entite: "", tel: "", email: "" }]); ouvrirCarte("pers", personnes.length, "edit"); }}>＋ Ajouter</button>
           </div>
           {openCard?.cat === "pers" && editeurEnPlace()}
         </div>
