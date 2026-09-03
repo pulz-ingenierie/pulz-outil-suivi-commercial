@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isIsoDate } from "@/lib/synthese";
+import { erreurSynthese } from "@/lib/ia-erreurs";
 import { analyseCompteRendu, type PieceJointeIA } from "@/lib/ia-synthese";
 import { getServerSupabase } from "@/lib/supabase/server";
 
@@ -86,7 +87,6 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ synthese });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Erreur inconnue.";
-    return NextResponse.json({ error: `Synthèse échouée : ${message}` }, { status: 502 });
+    return NextResponse.json({ error: erreurSynthese(err) }, { status: 502 });
   }
 }

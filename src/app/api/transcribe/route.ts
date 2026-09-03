@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { erreurTranscription } from "@/lib/ia-erreurs";
 
 // Transcription audio → texte (Whisper). L'appel part du serveur : la clé
 // OpenAI reste côté serveur, jamais exposée au navigateur (règle CLAUDE.md).
@@ -66,7 +67,7 @@ export async function POST(req: Request) {
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
       return NextResponse.json(
-        { error: `Transcription échouée (${res.status}).`, detail: detail.slice(0, 300) },
+        { error: erreurTranscription(res.status, detail), detail: detail.slice(0, 300) },
         { status: 502 },
       );
     }

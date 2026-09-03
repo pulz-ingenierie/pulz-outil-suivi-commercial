@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { erreurSynthese } from "@/lib/ia-erreurs";
 import { NextResponse } from "next/server";
 import { affineSystemPrompt } from "@/lib/prompts";
 import { extractJsonObject, isIsoDate, validateSynthese, type Synthese } from "@/lib/synthese";
@@ -82,7 +83,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ synthese: validateSynthese(parsed, knownEntites, knownOps, today) });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Erreur inconnue.";
-    return NextResponse.json({ error: `Correction échouée : ${message}` }, { status: 502 });
+    // Même diagnostic que la synthèse : c'est le même compte Anthropic.
+    return NextResponse.json({ error: erreurSynthese(err).replace("Synthèse", "Correction") }, { status: 502 });
   }
 }
