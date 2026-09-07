@@ -42,7 +42,7 @@ export default async function Brouillons({
     supabase.from("entites").select("id, nom, type").order("nom"),
     supabase.from("operations").select("id, nom, ville").order("created_at", { ascending: false }),
     supabase.from("contacts").select("nom, prenom, entites(nom)"),
-    supabase.from("utilisateurs").select("nom").eq("actif", true),
+    supabase.from("utilisateurs").select("nom").eq("actif", true).order("nom"),
   ]);
   const membres = (membresRows ?? []).map((m: any) => String(m.nom ?? "").trim()).filter(Boolean);
   const contacts = (contactsBase ?? []).map((c: any) => ({

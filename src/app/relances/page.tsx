@@ -2,7 +2,7 @@ import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
 import { createRelance } from "@/lib/actions";
 import { envoyerRappelsMaintenant, envoyerDigestCrsMaintenant } from "@/lib/admin-actions";
 import { getIdentite } from "@/lib/auth";
-import { indexerLiens, personnesDeRelance } from "@/lib/personnes";
+import { indexerLiens, personnesDeRelance, avecResponsable } from "@/lib/personnes";
 import { titreOperation } from "@/lib/titres";
 import RelancesListe, { type RelRow } from "@/components/RelancesListe";
 import HashBack from "@/components/HashBack";
@@ -29,6 +29,7 @@ type Rel = {
   date_echeance: string;
   auto: boolean;
   personne: string | null;
+  assignee_id: string | null;
   operation_id: string | null;
   entite_id: string | null;
   operations: { nom: string; statut: string } | null;
@@ -41,8 +42,12 @@ function versRow(
   today: string,
   personnesIdx: Record<string, string>,
   opStructures: Record<string, { id: string; nom: string }[]>,
+  nomParMembre: Map<string, string>,
 ): RelRow {
-  const personnes = personnesDeRelance(r.personne, personnesIdx);
+  // Le membre RESPONSABLE (assignee_id) en tête, puis les personnes CONCERNÉES
+  // (texte libre, contacts externes) : ce sont deux rôles distincts.
+  const responsable = r.assignee_id ? nomParMembre.get(r.assignee_id) ?? null : null;
+  const personnes = personnesDeRelance(avecResponsable(r.personne, responsable), personnesIdx);
   const op = r.operation_id && r.operations?.nom
     ? { id: r.operation_id, nom: r.operations.nom, statut: r.operations.statut }
     : null;
@@ -101,10 +106,15 @@ export default async function Relances({
       .order("date_echeance", { ascending: true }),
     supabase.from("operations").select("id, nom").order("created_at", { ascending: false }),
     supabase.from("entites").select("id, nom").order("nom"),
-    supabase.from("utilisateurs").select("id, nom").eq("actif", true).order("nom"),
+    supabase.from("utilisateurs").select("id, nom, actif").order("nom"),
     supabase.from("contacts").select("id, nom, prenom"),
   ]);
   const personnesIdx = indexerLiens((contacts ?? []) as any, (utilisateurs ?? []) as any);
+  // Un responsable désactivé depuis doit rester lisible sur ses relances : on
+  // garde donc tous les membres pour l'affichage, et on ne filtre « actif » que
+  // pour les listes de choix.
+  const nomParMembre = new Map(((utilisateurs ?? []) as any[]).map((u) => [u.id as string, u.nom as string]));
+  const membresActifs = ((utilisateurs ?? []) as any[]).filter((u) => u.actif);
 
   const today = new Date().toISOString().slice(0, 10);
   const list = (relances ?? []) as unknown as Rel[];
@@ -198,10 +208,10 @@ export default async function Relances({
       )}
 
       <RelancesListe
-        membres={(utilisateurs ?? []).map((u: any) => u.nom).filter(Boolean)}
+        membres={membresActifs.map((u: any) => u.nom).filter(Boolean)}
         groupes={[
-          { titre: "En retard", classe: "crit", items: enRetard.map((r) => versRow(r, today, personnesIdx, opStructures)) },
-          { titre: "À venir", classe: "muted-h", items: aVenir.map((r) => versRow(r, today, personnesIdx, opStructures)) },
+          { titre: "En retard", classe: "crit", items: enRetard.map((r) => versRow(r, today, personnesIdx, opStructures, nomParMembre)) },
+          { titre: "À venir", classe: "muted-h", items: aVenir.map((r) => versRow(r, today, personnesIdx, opStructures, nomParMembre)) },
         ]}
       />
 
@@ -226,7 +236,7 @@ export default async function Relances({
               <span className="lab">Assignée à</span>
               <select name="assignee_id" defaultValue="">
                 <option value="">— Personne —</option>
-                {(utilisateurs ?? []).map((u: any) => <option key={u.id} value={u.id}>{u.nom}</option>)}
+                {membresActifs.map((u: any) => <option key={u.id} value={u.id}>{u.nom}</option>)}
               </select>
             </label>
           </div>

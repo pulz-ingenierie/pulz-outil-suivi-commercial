@@ -8,7 +8,7 @@ import OperationRow from "@/components/OperationRow";
 import RelanceRow from "@/components/RelanceRow";
 import AssocierAffaire from "@/components/AssocierAffaire";
 import FilCr from "@/components/FilCr";
-import { normNom, indexerLiens, personnesDeRelance } from "@/lib/personnes";
+import { normNom, indexerLiens, personnesDeRelance, avecResponsable } from "@/lib/personnes";
 import ACompleter from "@/components/ACompleter";
 import { manquesContact } from "@/lib/completude";
 
@@ -63,6 +63,9 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
     supabase.from("utilisateurs").select("id, nom"),
   ]);
   const liensPersonnes = indexerLiens((tousContacts ?? []) as any, (membres ?? []) as any);
+  // Nom du membre responsable d'une relance (assignee_id) : affiché avec les
+  // personnes concernées, dont il reste distinct.
+  const nomParMembre = new Map(((membres ?? []) as any[]).map((m) => [m.id as string, m.nom as string]));
 
   const struct = structure as { id: string; nom: string; type: string } | null;
   const operations = ((liens ?? []) as any[])
@@ -171,7 +174,7 @@ export default async function FichePersonne({ params }: { params: Promise<{ id: 
                   echeance={dateFr(r.date_echeance)}
                   enRetard={r.date_echeance < today}
                   op={r.operation_id && r.operations?.nom ? { id: r.operation_id, nom: r.operations.nom } : null}
-                  personnes={personnesDeRelance(r.personne, liensPersonnes)}
+                  personnes={personnesDeRelance(avecResponsable(r.personne, r.assignee_id ? nomParMembre.get(r.assignee_id) ?? null : null), liensPersonnes)}
                 />
               ))}
             </div>

@@ -25,7 +25,7 @@ export default async function VocalPage({
     supabase.from("entites").select("id, nom, type").order("nom"),
     supabase.from("operations").select("id, nom, ville").order("created_at", { ascending: false }),
     supabase.from("contacts").select("nom, prenom, entites(nom)"),
-    supabase.from("utilisateurs").select("nom").eq("actif", true),
+    supabase.from("utilisateurs").select("nom").eq("actif", true).order("nom"),
     supabase.from("relances").select("id, objet, personne, date_echeance, operation_id, entite_id, operations(nom), entites(nom)").eq("statut", "a_faire"),
   ]);
   // Chaque contact connu porte le nom de sa structure (si rattaché) : l'IA s'en

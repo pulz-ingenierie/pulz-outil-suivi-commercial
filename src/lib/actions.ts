@@ -374,7 +374,6 @@ async function materialiserCr(
   org_id: string,
   crId: string,
   fd: FormData,
-  authorNom: string | null = null,
 ): Promise<{ entiteIds: string[]; operationIds: string[] }> {
   const sb = supabase!;
   const entiteIds = fd.getAll("entite_ids").map(String).filter(Boolean);
@@ -747,26 +746,37 @@ async function materialiserCr(
       const suitesFiltre = suites.filter((_: any, i: number) => baseFiltre.includes(base[i]));
 
       if (baseFiltre.length) {
-        // Le champ « personne » liste les personnes de la relance : le(s)
-        // contact(s) CONCERNÉ(s) (externe, ex. « Jean-François Turpin ») ET le
-        // membre RESPONSABLE. On garde ce que l'IA/le débrief a fourni, et si
-        // AUCUN membre du groupement n'y figure, on ajoute l'auteur comme
-        // responsable (celui qui doit provoquer l'action).
-        const { data: membresRows2 } = await sb.from("utilisateurs").select("nom");
-        const membreNoms = (membresRows2 ?? []).map((m: any) => normNom(m.nom)).filter(Boolean);
-        const aUnMembre = (p: string) => p.split(",").map((s) => normNom(s)).some((n) => n && membreNoms.includes(n));
-        const personneFinale = (p: string | null | undefined): string | null => {
-          const base = (p ?? "").trim();
-          if (base && aUnMembre(base)) return base; // déjà un responsable
-          if (authorNom) return base ? `${base}, ${authorNom}` : authorNom;
-          return base || null;
+        // DEUX rôles, DEUX colonnes — ne jamais les confondre :
+        //   `personne`    = le ou les contacts CONCERNÉS (externes, à recontacter) ;
+        //   `assignee_id` = le MEMBRE du groupement qui doit s'en occuper.
+        // Jusqu'ici le responsable n'était jamais renseigné pour une relance née
+        // d'une dictée : le rappel du matin, qui s'adresse à `assignee_id`, les
+        // ignorait toutes en silence. Le débrief fournit désormais le champ
+        // `responsable` ; à défaut, l'auteur du compte rendu en hérite.
+        const { data: membresRows2 } = await sb.from("utilisateurs").select("id, nom");
+        const idParMembre = new Map(
+          (membresRows2 ?? []).map((m: any) => [normNom(m.nom), m.id as string]),
+        );
+        const responsableId = (nom: string | null | undefined): string | null => {
+          for (const part of String(nom ?? "").split(",")) {
+            const id = idParMembre.get(normNom(part));
+            if (id) return id; // le premier membre reconnu porte la relance
+          }
+          return null;
         };
         // La colonne « personne » peut ne pas encore exister (migration 0003) :
         // on tente avec, et on retombe proprement sans elle en cas d'échec.
-        const { error: relErr } = await sb
-          .from("relances")
-          .insert(baseFiltre.map((row: any, i: number) => ({ ...row, personne: personneFinale(suitesFiltre[i].personne) })));
-        if (relErr) await sb.from("relances").insert(baseFiltre);
+        const lignes = baseFiltre.map((row: any, i: number) => ({
+          ...row,
+          personne: (suitesFiltre[i].personne ?? "").trim() || null,
+          assignee_id: responsableId(suitesFiltre[i].responsable) ?? auteurId ?? null,
+        }));
+        const { error: relErr } = await sb.from("relances").insert(lignes);
+        if (relErr) {
+          await sb.from("relances").insert(
+            lignes.map(({ personne, ...reste }: any) => reste),
+          );
+        }
       }
     }
   }
@@ -835,7 +845,7 @@ export async function createCr(fd: FormData) {
     .single();
   if (error) throw new Error(error.message);
 
-  const { operationIds } = await materialiserCr(supabase, org_id, cr.id, fd, profil?.nom ?? null);
+  const { operationIds } = await materialiserCr(supabase, org_id, cr.id, fd);
 
   // Compte rendu généré depuis une relance : on la clôt (faite) et on la relie
   // au compte rendu qui la « résout ».

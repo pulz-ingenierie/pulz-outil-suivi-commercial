@@ -57,6 +57,25 @@ export function lienPersonne(idx: Record<string, string>, name: string | null | 
   return k && idx[k] ? idx[k] : null;
 }
 
+// Le RESPONSABLE d'une relance (membre du groupement, colonne `assignee_id`) et
+// les personnes CONCERNÉES (texte libre, contacts externes) sont deux rôles
+// distincts et deux colonnes distinctes. À l'affichage on les montre ensemble,
+// le responsable en tête : c'est la question qu'on se pose en lisant la ligne.
+export function avecResponsable(
+  personne: string | null | undefined,
+  responsableNom: string | null | undefined,
+): string {
+  const resp = (responsableNom ?? "").trim();
+  const autres = (personne ?? "").trim();
+  if (!resp) return autres;
+  const dejaCite = autres
+    .split(",")
+    .map((s) => normNom(s))
+    .includes(normNom(resp));
+  if (dejaCite || !autres) return dejaCite ? autres : resp;
+  return `${resp}, ${autres}`;
+}
+
 export type PersonneSignet = { nom: string; href: string | null; membre: boolean };
 
 // Découpe le champ « personne » d'une relance (texte libre, éventuellement

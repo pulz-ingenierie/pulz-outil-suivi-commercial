@@ -45,7 +45,11 @@ function Icon({ name }: { name: "structure" | "operation" | "personne" | "relanc
   return <svg {...p}><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6" /><path d="M10 20a2 2 0 0 0 4 0" /></svg>;
 }
 type PersonneEdit = { prenom: string; nom: string; fonction: string; entite: string; tel: string; email: string; operations?: string[] };
-type RelanceEdit = { objet: string; date: string; personne: string; operation?: string; entite?: string };
+// Une relance porte DEUX rôles distincts, à ne jamais confondre :
+//  - `personne`    : la ou les personnes CONCERNÉES (contact externe à recontacter) ;
+//  - `responsable` : le MEMBRE du groupement qui doit s'en occuper.
+// L'IA ne renseigne que le premier ; le second se choisit au débrief.
+type RelanceEdit = { objet: string; date: string; personne: string; responsable: string; operation?: string; entite?: string };
 
 const TYPES_RDV = [
   { v: "dejeuner", l: "Déjeuner" },
@@ -357,6 +361,9 @@ export default function VoiceCr({
         .map((r) => ({
           objet: r.objet,
           date: addDays(today, r.dans_jours),
+          // JAMAIS prérempli : l'IA ne connaît que la personne concernée
+          // (externe). Le responsable se choisit au débrief, parmi les membres.
+          responsable: "",
           // On garde les personnes de l'IA (contact concerné par la relance, ex.
           // « Jean-François Turpin »). Le membre RESPONSABLE s'ajoute au débrief
           // (« qui doit s'occuper »), sans écraser le contact concerné.
@@ -563,7 +570,15 @@ export default function VoiceCr({
     }));
   const relancesPayload = relances
     .filter((r) => r.objet.trim())
-    .map((r) => ({ objet: r.objet.trim(), dans_jours: diffDays(today, r.date), personne: r.personne.trim() || null, operation: r.operation?.trim() || null, entite: r.entite?.trim() || null }));
+    .map((r) => ({
+      objet: r.objet.trim(),
+      dans_jours: diffDays(today, r.date),
+      personne: r.personne.trim() || null,
+      // Membre(s) du groupement qui doit s'en occuper → assignee_id côté serveur.
+      responsable: r.responsable.trim() || null,
+      operation: r.operation?.trim() || null,
+      entite: r.entite?.trim() || null,
+    }));
   // Liens affaire ↔ structure : ceux portés directement par chaque opération
   // (entite du rattachement, le plus fiable) + ceux proposés par l'IA. On ne
   // filtre PAS par nom ici : materialiserCr revalide chaque lien contre les
@@ -644,7 +659,7 @@ export default function VoiceCr({
     // figer une croix « ✕ » quand la ville n'est pas encore connue. L'affaire
     // reste rattachée par son nom exact (champ operation).
     const client = opName.split(" - ")[0].trim() || opName;
-    setRelances((rr) => [...rr, { objet: `Relancer ${client}`, date: addDays(today, jours), personne: persDefaut, operation: opName }]);
+    setRelances((rr) => [...rr, { objet: `Relancer ${client}`, date: addDays(today, jours), personne: persDefaut, responsable: "", operation: opName }]);
   };
   // Cas sans aucune opération : proposition générique (une seule fois).
   const sujetGenerique =
@@ -654,12 +669,12 @@ export default function VoiceCr({
   const ajouterRelanceGenerique = (jours: number) => {
     const objet = sujetGenerique ? `Recontacter ${sujetGenerique}` : "Recontacter";
     const ent = rattachements.find((r) => r.kind === "structure" && r.name.trim())?.name.trim();
-    setRelances((rr) => [...rr, { objet, date: addDays(today, jours), personne: persDefaut, entite: ent }]);
+    setRelances((rr) => [...rr, { objet, date: addDays(today, jours), personne: persDefaut, responsable: "", entite: ent }]);
   };
   // Personnes à proposer pour « qui doit s'occuper de… » : UNIQUEMENT les membres
   // du groupement (équipe interne). Un prospect externe ne « s'occupe » jamais
   // d'une relance — il en est la cible, pas le responsable.
-  const candidatsPersonne = Array.from(new Set(membres.filter(Boolean)));
+  const candidatsPersonne = Array.from(new Set(membres.filter(Boolean))).sort((a, b) => a.localeCompare(b, "fr"));
   // Opérations nouvelles sans commune : on demande où se situe le projet (la
   // ville est un signet à part entière, et complète le titre « Client - Ville - … »).
   // On demande la commune pour : les affaires NOUVELLES sans ville, ET les
@@ -722,6 +737,27 @@ export default function VoiceCr({
   // liste de noms séparés par des virgules.
   const listePersonnes = (v: string) => v.split(",").map((s) => s.trim()).filter(Boolean);
   const aPersonne = (v: string, name: string) => listePersonnes(v).some((x) => x.toLowerCase() === name.trim().toLowerCase());
+  // Responsable(s) d'une relance — mêmes gestes, mais sur un champ séparé.
+  const aResponsable = (i: number, name: string) => aPersonne(relances[i]?.responsable ?? "", name);
+  const basculerResponsable = (i: number, name: string) =>
+    setRelances((prev) =>
+      prev.map((r, j) => {
+        if (j !== i) return r;
+        const actuels = listePersonnes(r.responsable);
+        const k = name.trim().toLowerCase();
+        const restants = actuels.filter((x) => x.toLowerCase() !== k);
+        const suivants = restants.length === actuels.length ? [...actuels, name.trim()] : restants;
+        return { ...r, responsable: suivants.join(", ") };
+      }),
+    );
+  const retirerResponsable = (i: number, name: string) =>
+    setRelances((prev) =>
+      prev.map((r, j) =>
+        j === i
+          ? { ...r, responsable: listePersonnes(r.responsable).filter((x) => x.toLowerCase() !== name.trim().toLowerCase()).join(", ") }
+          : r,
+      ),
+    );
   const basculerPersonne = (i: number, name: string) =>
     setRelances((prev) => prev.map((r, j) => {
       if (j !== i) return r;
@@ -1026,7 +1062,27 @@ export default function VoiceCr({
           <div className="carte-body">
             <label className="field"><span className="lab">Action de suivi (sans le nom de la personne)</span>
               <input value={r.objet} placeholder="Ex. Rappeler pour la remise de l'offre" onChange={(e) => majRel(i, { objet: e.target.value })} /></label>
-            <div className="field"><span className="lab">Personnes concernées</span>
+            {/* DEUX rôles, DEUX champs. Les confondre revenait à demander à un
+                prospect de se relancer lui-même. */}
+            <div className="field"><span className="lab">Qui s'en occupe <em>(membre du groupement)</em></span>
+              {listePersonnes(r.responsable).length > 0 && (
+                <div className="pers-chips">
+                  {listePersonnes(r.responsable).map((n) => (
+                    <button type="button" className="sig-d pers on" key={n} onClick={() => retirerResponsable(i, n)}>
+                      <span className="sig-lbl">{n} ✕</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <select
+                value=""
+                onChange={(e) => { const v = e.target.value; if (v && !aResponsable(i, v)) basculerResponsable(i, v); }}
+              >
+                <option value="">＋ Ajouter un membre…</option>
+                {candidatsPersonne.filter((n) => !aResponsable(i, n)).map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
+            <div className="field"><span className="lab">Personnes concernées <em>(interlocuteur à recontacter)</em></span>
               {listePersonnes(r.personne).length > 0 && (
                 <div className="pers-chips">
                   {listePersonnes(r.personne).map((n) => (
@@ -1036,13 +1092,17 @@ export default function VoiceCr({
                   ))}
                 </div>
               )}
-              <select
-                value=""
-                onChange={(e) => { const v = e.target.value; if (v && !aPersonne(r.personne, v)) basculerPersonne(i, v); }}
-              >
-                <option value="">＋ Ajouter une personne…</option>
-                {candidatsPersonne.filter((n) => !aPersonne(r.personne, n)).map((n) => <option key={n} value={n}>{n}</option>)}
-              </select>
+              <input
+                list="dl-personnes"
+                placeholder="Ajouter une personne concernée…"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const v = (e.target as HTMLInputElement).value.trim();
+                    if (v) { if (!aPersonne(r.personne, v)) basculerPersonne(i, v); (e.target as HTMLInputElement).value = ""; }
+                  }
+                }}
+              />
             </div>
             <label className="field"><span className="lab">Échéance</span>
               <input type="date" value={r.date} onChange={(e) => majRel(i, { date: e.target.value })} /></label>
@@ -1246,7 +1306,7 @@ export default function VoiceCr({
               </li>
             ))}
             <li>
-              <button type="button" className="rel-add" onClick={() => { setRelances((rr) => [...rr, { objet: "", date: addDays(today, 30), personne: "" }]); ouvrirCarte("rel", relances.length, "edit"); }}>＋ Ajouter une relance</button>
+              <button type="button" className="rel-add" onClick={() => { setRelances((rr) => [...rr, { objet: "", date: addDays(today, 30), personne: "", responsable: "" }]); ouvrirCarte("rel", relances.length, "edit"); }}>＋ Ajouter une relance</button>
             </li>
           </ul>
         </div>
@@ -1318,32 +1378,32 @@ export default function VoiceCr({
             })}
             {relancesAvecObjet.map(({ r, i }) => (
               <div className="precise-row" key={`r${i}`}>
-                <span className="precise-q">Qui doit s'occuper de <strong>{r.objet || "cette relance"}</strong> ? <em className="precise-hint">(plusieurs possibles)</em></span>
+                <span className="precise-q">Qui doit s'occuper de <strong>{r.objet || "cette relance"}</strong> ? <em className="precise-hint">(un membre du groupement ; plusieurs possibles)</em></span>
+                {/* Le RESPONSABLE est toujours un membre du groupement. On ne
+                    propose donc que l'équipe, jamais l'interlocuteur externe du
+                    compte rendu : lui est la CIBLE de la relance, pas celui qui
+                    s'en occupe. Sa mention reste sur la carte de la relance,
+                    dans « Personnes concernées ». */}
                 <div className="precise-answer">
-                  {candidatsPersonne.slice(0, 6).map((n) => (
-                    <button type="button" className={`sig-d pers${aPersonne(r.personne, n) ? " on" : ""}`} key={n} onClick={() => basculerPersonne(i, n)}>
+                  {candidatsPersonne.map((n) => (
+                    <button type="button" className={`sig-d pers${aResponsable(i, n) ? " on" : ""}`} key={n} onClick={() => basculerResponsable(i, n)}>
                       <span className="sig-lbl">{n}</span>
                     </button>
                   ))}
-                  {listePersonnes(r.personne)
+                  {listePersonnes(r.responsable)
                     .filter((n) => !candidatsPersonne.some((c) => c.toLowerCase() === n.toLowerCase()))
                     .map((n) => (
-                      <button type="button" className="sig-d pers on" key={n} onClick={() => retirerPersonne(i, n)}>
+                      <button type="button" className="sig-d pers on" key={n} onClick={() => retirerResponsable(i, n)}>
                         <span className="sig-lbl">{n} ✕</span>
                       </button>
                     ))}
-                  <input
-                    list="dl-personnes"
-                    placeholder="ajouter un nom…"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        const v = (e.target as HTMLInputElement).value.trim();
-                        if (v) { if (!aPersonne(r.personne, v)) basculerPersonne(i, v); (e.target as HTMLInputElement).value = ""; }
-                      }
-                    }}
-                  />
                 </div>
+                {listePersonnes(r.personne).length > 0 && (
+                  <div className="precise-note">
+                    Personne{listePersonnes(r.personne).length > 1 ? "s" : ""} concernée{listePersonnes(r.personne).length > 1 ? "s" : ""} par cette relance :{" "}
+                    <strong>{listePersonnes(r.personne).join(", ")}</strong>
+                  </div>
+                )}
               </div>
             ))}
             {persAPreciser.map(({ p, i }) => (

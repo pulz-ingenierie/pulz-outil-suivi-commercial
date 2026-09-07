@@ -7,7 +7,7 @@ import PhaseSelect from "./PhaseSelect";
 import BackButton from "@/components/BackButton";
 import Signet from "@/components/Signet";
 import RelanceRow from "@/components/RelanceRow";
-import { indexerLiens, personnesDeRelance } from "@/lib/personnes";
+import { indexerLiens, personnesDeRelance, avecResponsable } from "@/lib/personnes";
 import { titreOperation } from "@/lib/titres";
 import { manquesOperation } from "@/lib/completude";
 import ACompleter from "@/components/ACompleter";
@@ -69,6 +69,9 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
   const st = operation.statut;
   const today = new Date().toISOString().slice(0, 10);
   const liensPersonnes = indexerLiens((contacts ?? []) as any, (membres ?? []) as any);
+  // Nom du membre responsable d'une relance (assignee_id) : affiché avec les
+  // personnes concernées, dont il reste distinct.
+  const nomParMembre = new Map(((membres ?? []) as any[]).map((m) => [m.id as string, m.nom as string]));
   const entites = (liensEnt ?? []).map((l: any) => ({ role: l.role_entree, ...(l.entites ?? {}) })).filter((e: any) => e.nom);
   const crs = (crLiens ?? []).map((c: any) => c.crs).filter(Boolean)
     .sort((a: any, b: any) => (a.date_rdv < b.date_rdv ? 1 : -1));
@@ -146,7 +149,7 @@ export default async function FicheOperation({ params }: { params: Promise<{ id:
                   echeance={dateFr(r.date_echeance)}
                   enRetard={r.date_echeance < today}
                   structs={entites.map((e: any) => ({ id: e.id, nom: e.nom }))}
-                  personnes={personnesDeRelance(r.personne, liensPersonnes)}
+                  personnes={personnesDeRelance(avecResponsable(r.personne, r.assignee_id ? nomParMembre.get(r.assignee_id) ?? null : null), liensPersonnes)}
                 />
               ))}
             </div>

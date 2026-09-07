@@ -376,6 +376,11 @@ a.vrow { color: var(--ink); text-decoration: none; }
 .ac-dot { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--faint);
           display: inline-block; flex: none; }
 
+/* Rappel discret sous une question du débrief (ex. la personne concernée par
+   une relance, quand on demande QUI doit s'en occuper). */
+.precise-note { font-size: 12.5px; color: var(--muted); margin-top: 7px; }
+.precise-note strong { font-weight: 600; color: var(--ink); }
+
 /* Barre de filtres d'une liste (pastilles) — actif : fond encre ; inactif :
    papier bordé (anatomie de liste de la DA). */
 .filtres { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 10px; }
