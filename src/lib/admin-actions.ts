@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { getIdentite } from "@/lib/auth";
 import { envoyerRappelsRelances } from "@/lib/relances-digest";
+import { envoyerDigestCrs } from "@/lib/cr-digest";
 import { sendEmail, isEmailConfigured } from "@/lib/email";
 import { releverEmails } from "@/lib/email-intake";
 
@@ -195,6 +196,20 @@ export async function releverEmailsMaintenant() {
 }
 
 // Envoi manuel des rappels (pour tester / relancer à la demande). Réservé pilotes.
+// Envoi de vérification du récapitulatif des comptes rendus, hors créneau.
+// Réservé aux pilotes, comme les rappels de relances.
+export async function envoyerDigestCrsMaintenant() {
+  await requirePilote();
+  const r = await envoyerDigestCrs();
+  revalidatePath("/relances");
+  const q = new URLSearchParams({
+    dcrs: String(r.crs),
+    ddest: String(r.destinataires),
+    dcfg: r.configured ? "1" : "0",
+  }).toString();
+  redirect(`/relances?${q}`);
+}
+
 export async function envoyerRappelsMaintenant() {
   await requirePilote();
   const r = await envoyerRappelsRelances();

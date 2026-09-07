@@ -1,5 +1,7 @@
 {
-  "regions": ["dub1"],
+  "regions": [
+    "dub1"
+  ],
   "crons": [
     {
       "path": "/api/relances/envoyer",
@@ -8,6 +10,10 @@
     {
       "path": "/api/email-intake",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/crs/digest",
+      "schedule": "0 * * * *"
     }
   ]
 }

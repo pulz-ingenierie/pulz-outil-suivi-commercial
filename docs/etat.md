@@ -92,7 +92,8 @@
 |-----|---------------|--------|------|
 | `RESEND_API_KEY` | secret | pour l'envoi d'e-mails | Service qui expédie les e-mails de relance. Inutile tant que cette brique n'est pas activée. |
 | `RELANCE_EMAIL_FROM` | (réglage) | avec Resend | Adresse expéditrice des relances (ex. `commercial@votre-domaine.fr`). |
-| `CRON_SECRET` | secret | avec Resend | Protège la tâche d'envoi automatique (une longue valeur aléatoire). Vercel l'ajoute lui-même à l'appel programmé du matin. |
+| `CRON_SECRET` | secret | avec Resend | Protège les tâches d'envoi automatique (une longue valeur aléatoire). Vercel l'ajoute lui-même aux appels programmés. |
+| `DIGEST_CR_HEURE` | (réglage) | non | Heure de Paris à laquelle part le récapitulatif quotidien des comptes rendus. Défaut : `18`. La tâche Vercel se déclenche chaque heure ; c'est ce réglage qui décide du créneau (donc pas de dérive été/hiver). |
 
 ### Divers
 

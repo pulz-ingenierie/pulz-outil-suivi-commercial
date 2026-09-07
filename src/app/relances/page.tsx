@@ -1,6 +1,6 @@
 import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
 import { createRelance } from "@/lib/actions";
-import { envoyerRappelsMaintenant } from "@/lib/admin-actions";
+import { envoyerRappelsMaintenant, envoyerDigestCrsMaintenant } from "@/lib/admin-actions";
 import { getIdentite } from "@/lib/auth";
 import { indexerLiens, personnesDeRelance } from "@/lib/personnes";
 import { titreOperation } from "@/lib/titres";
@@ -80,7 +80,8 @@ function versRow(
 export default async function Relances({
   searchParams,
 }: {
-  searchParams: Promise<{ dest?: string; rel?: string; ign?: string; cfg?: string; mailtest?: string }>;
+  searchParams: Promise<{ dest?: string; rel?: string; ign?: string; cfg?: string; mailtest?: string;
+    dcrs?: string; ddest?: string; dcfg?: string }>;
 }) {
   const sp = await searchParams;
   if (!isSupabaseConfigured()) {
@@ -134,6 +135,8 @@ export default async function Relances({
   // Bannière de résultat après un envoi manuel (?dest=&rel=&ign=&cfg=).
   const aEnvoye = sp.dest !== undefined;
   const envoiConfigure = sp.cfg === "1";
+  // Idem pour le récapitulatif des comptes rendus (?dcrs=&ddest=&dcfg=).
+  const aEnvoyeDigest = sp.dcrs !== undefined;
 
   return (
     <main className="wrap">
@@ -146,9 +149,16 @@ export default async function Relances({
         <a className="btn" href="#nouvelle-relance">+ Nouvelle relance</a>
       </div>
       {estPilote && (
-        <form action={envoyerRappelsMaintenant} style={{ margin: "-6px 0 16px" }}>
-          <button className="btn ghost mini" type="submit">Envoyer les rappels maintenant</button>
-        </form>
+        <div style={{ display: "flex", gap: 7, flexWrap: "wrap", margin: "-6px 0 16px" }}>
+          <form action={envoyerRappelsMaintenant}>
+            <button className="btn ghost mini" type="submit">Envoyer les rappels maintenant</button>
+          </form>
+          {/* Vérification hors créneau du récapitulatif du soir. En temps normal
+              il part tout seul, en fin de journée, aux membres du groupement. */}
+          <form action={envoyerDigestCrsMaintenant}>
+            <button className="btn ghost mini" type="submit">Envoyer le récap des CR maintenant</button>
+          </form>
+        </div>
       )}
 
       {sp.mailtest !== undefined && (
@@ -170,6 +180,16 @@ export default async function Relances({
                 Number(sp.ign) > 0 ? ` ${sp.ign} relance(s) sans responsable/e-mail non envoyée(s).` : ""
               }`
             : "L'envoi d'e-mails n'est pas encore configuré (clé Resend manquante). Les rappels s'afficheront ici en attendant."}
+        </div>
+      )}
+
+      {aEnvoyeDigest && (
+        <div className={`card notice${Number(sp.ddest) > 0 ? "" : " err"}`} style={{ marginBottom: 14 }}>
+          {Number(sp.dcrs) === 0
+            ? "Aucun compte rendu nouveau à récapituler : rien n'a été envoyé."
+            : Number(sp.ddest) > 0
+              ? `Récapitulatif envoyé : ${sp.dcrs} compte(s) rendu(s) à ${sp.ddest} membre(s).`
+              : `Envoi impossible (${sp.dcfg === "1" ? "aucun membre actif avec e-mail" : "e-mail non configuré"}). Les ${sp.dcrs} compte(s) rendu(s) repartiront au prochain récapitulatif.`}
         </div>
       )}
 
