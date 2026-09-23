@@ -140,13 +140,15 @@ h1 { font-weight: 700; }
 .rel-acts-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 @media (min-width: 560px) { .rel-acts-row { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .rel-acts-row > form { display: flex; min-width: 0; }
-/* Le « pleine largeur » vaut pour les actions de la rangée, PAS pour les boutons
-   du formulaire de correction qu'elle contient (d'où l'exclusion). */
-.rel-acts-row > form:not(.rel-edit) > .btn,
+/* Le « pleine largeur » vaut pour les ACTIONS de la rangée (Fait, Abandonner),
+   jamais pour les boutons des formulaires qu'elle contient — report et
+   correction. Sans ces exclusions, le « OK » du report prenait toute la largeur
+   de sa ligne et recouvrait le sélecteur de date : impossible de valider. */
+.rel-acts-row > form:not(.rel-edit):not(.rel-report) > .btn,
 .rel-acts-row > button.btn { width: 100%; justify-content: center; }
 .rel-report { grid-column: 1 / -1; align-items: center; gap: 6px; }
 .rel-report input[type="date"] { flex: 1; font: inherit; font-size: 12.5px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
-.rel-report .btn { flex: none; width: auto; }
+.rel-report .btn { flex: 0 0 auto; width: auto; white-space: nowrap; }
 
 /* Correction d'une relance sur place : le formulaire prend toute la largeur de
    la rangée d'actions et se replie en une colonne lisible au pouce. */
