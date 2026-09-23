@@ -9,6 +9,7 @@ import { titreOperation } from "@/lib/titres";
 import SwipeRow from "@/components/SwipeRow";
 import CatIcon from "@/components/CatIcon";
 import PhaseAffaire from "@/components/PhaseAffaire";
+import ModifierRelance, { type OptionRef } from "@/components/ModifierRelance";
 import { type OperationStatut } from "@/lib/types";
 import type { PersonneSignet } from "@/lib/personnes";
 
@@ -26,6 +27,13 @@ export type RelRow = {
   personnes: PersonneSignet[];
   crHref: string;
   reporterDefault: string;
+  // Valeurs BRUTES, pour le formulaire de correction (les champs ci-dessus sont
+  // déjà mis en forme pour l'affichage et ne s'y prêtent pas).
+  echeanceIso: string;
+  operationId: string | null;
+  entiteId: string | null;
+  personne: string | null;
+  assigneeId: string | null;
 };
 
 type Groupe = { titre: string; classe: string; items: RelRow[] };
@@ -40,7 +48,20 @@ function concerneStructure(r: RelRow, structureId: string): boolean {
   return (r.structs ?? []).some((s) => s.id === structureId);
 }
 
-export default function RelancesListe({ groupes, membres = [] }: { groupes: Groupe[]; membres?: string[] }) {
+export default function RelancesListe({
+  groupes,
+  membres = [],
+  operationsRef = [],
+  structuresRef = [],
+  membresRef = [],
+}: {
+  groupes: Groupe[];
+  membres?: string[];
+  // Référentiels pour le formulaire de correction d'une relance.
+  operationsRef?: OptionRef[];
+  structuresRef?: OptionRef[];
+  membresRef?: OptionRef[];
+}) {
   const [ouvert, setOuvert] = useState<string | null>(null);
   const [vue, setVue] = useState<string>("__toutes__");
   const [membre, setMembre] = useState<string | null>(null);
@@ -230,6 +251,18 @@ export default function RelancesListe({ groupes, membres = [] }: { groupes: Grou
                                 <button className="btn ghost mini" type="submit" title="Marquer comme fait">Fait</button>
                               </form>
                               <ReporterRelance id={r.id} defaultDate={r.reporterDefault} />
+                              <ModifierRelance
+                                id={r.id}
+                                objet={r.objet}
+                                echeance={r.echeanceIso}
+                                operationId={r.operationId}
+                                entiteId={r.entiteId}
+                                personne={r.personne}
+                                assigneeId={r.assigneeId}
+                                operations={operationsRef}
+                                structures={structuresRef}
+                                membres={membresRef}
+                              />
                               <form action={updateRelance}>
                                 <input type="hidden" name="id" value={r.id} />
                                 <input type="hidden" name="action" value="abandonner" />

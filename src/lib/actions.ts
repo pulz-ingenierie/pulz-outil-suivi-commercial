@@ -1203,6 +1203,67 @@ export async function createContact(fd: FormData) {
   redirect(`/personnes/${data.id}`);
 }
 
+// Corrige une relance EN PLACE : libellé, échéance, affaire, structure,
+// personnes concernées, responsable. Jusqu'ici une relance saisie était figée —
+// on ne pouvait que la clore ou la reporter. Or l'oubli le plus courant est de
+// ne pas l'avoir rattachée à son affaire, et il fallait la supprimer pour la
+// recréer.
+export async function modifierRelance(fd: FormData) {
+  const supabase = requireSupabase();
+  const org_id = await currentOrgId(supabase);
+  const id = str(fd, "id");
+  if (!id) throw new Error("Relance introuvable.");
+
+  const objet = str(fd, "objet");
+  if (!objet) throw new Error("L'objet de la relance est obligatoire.");
+  const echeance = str(fd, "date_echeance");
+  if (!echeance) throw new Error("L'échéance est obligatoire.");
+
+  // Affaire et structure : on ne retient un identifiant que s'il appartient
+  // bien à l'organisation courante. Vide = on détache.
+  const appartient = async (table: "operations" | "entites", valeur: string | null) => {
+    if (!valeur) return null;
+    const { data } = await supabase
+      .from(table).select("id").eq("org_id", org_id).eq("id", valeur).maybeSingle();
+    return data?.id ?? null;
+  };
+  const operation_id = await appartient("operations", strOrNull(fd, "operation_id"));
+  const entite_id = await appartient("entites", strOrNull(fd, "entite_id"));
+
+  // Responsable : un MEMBRE du groupement (jamais un contact externe).
+  const membreChoisi = strOrNull(fd, "assignee_id");
+  let responsable: string | null = null;
+  if (membreChoisi) {
+    const { data } = await supabase
+      .from("utilisateurs").select("id").eq("org_id", org_id).eq("id", membreChoisi).maybeSingle();
+    responsable = data?.id ?? null;
+  }
+
+  const patch: Record<string, unknown> = {
+    objet,
+    date_echeance: echeance,
+    operation_id,
+    entite_id,
+    assignee_id: responsable,
+  };
+  // La colonne « personne » peut ne pas exister (migration 0003) : on tente
+  // avec, puis sans, plutôt que de perdre la correction.
+  const { error } = await supabase
+    .from("relances")
+    .update({ ...patch, personne: strOrNull(fd, "personne") })
+    .eq("id", id);
+  if (error) {
+    const { error: e2 } = await supabase.from("relances").update(patch).eq("id", id);
+    if (e2) throw new Error(e2.message);
+  }
+
+  revalidatePath("/tableau");
+  revalidatePath("/relances");
+  if (operation_id) revalidatePath(`/operations/${operation_id}`);
+  if (entite_id) revalidatePath(`/entites/${entite_id}`);
+  redirect(`/relances#r-${id}`);
+}
+
 // Fait avancer une relance : faite / reportée (nouvelle date) / abandonnée.
 export async function updateRelance(fd: FormData) {
   const supabase = requireSupabase();

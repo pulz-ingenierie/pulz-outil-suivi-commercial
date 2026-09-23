@@ -74,10 +74,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 {profil.role === "pilote" && (
                   <Link className="btn ghost mini" href="/admin/utilisateurs">Administration</Link>
                 )}
-                <span className="who">{profil.nom}</span>
-                <form action={signOut}>
-                  <button className="btn ghost mini" type="submit">Quitter</button>
-                </form>
+                {/* Plus de bouton « Quitter » ici : à portée de pouce en haut à
+                    droite, il était pressé par réflexe pour fermer une page et
+                    déconnectait l'utilisateur. La déconnexion vit désormais au
+                    bas de sa propre fiche, où l'on ne va pas par accident. */}
+                <Link className="who" href={`/membres/${profil.id}`}>{profil.nom}</Link>
               </div>
             </header>
             <StickyOffset />

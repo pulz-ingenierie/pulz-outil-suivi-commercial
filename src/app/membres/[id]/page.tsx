@@ -4,6 +4,8 @@ import { getServerSupabase, isSupabaseConfigured } from "@/lib/supabase/server";
 import { type OperationStatut } from "@/lib/types";
 import { normNom } from "@/lib/personnes";
 import BackButton from "@/components/BackButton";
+import { getIdentite } from "@/lib/auth";
+import { signOut } from "@/lib/auth-actions";
 import OperationRow from "@/components/OperationRow";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +32,7 @@ export default async function FicheMembre({ params }: { params: Promise<{ id: st
   }
 
   const supabase = getServerSupabase()!;
+  const { profil } = await getIdentite();
 
   const { data: u } = await supabase
     .from("utilisateurs")
@@ -126,6 +129,23 @@ export default async function FicheMembre({ params }: { params: Promise<{ id: st
             <div className="empty">Aucune relance en cours pour lui.</div>
           )}
         </div>
+
+        {/* Déconnexion : uniquement sur SA PROPRE fiche, tout en bas. Elle était
+            en haut à droite de chaque écran, où on la pressait par réflexe en
+            croyant fermer la page. */}
+        {profil?.id === id && (
+          <div className="block">
+            <div className="eyebrow">Votre session</div>
+            <p className="hint" style={{ marginTop: 6 }}>
+              Vous êtes connecté avec <strong>{(u as any).email}</strong>. Vous n'avez
+              pas besoin de vous déconnecter pour fermer l'application : il suffit de
+              fermer l'onglet ou de revenir à l'écran d'accueil.
+            </p>
+            <form action={signOut} style={{ marginTop: 10 }}>
+              <button className="btn ghost mini danger" type="submit">Se déconnecter</button>
+            </form>
+          </div>
+        )}
       </div>
     </main>
   );

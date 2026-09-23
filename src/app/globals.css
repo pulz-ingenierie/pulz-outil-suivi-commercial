@@ -80,8 +80,13 @@ h1 { font-weight: 700; }
   transform: translateY(-8px); }
 .bn-cr .ic { width: 24px; height: 24px; }
 .top-user { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
-.top-user .who { font-size: 13px; color: var(--muted); font-weight: 600; }
-@media (max-width: 620px) { .top-user .who { display: none; } }
+/* Le nom mène à sa propre fiche — d'où l'on se déconnecte. Il reste donc
+   VISIBLE sur téléphone (il y était masqué faute de place) : sans lui, la
+   déconnexion n'aurait plus aucun chemin sur mobile. Abrégé plutôt que caché. */
+.top-user .who { font-size: 13px; color: var(--muted); font-weight: 600; text-decoration: none;
+                 max-width: 11ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top-user .who:hover { color: var(--ink); }
+@media (max-width: 620px) { .top-user .who { max-width: 8ch; font-size: 12.5px; } }
 /* Petit écran : boutons compacts. IMPORTANT : conserver le retrait de safe-area
    en haut (sinon la barre passe sous la barre d'état / la dynamic island iOS). */
 @media (max-width: 620px) {
@@ -129,13 +134,36 @@ h1 { font-weight: 700; }
    Abandonner alignés en une rangée de largeurs égales. */
 .rel-acts { display: flex; flex-direction: column; gap: 8px; align-items: stretch; min-width: 250px; }
 .rel-acts > .btn { justify-content: center; }
-.rel-acts-row { display: flex; gap: 8px; flex-wrap: wrap; }
-.rel-acts-row > form, .rel-acts-row > button { flex: 1 1 0; min-width: 72px; }
-.rel-acts-row > form { display: flex; }
-.rel-acts-row > form .btn, .rel-acts-row > button.btn { width: 100%; justify-content: center; }
-.rel-report { flex-basis: 100%; align-items: center; gap: 6px; }
+/* Rangée d'actions d'une relance : une grille, pas un flex. Avec quatre actions
+   (Fait, Reporter, Modifier, Abandonner), le flex laissait le libellé le plus
+   long déborder de la ligne au lieu de passer dessous. */
+.rel-acts-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 560px) { .rel-acts-row { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.rel-acts-row > form { display: flex; min-width: 0; }
+/* Le « pleine largeur » vaut pour les actions de la rangée, PAS pour les boutons
+   du formulaire de correction qu'elle contient (d'où l'exclusion). */
+.rel-acts-row > form:not(.rel-edit) > .btn,
+.rel-acts-row > button.btn { width: 100%; justify-content: center; }
+.rel-report { grid-column: 1 / -1; align-items: center; gap: 6px; }
 .rel-report input[type="date"] { flex: 1; font: inherit; font-size: 12.5px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
 .rel-report .btn { flex: none; width: auto; }
+
+/* Correction d'une relance sur place : le formulaire prend toute la largeur de
+   la rangée d'actions et se replie en une colonne lisible au pouce. */
+.rel-edit { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 10px;
+            padding: 12px; margin-top: 2px; background: var(--surface);
+            border: 1px solid var(--line); border-radius: 10px; }
+.rel-edit .field { display: flex; flex-direction: column; gap: 4px; }
+.rel-edit .lab { font-size: 11.5px; font-weight: 600; letter-spacing: .02em; color: var(--muted); }
+.rel-edit .lab em { color: var(--crit); font-style: normal; }
+.rel-edit input, .rel-edit select { font: inherit; font-size: 13.5px; padding: 8px 10px;
+            border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink);
+            width: 100%; max-width: 100%; }
+.rel-edit .hint { font-size: 11.5px; color: var(--faint); line-height: 1.45; }
+.rel-edit .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 520px) { .rel-edit .row2 { grid-template-columns: 1fr; } }
+.rel-edit-foot { display: flex; gap: 8px; justify-content: flex-end; margin-top: 2px; }
+.rel-edit-foot .btn { flex: none; width: auto; }
 .btn.mini { font-size: 12.5px; padding: 7px 12px; }
 .btn.mini.danger { color: var(--crit); }
 .btn.mini.danger:hover { border-color: var(--crit); }

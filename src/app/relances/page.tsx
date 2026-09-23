@@ -79,6 +79,12 @@ function versRow(
     personnes,
     crHref,
     reporterDefault: plusJours(7),
+    // Valeurs brutes pour le formulaire de correction.
+    echeanceIso: r.date_echeance,
+    operationId: r.operation_id,
+    entiteId: r.entite_id,
+    personne: r.personne,
+    assigneeId: r.assignee_id,
   };
 }
 
@@ -209,6 +215,9 @@ export default async function Relances({
 
       <RelancesListe
         membres={membresActifs.map((u: any) => u.nom).filter(Boolean)}
+        operationsRef={((operations ?? []) as any[]).map((o) => ({ id: o.id, nom: o.nom }))}
+        structuresRef={((entites ?? []) as any[]).map((e) => ({ id: e.id, nom: e.nom }))}
+        membresRef={membresActifs.map((u: any) => ({ id: u.id, nom: u.nom }))}
         groupes={[
           { titre: "En retard", classe: "crit", items: enRetard.map((r) => versRow(r, today, personnesIdx, opStructures, nomParMembre)) },
           { titre: "À venir", classe: "muted-h", items: aVenir.map((r) => versRow(r, today, personnesIdx, opStructures, nomParMembre)) },
